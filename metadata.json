@@ -1,0 +1,8 @@
+{
+  "name": "Pintamax - Gestión Integral de Pinturerías",
+  "description": "Una plataforma ERP avanzada para la gestión de inventario, ventas (TPV), finanzas y administración de sucursales en tiempo real, potenciada con inteligencia artificial para análisis predictivo y soporte.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

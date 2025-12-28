@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Branch, RestockRequest, UserRole } from '../types';
+import { User, Product, Branch, RestockRequest, UserRole, InternalConsumption } from '../types';
 import { MOCK_BRANCHES } from '../constants';
 import { InventoryService } from '../services/inventoryService';
 
@@ -16,18 +16,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [requests, setRequests] = useState<RestockRequest[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('BR-MAIN');
-  const [viewMode, setViewMode] = useState<'products' | 'requests'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'requests' | 'consumption'>('products');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [consumptionHistory, setConsumptionHistory] = useState<InternalConsumption[]>([]);
   const [loading, setLoading] = useState(false);
   const isAdmin = user.role === UserRole.ADMIN;
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [transferQty, setTransferQty] = useState(0);
+  const [consumptionQty, setConsumptionQty] = useState(0);
+  const [consumptionReason, setConsumptionReason] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -53,6 +57,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           statusFilter === 'all' ? undefined : statusFilter
         );
         setRequests(loadedRequests);
+      }
+
+      if (viewMode === 'consumption') {
+        const history = await InventoryService.getInternalConsumptionHistory(selectedBranchId);
+        setConsumptionHistory(history);
       }
     } catch (error) {
       console.error("Error loading inventory:", error);
@@ -171,6 +180,26 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleRecordConsumption = async () => {
+    if (!selectedProduct || consumptionQty <= 0 || !consumptionReason) return;
+    try {
+      await InventoryService.recordInternalConsumption(
+        selectedProduct.id,
+        selectedBranchId,
+        user.id,
+        consumptionQty,
+        consumptionReason
+      );
+      setIsConsumptionModalOpen(false);
+      setConsumptionQty(0);
+      setConsumptionReason('');
+      loadData();
+      alert("Consumo interno registrado correctamente.");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    }
+  };
+
   return (
     <div className="h-screen flex overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} />
@@ -206,6 +235,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
               <div className="flex gap-4">
                 <button onClick={() => setViewMode('products')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'products' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Existencias</button>
                 <button onClick={() => setViewMode('requests')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'requests' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Peticiones</button>
+                <button onClick={() => setViewMode('consumption')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'consumption' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Consumo Local</button>
               </div>
               {viewMode === 'requests' && (
                 <select className="text-xs font-bold bg-white dark:bg-slate-800 border-none rounded-lg px-3 py-1.5 shadow-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -249,6 +279,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                               <td className="px-6 py-5 text-center"><span className={`text-lg font-black ${stock < 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span></td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => { setSelectedProduct(p); setIsConsumptionModalOpen(true) }}
+                                    className="px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-lg text-[10px] font-black uppercase hover:bg-amber-500 hover:text-white transition-all"
+                                    title="Registrar uso local"
+                                  >
+                                    Uso Local
+                                  </button>
                                   {selectedBranchId !== 'BR-MAIN' && <button onClick={() => { setSelectedProduct(p); setIsRequestModalOpen(true) }} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase">Resurtir</button>}
                                   <button onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-blue-500"><span className="material-symbols-outlined">edit</span></button>
                                   <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-400 hover:text-red-500"><span className="material-symbols-outlined">delete</span></button>
@@ -262,7 +299,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : viewMode === 'requests' ? (
               <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
@@ -295,6 +332,41 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left min-w-[700px]">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <th className="px-8 py-5">Producto</th>
+                        <th className="px-6 py-5 text-center">Cant.</th>
+                        <th className="px-6 py-5">Motivo</th>
+                        <th className="px-8 py-5 text-right">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-slate-700">
+                      {consumptionHistory.map(item => (
+                        <tr key={item.id}>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="size-8 bg-slate-100 rounded p-1"><img src={item.productImage} className="w-full h-full object-contain" /></div>
+                              <span className="font-bold text-sm dark:text-white">{item.productName}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-center font-black text-amber-600">-{item.quantity}</td>
+                          <td className="px-6 py-5 text-xs text-slate-500 font-medium">{item.reason}</td>
+                          <td className="px-8 py-5 text-right text-[10px] text-slate-400 font-bold uppercase">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {consumptionHistory.length === 0 && (
+                    <div className="p-12 text-center text-slate-400 italic">No hay registros de consumo interno.</div>
+                  )}
                 </div>
               </div>
             )}
@@ -334,6 +406,54 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 <div className="flex gap-4">
                   <button onClick={() => setIsRequestModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
                   <button onClick={handleRequestRestock} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl">Solicitar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isConsumptionModalOpen && selectedProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[40px] shadow-2xl p-10 animate-in zoom-in-95">
+              <h3 className="text-xl font-black mb-1">Uso Local</h3>
+              <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-6">{selectedProduct.name}</p>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Cantidad</label>
+                  <input
+                    type="number"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-black text-2xl outline-none focus:ring-2 focus:ring-amber-500/20"
+                    value={consumptionQty}
+                    onChange={e => setConsumptionQty(parseInt(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Motivo del uso</label>
+                  <select
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold text-sm outline-none"
+                    value={consumptionReason}
+                    onChange={e => setConsumptionReason(e.target.value)}
+                  >
+                    <option value="">Selecciona motivo...</option>
+                    <option value="Mantenimiento de sucursal">Mantenimiento de sucursal</option>
+                    <option value="Muestra para cliente">Muestra para cliente</option>
+                    <option value="Uso administrativo">Uso administrativo</option>
+                    <option value="Exhibición/Showroom">Exhibición/Showroom</option>
+                    <option value="Donación/Promoción">Donación/Promoción</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button onClick={() => { setIsConsumptionModalOpen(false); setConsumptionReason(''); setConsumptionQty(0); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
+                  <button
+                    onClick={handleRecordConsumption}
+                    disabled={!consumptionReason || consumptionQty <= 0}
+                    className="flex-1 py-4 bg-amber-500 text-white font-black rounded-2xl shadow-xl shadow-amber-500/20 disabled:opacity-50 uppercase text-xs"
+                  >
+                    Registrar
+                  </button>
                 </div>
               </div>
             </div>

@@ -129,3 +129,18 @@ export interface DiscountRequest {
   reason?: string;
   createdAt: string;
 }
+
+export interface InternalConsumption {
+  id: string;
+  productId: string;
+  productName?: string;
+  productImage?: string;
+  branchId: string;
+  branchName?: string;
+  userId: string;
+  userName?: string;
+  quantity: number;
+  reason: string;
+  costAtTime?: number;
+  createdAt: string;
+}

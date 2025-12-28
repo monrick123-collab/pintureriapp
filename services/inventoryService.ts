@@ -299,5 +299,51 @@ export const InventoryService = {
             p_request_id: requestId
         });
         if (error) throw error;
+    },
+
+    // --- INTERNAL CONSUMPTION ---
+
+    async recordInternalConsumption(productId: string, branchId: string, userId: string, quantity: number, reason: string): Promise<void> {
+        const { error } = await supabase.rpc('process_internal_consumption', {
+            p_product_id: productId,
+            p_branch_id: branchId,
+            p_user_id: userId,
+            p_quantity: quantity,
+            p_reason: reason
+        });
+
+        if (error) throw error;
+    },
+
+    async getInternalConsumptionHistory(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('internal_consumption')
+            .select(`
+                *,
+                products (name, sku, image),
+                branches (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId && branchId !== 'ALL') {
+            query = query.eq('branch_id', branchId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return data.map((item: any) => ({
+            id: item.id,
+            productId: item.product_id,
+            productName: item.products?.name,
+            productImage: item.products?.image,
+            branchId: item.branch_id,
+            branchName: item.branches?.name,
+            userId: item.user_id,
+            quantity: item.quantity,
+            reason: item.reason,
+            costAtTime: parseFloat(item.cost_at_time || '0'),
+            createdAt: item.created_at
+        }));
     }
 };

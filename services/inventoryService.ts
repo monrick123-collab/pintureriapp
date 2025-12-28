@@ -15,6 +15,7 @@ const mapDbProduct = (item: any): Product => ({
     stock: item.stock || 0,
     wholesalePrice: parseFloat(item.wholesale_price || item.products?.wholesale_price || '0'),
     wholesaleMinQty: parseInt(item.wholesale_min_qty || item.products?.wholesale_min_qty || '12'),
+    costPrice: parseFloat(item.cost_price || item.products?.cost_price || '0'),
     inventory: {}
 });
 
@@ -35,8 +36,9 @@ export const InventoryService = {
             const inventoryMap: Record<string, number> = {};
             prodInv.forEach((i: any) => inventoryMap[i.branch_id] = i.stock);
 
+            const mapped = mapDbProduct(p);
             return {
-                ...p,
+                ...mapped,
                 stock: prodInv.reduce((acc: number, curr: any) => acc + curr.stock, 0),
                 inventory: inventoryMap
             } as Product;
@@ -58,10 +60,10 @@ export const InventoryService = {
         if (error) throw error;
 
         return data.map(item => ({
-            ...item.products,
+            ...mapDbProduct(item.products),
             stock: item.stock,
             inventory: { [branchId]: item.stock } // Partial view
-        })) as unknown as Product[];
+        }));
     },
 
     async createProduct(product: Omit<Product, 'id' | 'inventory'>): Promise<any> {
@@ -207,7 +209,7 @@ export const InventoryService = {
 
     // --- RESTOCK FLOW ---
 
-    async getRestockRequests(branchId?: string, status?: string): Promise<any[]> {
+    async getRestockRequests(branchId?: string, status?: string | string[]): Promise<any[]> {
         let query = supabase
             .from('restock_requests')
             .select(`
@@ -218,7 +220,13 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
-        if (status) query = query.eq('status', status);
+        if (status) {
+            if (Array.isArray(status)) {
+                query = query.in('status', status);
+            } else {
+                query = query.eq('status', status);
+            }
+        }
 
         const { data, error } = await query;
         if (error) throw error;
@@ -235,6 +243,32 @@ export const InventoryService = {
             createdAt: r.created_at,
             shippedAt: r.shipped_at
         }));
+    },
+
+    async getRestockRequestById(id: string): Promise<any> {
+        const { data, error } = await supabase
+            .from('restock_requests')
+            .select(`
+                *,
+                products (name, sku, image),
+                branches (name)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            branchId: data.branch_id,
+            branchName: data.branches?.name,
+            productId: data.product_id,
+            productName: data.products?.name,
+            productImage: data.products?.image,
+            quantity: data.quantity,
+            status: data.status,
+            createdAt: data.created_at
+        };
     },
 
     async createRestockRequest(branchId: string, productId: string, quantity: number): Promise<void> {

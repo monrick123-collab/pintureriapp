@@ -19,6 +19,15 @@ export const MOCK_WAREHOUSE_USER: User = {
   branchId: 'BR-MAIN' // Bodega Principal
 };
 
+export const MOCK_FINANCE_USER: User = {
+  id: 'ACC-001',
+  name: 'Contador de Pruebas',
+  email: 'contador@pintamax.com',
+  role: UserRole.FINANCE,
+  avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+  branchId: 'BR-MAIN'
+};
+
 export const MOCK_BRANCHES: Branch[] = [
   { id: 'BR-MAIN', name: 'Bodega Principal (Hub)', address: 'Zona Industrial Vallejo', manager: 'Ing. Roberto Maya', phone: '555-1000', status: 'active', type: 'warehouse' },
   { id: 'BR-CENTRO', name: 'Sucursal Centro', address: 'Av. Juárez 45, Col. Centro', manager: 'Marta Sánchez', phone: '555-2000', status: 'active', type: 'store' },

@@ -12,6 +12,7 @@ import Branches from './views/Branches';
 import Quotations from './views/Quotations';
 import SalesHistory from './views/SalesHistory';
 import WarehouseDashboard from './views/WarehouseDashboard';
+import ShippingNote from './views/ShippingNote';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
@@ -54,9 +55,12 @@ const App: React.FC = () => {
             ) : <Navigate to="/login" replace />
           } />
 
-          <Route path="/finance" element={user?.role === UserRole.ADMIN ? <Finance user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/pos" element={user ? <POS user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+
+          <Route path="/finance" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <Finance user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/inventory" element={user ? <Inventory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/sales-history" element={user ? <SalesHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/shipping-note/:id" element={user ? <ShippingNote /> : <Navigate to="/login" replace />} />
           <Route path="/users" element={user?.role === UserRole.ADMIN ? <UserManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User } from '../types';
-import { MOCK_FINANCES } from '../constants';
+import { User, Expense, ExpenseCategory } from '../types';
+import { AccountingService } from '../services/accountingService';
+import { InventoryService } from '../services/inventoryService';
 
 interface FinanceProps {
   user: User;
@@ -10,92 +11,245 @@ interface FinanceProps {
 }
 
 const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'audit' | 'inventory'>('dashboard');
+  const [summary, setSummary] = useState<any>(null);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState('ALL');
+
+  // Form states for new expense
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    description: '',
+    amount: 0,
+    category: 'otros' as ExpenseCategory,
+    branchId: 'BR-MAIN'
+  });
+
+  useEffect(() => {
+    loadBaseData();
+    loadTabData();
+  }, [activeTab, selectedBranch]);
+
+  const loadBaseData = async () => {
+    const b = await InventoryService.getBranches();
+    setBranches(b);
+  };
+
+  const loadTabData = async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+      if (activeTab === 'dashboard') {
+        const s = await AccountingService.getFinancialSummary(firstDay, lastDay, selectedBranch);
+        setSummary(s);
+      } else if (activeTab === 'expenses') {
+        const e = await AccountingService.getExpenses(selectedBranch);
+        setExpenses(e);
+      }
+    } catch (error) {
+      console.error("Error loading finance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await AccountingService.createExpense(newExpense);
+      setIsExpenseModalOpen(false);
+      loadTabData();
+      alert("Gasto registrado correctamente");
+    } catch (err) {
+      alert("Error al registrar gasto");
+    }
+  };
+
   return (
     <div className="h-screen flex overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} />
-      
-      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-background-light dark:bg-background-dark">
-        <header className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm pt-6 px-6 lg:px-8 pb-4 border-b border-slate-200 dark:border-slate-800">
-          <div className="max-w-[1400px] mx-auto flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span>Inicio / Finanzas / Gestión de Cuentas</span>
-            </div>
-            <div className="flex flex-wrap justify-between items-end gap-4">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-slate-900 dark:text-white text-3xl font-black tracking-tight">Gestión Financiera</h1>
-                <p className="text-slate-500">Cuentas por cobrar, pagar y conciliación fiscal.</p>
-              </div>
-              <div className="flex gap-3">
-                <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-lg">
-                  <span className="material-symbols-outlined text-[20px]">file_download</span>
-                  <span>Exportar Reporte</span>
+
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark">
+        <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white">Panel de Contabilidad</h1>
+            <div className="flex gap-4 mt-2">
+              {['dashboard', 'expenses', 'audit', 'inventory'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  className={`text-xs font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-slate-400'}`}
+                >
+                  {tab === 'dashboard' ? 'Resumen' : tab === 'expenses' ? 'Gastos' : tab === 'audit' ? 'Auditoría' : 'Inventario'}
                 </button>
-                <button className="flex items-center gap-2 h-10 px-4 bg-primary text-white text-sm font-bold rounded-lg shadow-lg">
-                  <span className="material-symbols-outlined text-[20px]">add</span>
-                  <span>Nueva Transacción</span>
-                </button>
-              </div>
+              ))}
             </div>
           </div>
+          <select
+            className="bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-xs font-bold px-4 py-2"
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+          >
+            <option value="ALL">Todas las Sucursales</option>
+            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
         </header>
 
-        <div className="p-6 sm:px-8 pb-10 max-w-[1400px] mx-auto w-full flex flex-col gap-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {['Por Cobrar', 'Por Pagar', 'Balance Neto', 'Pendientes'].map((stat, i) => (
-              <div key={i} className="rounded-xl p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-                <p className="text-slate-500 text-sm font-medium">{stat}</p>
-                <h3 className="text-2xl font-bold tracking-tight mt-1">
-                  {i === 3 ? '12' : `$${(Math.random() * 100000).toLocaleString()}`}
-                </h3>
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          {activeTab === 'dashboard' && summary && (
+            <div className="max-w-7xl mx-auto space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas Brutas (Mes)</p>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">${summary.totalSales.toLocaleString()}</h2>
+                  <p className="text-xs text-green-500 font-bold mt-2 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">trending_up</span> Incluye IVA
+                  </p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Utilidad Bruta</p>
+                  <h2 className="text-3xl font-black text-primary">${summary.grossProfit.toLocaleString()}</h2>
+                  <p className="text-xs text-slate-400 font-bold mt-2">Ventas - Costo de Productos</p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Utilidad Neta</p>
+                  <h2 className={`text-3xl font-black ${summary.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${summary.netProfit.toLocaleString()}
+                  </h2>
+                  <p className="text-xs text-slate-400 font-bold mt-2">Después de gastos operativos</p>
+                </div>
               </div>
-            ))}
-          </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Factura #</th>
-                    <th className="px-6 py-4 font-semibold">Contraparte</th>
-                    <th className="px-6 py-4 font-semibold">Sucursal</th>
-                    <th className="px-6 py-4 font-semibold">Vencimiento</th>
-                    <th className="px-6 py-4 font-semibold">Estado</th>
-                    <th className="px-6 py-4 font-semibold text-right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {MOCK_FINANCES.map(inv => (
-                    <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-primary">{inv.id}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                            {inv.colorCode}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{inv.counterparty}</span>
-                            <span className="text-xs text-slate-500">{inv.counterpartyId}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{inv.branch}</td>
-                      <td className={`px-6 py-4 font-medium ${inv.status === 'overdue' ? 'text-red-500' : ''}`}>{inv.dueDate}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          inv.status === 'overdue' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
-                        }`}>
-                          {inv.status === 'overdue' ? 'Vencido' : 'Pendiente'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold">${inv.amount.toLocaleString()}</td>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-100 dark:border-slate-700">
+                  <h3 className="font-black text-lg mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">account_balance_wallet</span>
+                    Desglose Fiscal
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between py-3 border-b border-slate-50 dark:border-slate-700">
+                      <span className="text-sm font-bold text-slate-500">IVA por Pagar (16%)</span>
+                      <span className="text-sm font-black text-red-500">${summary.totalIva.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-3 border-b border-slate-50 dark:border-slate-700">
+                      <span className="text-sm font-bold text-slate-500">Costo de Mercancía</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">${summary.totalCogs.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-3">
+                      <span className="text-sm font-bold text-slate-500">Gastos Operativos</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">${summary.totalExpenses.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-8 rounded-3xl border border-primary/10 flex flex-col justify-center items-center text-center">
+                  <span className="material-symbols-outlined text-5xl text-primary mb-4">insights</span>
+                  <h4 className="text-xl font-black text-primary mb-2">Margen de Operación</h4>
+                  <div className="text-5xl font-black text-primary mb-2">
+                    {summary.totalSales > 0 ? ((summary.netProfit / summary.totalSales) * 100).toFixed(1) : 0}%
+                  </div>
+                  <p className="text-xs font-bold text-primary/60 uppercase tracking-widest">Rendimiento sobre venta total</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'expenses' && (
+            <div className="max-w-7xl mx-auto space-y-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-xl">Registro de Gastos</h3>
+                <button
+                  onClick={() => setIsExpenseModalOpen(true)}
+                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                >
+                  NUEVO GASTO
+                </button>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50">
+                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4">Descripción</th>
+                      <th className="px-6 py-4">Categoría</th>
+                      <th className="px-6 py-4">Sucursal</th>
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4 text-right">Monto</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                    {expenses.map(e => (
+                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                        <td className="px-6 py-4 text-sm font-bold">{e.description}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-tighter text-slate-500">{e.category}</span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-400">{e.branchId}</td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">${e.amount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {expenses.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay gastos registrados en este periodo.</div>}
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'audit' || activeTab === 'inventory') && (
+            <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
+              <span className="material-symbols-outlined text-6xl mb-4">construction</span>
+              <h3 className="text-2xl font-black uppercase tracking-widest">Módulo en Desarrollo</h3>
+              <p className="max-w-md mt-2 font-bold">Estamos conectando los flujos de auditoría y valoración en tiempo real con la base de datos de Supabase.</p>
+            </div>
+          )}
+        </div>
+
+        {/* MODAL: NUEVO GASTO */}
+        {isExpenseModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-8 animate-in zoom-in-95">
+              <h3 className="text-xl font-black mb-6">Registrar Gasto Operativo</h3>
+              <form onSubmit={handleAddExpense} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Descripción</label>
+                  <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Monto ($)</label>
+                    <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black" value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Categoría</label>
+                    <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value as any })}>
+                      <option value="renta">Renta</option>
+                      <option value="servicios">Servicios</option>
+                      <option value="salarios">Salarios</option>
+                      <option value="suministros">Suministros</option>
+                      <option value="otros">Otros</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Sucursal</label>
+                  <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.branchId} onChange={e => setNewExpense({ ...newExpense, branchId: e.target.value })}>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
+                  <button type="submit" className="flex-1 py-3 bg-primary text-white font-black rounded-xl shadow-lg">Guardar</button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

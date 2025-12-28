@@ -1,15 +1,19 @@
-
 import { supabase } from './supabase';
 import { Sale, SaleItem } from '../types';
 
 export const SalesService = {
     /**
      * Procesa una venta completa de manera atómica usando una función RPC en Supabase.
-     * Esto asegura que el stock se descuente correctamente y se registre la venta al mismo tiempo.
      */
-    async processSale(branchId: string, items: SaleItem[], total: number, paymentMethod: string, clientId?: string): Promise<string> {
+    async processSale(
+        branchId: string,
+        items: SaleItem[],
+        total: number,
+        paymentMethod: string,
+        clientId?: string,
+        extra?: { subtotal: number, discountAmount: number, iva: number }
+    ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
-        // El RPC espera: product_id, quantity, price, product_name
         const rpcItems = items.map(i => ({
             product_id: i.productId,
             quantity: i.quantity,
@@ -21,7 +25,10 @@ export const SalesService = {
             p_branch_id: branchId,
             p_total: total,
             p_payment_method: paymentMethod,
-            p_items: rpcItems
+            p_items: rpcItems,
+            p_subtotal: extra?.subtotal || total,
+            p_discount_amount: extra?.discountAmount || 0,
+            p_iva: extra?.iva || 0
         });
 
         if (error) {
@@ -30,7 +37,6 @@ export const SalesService = {
         }
 
         // Si hay cliente, actualizamos la venta recién creada para vincularla
-        // (Opcional: se podría pasar al RPC también, pero por simplicidad lo hacemos aquí)
         if (clientId && data) {
             await supabase
                 .from('sales')
@@ -38,7 +44,7 @@ export const SalesService = {
                 .eq('id', data);
         }
 
-        return data; // Retorna el ID de la venta
+        return data;
     },
 
     async getSalesByBranch(branchId: string): Promise<Sale[]> {
@@ -57,6 +63,9 @@ export const SalesService = {
             id: s.id,
             branchId: s.branch_id,
             clientId: s.client_id,
+            subtotal: s.subtotal || 0,
+            discountAmount: s.discount_amount || 0,
+            iva: s.iva || 0,
             total: s.total,
             status: s.status,
             paymentMethod: s.payment_method,
@@ -96,6 +105,9 @@ export const SalesService = {
             branchId: s.branch_id,
             branchName: s.branch?.name,
             clientId: s.client_id,
+            subtotal: s.subtotal || 0,
+            discountAmount: s.discount_amount || 0,
+            iva: s.iva || 0,
             total: s.total,
             status: s.status,
             paymentMethod: s.payment_method,

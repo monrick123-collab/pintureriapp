@@ -38,6 +38,18 @@ export interface Product {
   status: 'available' | 'low' | 'out' | 'expired';
   wholesalePrice?: number;
   wholesaleMinQty?: number;
+  costPrice?: number;
+}
+
+export type ExpenseCategory = 'renta' | 'servicios' | 'salarios' | 'suministros' | 'otros';
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: ExpenseCategory;
+  branchId: string;
+  createdAt: string;
 }
 
 export type RestockStatus = 'pending_admin' | 'approved_warehouse' | 'shipped' | 'completed' | 'rejected';
@@ -96,9 +108,24 @@ export interface Sale {
   branchId: string;
   branchName?: string;
   clientId?: string;
+  subtotal: number;
+  discountAmount: number;
+  iva: number;
   total: number;
   status: 'completed' | 'cancelled';
   paymentMethod: 'cash' | 'card' | 'transfer';
   createdAt: string;
   items: SaleItem[];
+}
+
+export interface DiscountRequest {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  branchId: string;
+  amount: number;
+  type: 'percentage' | 'fixed';
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+  createdAt: string;
 }

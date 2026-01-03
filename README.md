@@ -76,16 +76,66 @@ npm run dev
 
 La aplicación estará disponible en `http://localhost:3000`
 
+## 🔄 Actualizar Código en GitHub
+
+### Método Rápido (Recomendado)
+
+Usa el script automatizado:
+
+```bash
+./update-github.sh "Descripción de tus cambios"
+```
+
+### Método Manual
+
+```bash
+# 1. Ver cambios
+git status
+
+# 2. Añadir archivos
+git add .
+
+# 3. Crear commit
+git commit -m "Descripción de cambios"
+
+# 4. Subir a GitHub
+git push origin main
+```
+
+### Sincronizar con GitHub
+
+Para descargar y subir cambios:
+
+```bash
+./sync-github.sh
+```
+
+O manualmente:
+
+```bash
+# Descargar cambios
+git pull origin main
+
+# Subir cambios
+git push origin main
+```
+
+**📖 Para más detalles, consulta el workflow:** `/actualizar-github`
+
 ## 🏗️ Estructura del Proyecto
 
 ```
 pintureriapp/
+├── .agent/
+│   └── workflows/      # Guías de trabajo
 ├── components/         # Componentes reutilizables
 ├── services/          # Servicios de API (Supabase, Gemini)
 ├── views/             # Vistas principales de la aplicación
 ├── types.ts           # Definiciones de TypeScript
 ├── constants.tsx      # Datos mock y constantes
-└── *.sql             # Migraciones de base de datos
+├── *.sql             # Migraciones de base de datos
+├── update-github.sh   # Script para actualizar GitHub
+└── sync-github.sh     # Script para sincronizar
 ```
 
 ## 👥 Sistema de Roles

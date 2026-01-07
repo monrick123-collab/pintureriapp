@@ -13,21 +13,22 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const location = useLocation();
   const isAdmin = user.role === UserRole.ADMIN;
   const isWarehouse = user.role === UserRole.WAREHOUSE;
+  const isFinance = user.role === UserRole.FINANCE;
 
   const navItems = [
     {
-      label: isAdmin ? 'Panel de Control' : isWarehouse ? 'Panel Bodega' : 'Punto de Venta',
+      label: isAdmin ? 'Panel de Control' : isWarehouse ? 'Panel Bodega' : isFinance ? 'Contabilidad' : 'Punto de Venta',
       path: '/',
-      icon: isAdmin ? 'dashboard' : isWarehouse ? 'warehouse' : 'point_of_sale'
+      icon: isAdmin ? 'dashboard' : isWarehouse ? 'warehouse' : isFinance ? 'payments' : 'point_of_sale'
     },
-    ...(user.role !== UserRole.SELLER ? [
+    ...(user.role !== UserRole.SELLER && !isFinance ? [
       { label: isWarehouse ? 'Ventas / TPV' : 'Punto de Venta', path: '/pos', icon: 'point_of_sale' }
     ] : []),
     { label: 'Cotizador', path: '/quotations', icon: 'request_quote' },
     { label: 'Inventario', path: '/inventory', icon: 'inventory_2' },
     { label: 'Historial Ventas', path: '/sales-history', icon: 'receipt_long' },
     { label: 'Clientes', path: '/clients', icon: 'group' },
-    ...(isAdmin || user.role === UserRole.FINANCE ? [
+    ...(isAdmin ? [
       { label: 'Contabilidad', path: '/finance', icon: 'payments' },
     ] : []),
     ...(isAdmin ? [

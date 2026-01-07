@@ -51,7 +51,8 @@ const App: React.FC = () => {
             user ? (
               user.role === UserRole.ADMIN ? <Dashboard user={user} onLogout={handleLogout} /> :
                 user.role === UserRole.WAREHOUSE ? <WarehouseDashboard user={user} onLogout={handleLogout} /> :
-                  <POS user={user} onLogout={handleLogout} />
+                  user.role === UserRole.FINANCE ? <Finance user={user} onLogout={handleLogout} /> :
+                    <POS user={user} onLogout={handleLogout} />
             ) : <Navigate to="/login" replace />
           } />
 

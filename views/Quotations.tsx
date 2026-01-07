@@ -328,10 +328,10 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
               <button
                 disabled={items.length === 0}
                 onClick={() => setIsPreviewOpen(true)}
-                className="hidden md:flex h-10 px-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs rounded-xl hover:bg-slate-100 transition-all items-center gap-2"
+                className="flex h-10 px-3 md:px-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs rounded-xl hover:bg-slate-100 transition-all items-center gap-2"
               >
                 <span className="material-symbols-outlined text-lg">visibility</span>
-                VISTA PREVIA
+                <span className="hidden md:inline">VISTA PREVIA</span>
               </button>
               <button
                 disabled={items.length === 0}
@@ -472,6 +472,14 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                     className="text-[9px] font-black text-primary uppercase hover:underline disabled:opacity-50"
                   >
                     {activeDiscountRequest?.status === 'pending' ? 'Esperando Aprobación...' : 'Solicitar Descuento'}
+                  </button>
+                  <button
+                    disabled={items.length === 0}
+                    onClick={() => setIsPreviewOpen(true)}
+                    className="lg:hidden flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase hover:text-primary transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">visibility</span>
+                    Vista Previa
                   </button>
                 </div>
               </div>

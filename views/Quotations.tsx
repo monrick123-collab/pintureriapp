@@ -190,6 +190,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em]">
+                <th className="px-6 py-5 text-center w-20">Imagen</th>
                 <th className="px-8 py-5 text-left">Referencia / Descripción</th>
                 <th className="px-6 py-5 text-center">Cantidad</th>
                 <th className="px-6 py-5 text-right">Precio Unitario</th>
@@ -199,6 +200,11 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
             <tbody className="divide-y divide-slate-100 bg-white">
               {items.map((item, idx) => (
                 <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                  <td className="px-6 py-6 text-center">
+                    <div className="size-12 mx-auto rounded-lg overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-1">
+                      <img src={item.image} className="max-h-full max-w-full object-contain" alt={item.name} />
+                    </div>
+                  </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">{item.sku}</span>
@@ -498,11 +504,18 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                 <span className="material-symbols-outlined">print</span> Imprimir
               </button>
             </div>
-            <div className="w-full flex-1 overflow-auto flex flex-col items-center custom-scrollbar pb-20">
-              <div className="w-fit bg-white shadow-2xl rounded-sm mb-10">
+            <div className="w-full flex-1 overflow-auto flex flex-col items-center custom-scrollbar pb-20 px-4">
+              <div
+                className="w-fit bg-white shadow-2xl rounded-sm mb-10 origin-top transition-transform duration-300"
+                style={{
+                  transform: typeof window !== 'undefined' && window.innerWidth < 850
+                    ? `scale(${(window.innerWidth - 40) / 850})`
+                    : 'scale(1)'
+                }}
+              >
                 <QuoteDocument />
               </div>
-              <p className="pb-10 text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">--- Fin de la Vista Previa ---</p>
+              <p className="pb-10 text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mt-auto">--- Fin de la Vista Previa ---</p>
             </div>
           </div>
         )}

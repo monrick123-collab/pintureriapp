@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Expense, ExpenseCategory } from '../types';
+import { User, Expense, ExpenseCategory, PriceRequest } from '../types';
 import { AccountingService } from '../services/accountingService';
 import { InventoryService } from '../services/inventoryService';
+import { translateStatus } from '../utils/formatters';
 
 interface FinanceProps {
   user: User;
@@ -17,6 +18,10 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranch, setSelectedBranch] = useState('ALL');
+  const [priceRequests, setPriceRequests] = useState<PriceRequest[]>([]);
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<PriceRequest | null>(null);
+  const [newPrice, setNewPrice] = useState<number>(0);
 
   // Form states for new expense
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -50,6 +55,9 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
       } else if (activeTab === 'expenses') {
         const e = await AccountingService.getExpenses(selectedBranch);
         setExpenses(e);
+      } else if (activeTab === 'inventory') {
+        const pr = await InventoryService.getPriceRequests();
+        setPriceRequests(pr);
       }
     } catch (error) {
       console.error("Error loading finance data:", error);
@@ -67,6 +75,21 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
       alert("Gasto registrado correctamente");
     } catch (err) {
       alert("Error al registrar gasto");
+    }
+  };
+
+  const handleResolvePrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+    try {
+      await InventoryService.resolvePriceRequest(selectedRequest.id, selectedRequest.productId, newPrice);
+      setIsPriceModalOpen(false);
+      setSelectedRequest(null);
+      setNewPrice(0);
+      loadTabData();
+      alert("Precio actualizado y solicitud resuelta.");
+    } catch (err) {
+      alert("Error al actualizar precio");
     }
   };
 
@@ -187,7 +210,7 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
                       <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                         <td className="px-6 py-4 text-sm font-bold">{e.description}</td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-tighter text-slate-500">{e.category}</span>
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-tighter text-slate-500">{translateStatus(e.category)}</span>
                         </td>
                         <td className="px-6 py-4 text-xs font-medium text-slate-400">{e.branchId}</td>
                         <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</td>
@@ -201,7 +224,60 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
             </div>
           )}
 
-          {(activeTab === 'audit' || activeTab === 'inventory') && (
+          {activeTab === 'inventory' && (
+            <div className="max-w-7xl mx-auto space-y-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="font-black text-xl">Gestión de Catálogo y Precios</h3>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Solicitudes Pendientes de Bodega</p>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50">
+                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4">Producto Solicitado</th>
+                      <th className="px-6 py-4">Solicitante (ID)</th>
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4 text-center">Estado</th>
+                      <th className="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                    {priceRequests.map(pr => (
+                      <tr key={pr.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{pr.productName || 'Producto no encontrado'}</p>
+                          <p className="text-[10px] font-mono text-slate-400 uppercase">{pr.productId.slice(0, 8)}</p>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">{pr.requesterName}</td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(pr.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${pr.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {translateStatus(pr.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {pr.status === 'pending' && (
+                            <button
+                              onClick={() => { setSelectedRequest(pr); setIsPriceModalOpen(true); }}
+                              className="px-3 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black uppercase hover:scale-105 transition-all"
+                            >
+                              Asignar Precio
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {priceRequests.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay solicitudes de precio pendientes.</div>}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'audit' && (
             <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
               <span className="material-symbols-outlined text-6xl mb-4">construction</span>
               <h3 className="text-2xl font-black uppercase tracking-widest">Módulo en Desarrollo</h3>
@@ -209,6 +285,36 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
             </div>
           )}
         </div>
+
+        {/* MODAL: ASIGNAR PRECIO */}
+        {isPriceModalOpen && selectedRequest && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95">
+              <h3 className="text-xl font-black mb-1 uppercase tracking-tighter text-slate-900 dark:text-white">Asignar Precio</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">{selectedRequest.productName}</p>
+
+              <form onSubmit={handleResolvePrice} className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Precio al Público ($)</label>
+                  <input
+                    type="number"
+                    required
+                    autoFocus
+                    step="0.01"
+                    className="w-full p-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-black text-4xl text-center focus:border-primary outline-none transition-all"
+                    value={newPrice}
+                    onChange={e => setNewPrice(parseFloat(e.target.value))}
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button type="button" onClick={() => { setIsPriceModalOpen(false); setSelectedRequest(null); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
+                  <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-xs tracking-widest">Confirmar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* MODAL: NUEVO GASTO */}
         {isExpenseModalOpen && (

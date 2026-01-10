@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { User, Product, Branch, RestockRequest, UserRole, InternalConsumption } from '../types';
 import { MOCK_BRANCHES } from '../constants';
 import { InventoryService } from '../services/inventoryService';
+import { translateStatus } from '../utils/formatters';
 
 interface InventoryProps {
   user: User;
@@ -22,6 +23,8 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [consumptionHistory, setConsumptionHistory] = useState<InternalConsumption[]>([]);
   const [loading, setLoading] = useState(false);
   const isAdmin = user.role === UserRole.ADMIN;
+  const isWarehouse = user.role === UserRole.WAREHOUSE;
+  const isFinance = user.role === UserRole.FINANCE;
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -35,9 +38,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
-    name: '', sku: '', category: 'Interiores', price: 0, image: '', description: '',
-    wholesalePrice: 0, wholesaleMinQty: 12
+    name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '',
+    wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro'
   });
+
+  const [brandFilter, setBrandFilter] = useState<string>('all');
 
   useEffect(() => {
     loadData();
@@ -70,13 +75,16 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     }
   };
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesBrand = brandFilter === 'all' || p.brand === brandFilter;
+    return matchesSearch && matchesBrand;
+  });
+
+  const allBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean)));
 
   const resetForm = () => {
-    setFormData({ name: '', sku: '', category: 'Interiores', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12 });
+    setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro' });
     setSelectedProduct(null);
   };
 
@@ -116,10 +124,21 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     setFormData({
       name: p.name, sku: p.sku, category: p.category, price: p.price,
       image: p.image, description: p.description,
+      brand: p.brand || '',
       wholesalePrice: p.wholesalePrice || 0,
-      wholesaleMinQty: p.wholesaleMinQty || 12
+      wholesaleMinQty: p.wholesaleMinQty || 12,
+      packageType: p.packageType || 'litro'
     });
     setIsEditModalOpen(true);
+  };
+
+  const handleRequestPrice = async (productId: string) => {
+    try {
+      await InventoryService.createPriceRequest(productId, user.id);
+      alert("Solicitud de precio enviada al Contador.");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -221,11 +240,15 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           </div>
           <div className="flex gap-2">
             <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleCSVUpload} />
-            <div className="hidden sm:flex gap-2">
-              <button onClick={() => fileInputRef.current?.click()} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">upload_file</span><span className="text-xs uppercase">Subir</span></button>
-              <button onClick={handleDownloadTemplate} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">download</span><span className="text-xs uppercase">Plantilla</span></button>
-            </div>
-            <button onClick={() => setIsAddModalOpen(true)} className="h-10 px-4 bg-primary text-white rounded-xl font-black flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"><span className="material-symbols-outlined">add</span><span className="text-xs uppercase">Nuevo</span></button>
+            {isAdmin && (
+              <div className="hidden sm:flex gap-2">
+                <button onClick={() => fileInputRef.current?.click()} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">upload_file</span><span className="text-xs uppercase">Subir</span></button>
+                <button onClick={handleDownloadTemplate} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">download</span><span className="text-xs uppercase">Plantilla</span></button>
+              </div>
+            )}
+            {isAdmin && (
+              <button onClick={() => setIsAddModalOpen(true)} className="h-10 px-4 bg-primary text-white rounded-xl font-black flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"><span className="material-symbols-outlined">add</span><span className="text-xs uppercase">Nuevo</span></button>
+            )}
           </div>
         </header>
 
@@ -249,9 +272,21 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
             {viewMode === 'products' ? (
               <div className="space-y-4">
-                <div className="relative max-w-md">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                  <input className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative max-w-md flex-1">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                    <input className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar por nombre o SKU..." value={search} onChange={e => setSearch(e.target.value)} />
+                  </div>
+                  <select
+                    className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl border-none shadow-sm text-sm font-bold text-slate-600"
+                    value={brandFilter}
+                    onChange={e => setBrandFilter(e.target.value)}
+                  >
+                    <option value="all">Todas las Marcas</option>
+                    {allBrands.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                   <div className="overflow-x-auto custom-scrollbar">
@@ -259,7 +294,8 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                       <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                         <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
-                          <th className="px-6 py-5">Precio</th>
+                          <th className="px-6 py-5">Marca</th>
+                          {!isWarehouse && <th className="px-6 py-5">Precio</th>}
                           <th className="px-6 py-5 text-center">Stock</th>
                           <th className="px-8 py-5 text-right">Acciones</th>
                         </tr>
@@ -275,7 +311,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   <div><p className="font-bold text-slate-900 dark:text-white">{p.name}</p><p className="text-[10px] font-mono text-slate-400">{p.sku}</p></div>
                                 </div>
                               </td>
-                              <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
+                              <td className="px-6 py-5">
+                                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[9px] font-bold uppercase text-slate-600 dark:text-slate-300">
+                                  {p.brand || 'Genérico'}
+                                </span>
+                              </td>
+                              {!isWarehouse && <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>}
                               <td className="px-6 py-5 text-center"><span className={`text-lg font-black ${stock < 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span></td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
@@ -286,9 +327,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   >
                                     Uso Local
                                   </button>
+                                  {isWarehouse && (
+                                    <button
+                                      onClick={() => handleRequestPrice(p.id)}
+                                      className="px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all"
+                                      title="Solicitar actualización de precio"
+                                    >
+                                      Solicitar Precio
+                                    </button>
+                                  )}
                                   {selectedBranchId !== 'BR-MAIN' && <button onClick={() => { setSelectedProduct(p); setIsRequestModalOpen(true) }} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase">Resurtir</button>}
-                                  <button onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-blue-500"><span className="material-symbols-outlined">edit</span></button>
-                                  <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-400 hover:text-red-500"><span className="material-symbols-outlined">delete</span></button>
+                                  {isAdmin && (
+                                    <>
+                                      <button onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-blue-500"><span className="material-symbols-outlined">edit</span></button>
+                                      <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-400 hover:text-red-500"><span className="material-symbols-outlined">delete</span></button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -315,13 +369,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                       {requests.map(req => (
                         <tr key={req.id}>
                           <td className="px-8 py-5 flex items-center gap-3">
-                            <div className="size-8 bg-slate-100 rounded p-1"><img src={req.productImage} className="w-full h-full object-contain" /></div>
+                            <div className="size-8 bg-slate-100 rounded p-1"><img src={req.product?.image} className="w-full h-full object-contain" /></div>
                             <span className="font-bold text-sm dark:text-white">{req.productName}</span>
                           </td>
                           <td className="px-6 py-5 text-center font-black">{req.quantity}</td>
                           <td className="px-6 py-5 text-center">
                             <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600">
-                              {req.status}
+                              {translateStatus(req.status)}
                             </span>
                           </td>
                           <td className="px-8 py-5 text-right flex justify-end gap-2">
@@ -384,8 +438,28 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                   <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">SKU</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Marca</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} /></div>
                   <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Categoría</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Interiores</option><option>Exteriores</option><option>Esmaltes</option><option>Accesorios</option></select></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
+                  <select
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
+                    value={formData.packageType}
+                    onChange={e => setFormData({ ...formData, packageType: e.target.value as any })}
+                  >
+                    <option value="cubeta">Cubeta (19 lts)</option>
+                    <option value="galon">Galón (4 lts)</option>
+                    <option value="litro">Litro (1 lto)</option>
+                    <option value="medio">Medio (1/2 lto)</option>
+                    <option value="cuarto">Cuarto (1/4 lto)</option>
+                    <option value="aerosol">Aerosol</option>
+                    <option value="complemento">Complemento</option>
+                  </select>
                 </div>
                 <div className="flex gap-4 pt-4">
                   <button type="button" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); resetForm(); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>

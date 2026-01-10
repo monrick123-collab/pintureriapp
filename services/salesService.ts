@@ -11,7 +11,14 @@ export const SalesService = {
         total: number,
         paymentMethod: string,
         clientId?: string,
-        extra?: { subtotal: number, discountAmount: number, iva: number }
+        extra?: {
+            subtotal: number,
+            discountAmount?: number,
+            iva: number,
+            isWholesale?: boolean,
+            paymentType?: 'contado' | 'credito',
+            departureAdminId?: string
+        }
     ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
         const rpcItems = items.map(i => ({
@@ -36,12 +43,20 @@ export const SalesService = {
             throw new Error(error.message);
         }
 
-        // Si hay cliente, actualizamos la venta recién creada para vincularla
-        if (clientId && data) {
-            await supabase
-                .from('sales')
-                .update({ client_id: clientId })
-                .eq('id', data);
+        // Actualizamos campos adicionales (Mayoreo, Crédito, Cliente, Admin)
+        if (data) {
+            const updates: any = {};
+            if (clientId) updates.client_id = clientId;
+            if (extra?.isWholesale !== undefined) updates.is_wholesale = extra.isWholesale;
+            if (extra?.paymentType) updates.payment_type = extra.paymentType;
+            if (extra?.departureAdminId) updates.departure_admin_id = extra.departureAdminId;
+
+            if (Object.keys(updates).length > 0) {
+                await supabase
+                    .from('sales')
+                    .update(updates)
+                    .eq('id', data);
+            }
         }
 
         return data;
@@ -51,9 +66,10 @@ export const SalesService = {
         const { data, error } = await supabase
             .from('sales')
             .select(`
-        *,
-        sale_items (*)
-      `)
+                *,
+                sale_items (*),
+                clients (name)
+            `)
             .eq('branch_id', branchId)
             .order('created_at', { ascending: false });
 
@@ -63,6 +79,7 @@ export const SalesService = {
             id: s.id,
             branchId: s.branch_id,
             clientId: s.client_id,
+            clientName: s.clients?.name,
             subtotal: s.subtotal || 0,
             discountAmount: s.discount_amount || 0,
             iva: s.iva || 0,
@@ -70,6 +87,9 @@ export const SalesService = {
             status: s.status,
             paymentMethod: s.payment_method,
             createdAt: s.created_at,
+            isWholesale: s.is_wholesale,
+            paymentType: s.payment_type,
+            departureAdminId: s.departure_admin_id,
             items: s.sale_items.map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -86,7 +106,8 @@ export const SalesService = {
             .select(`
                 *,
                 branch:branches(name),
-                sale_items (*)
+                sale_items (*),
+                clients (name)
             `)
             .gte('created_at', startDate)
             .lte('created_at', endDate)
@@ -105,6 +126,7 @@ export const SalesService = {
             branchId: s.branch_id,
             branchName: s.branch?.name,
             clientId: s.client_id,
+            clientName: s.clients?.name,
             subtotal: s.subtotal || 0,
             discountAmount: s.discount_amount || 0,
             iva: s.iva || 0,
@@ -112,6 +134,10 @@ export const SalesService = {
             status: s.status,
             paymentMethod: s.payment_method,
             createdAt: s.created_at,
+            isWholesale: s.is_wholesale,
+            paymentType: s.payment_type,
+            departureAdminId: s.departure_admin_id,
+            departureAdminName: s.departure_admin_id, // Fallback to ID
             items: s.sale_items.map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -120,5 +146,58 @@ export const SalesService = {
                 total: i.quantity * i.unit_price
             }))
         }));
+    },
+
+    async getAdmins(): Promise<{ id: string, name: string }[]> {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('role', 'ADMIN');
+
+        if (error) throw error;
+
+        return data.map((d: any) => ({
+            id: d.id,
+            name: d.full_name || 'Sin nombre'
+        }));
+    },
+
+    async getSaleDetail(id: string): Promise<Sale> {
+        const { data, error } = await supabase
+            .from('sales')
+            .select(`
+                *,
+                sale_items (*),
+                clients (*)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            branchId: data.branch_id,
+            clientId: data.client_id,
+            clientName: data.clients?.name,
+            subtotal: data.subtotal || 0,
+            discountAmount: data.discount_amount || 0,
+            iva: data.iva || 0,
+            total: data.total,
+            status: data.status,
+            paymentMethod: data.payment_method,
+            createdAt: data.created_at,
+            isWholesale: data.is_wholesale,
+            paymentType: data.payment_type,
+            departureAdminId: data.departure_admin_id,
+            departureAdminName: data.departure_admin_id,
+            items: data.sale_items.map((i: any) => ({
+                productId: i.product_id,
+                productName: i.product_name,
+                quantity: i.quantity,
+                price: i.unit_price,
+                total: i.quantity * i.unit_price
+            }))
+        };
     }
 };

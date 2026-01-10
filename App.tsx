@@ -13,6 +13,9 @@ import Quotations from './views/Quotations';
 import SalesHistory from './views/SalesHistory';
 import WarehouseDashboard from './views/WarehouseDashboard';
 import ShippingNote from './views/ShippingNote';
+import WholesalePOS from './views/WholesalePOS';
+import WholesaleHistory from './views/WholesaleHistory';
+import WholesaleNote from './views/WholesaleNote';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
@@ -66,6 +69,10 @@ const App: React.FC = () => {
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/quotations" element={user ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+
+          <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/wholesale-history" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE) ? <WholesaleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

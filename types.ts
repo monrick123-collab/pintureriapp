@@ -30,6 +30,7 @@ export interface Product {
   sku: string;
   name: string;
   category: string;
+  brand?: string; // New field
   description: string;
   price: number;
   stock: number;
@@ -39,6 +40,7 @@ export interface Product {
   wholesalePrice?: number;
   wholesaleMinQty?: number;
   costPrice?: number;
+  packageType?: 'cubeta' | 'galon' | 'litro' | 'medio' | 'cuarto' | 'aerosol' | 'complemento';
 }
 
 export type ExpenseCategory = 'renta' | 'servicios' | 'salarios' | 'suministros' | 'otros';
@@ -54,6 +56,16 @@ export interface Expense {
 
 export type RestockStatus = 'pending_admin' | 'approved_warehouse' | 'shipped' | 'completed' | 'rejected';
 
+export interface RestockSheet {
+  id: string;
+  branchId: string;
+  folio: number;
+  totalAmount: number;
+  createdAt: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  items?: RestockRequest[]; // Joined items
+}
+
 export interface RestockRequest {
   id: string;
   branchId: string;
@@ -66,6 +78,41 @@ export interface RestockRequest {
   approvedAt?: string;
   shippedAt?: string;
   receivedAt?: string;
+
+  // New fields for Sheets
+  sheetId?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+  product?: Product; // Joined product
+}
+
+// New interfaces for Supply Orders (Point 2)
+export type SupplyStatus = 'pending' | 'processing' | 'shipped' | 'received' | 'cancelled';
+
+export interface SupplyOrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface SupplyOrder {
+  id: string;
+  folio: number;
+  branchId: string;
+  branchName?: string;
+  createdBy: string;
+  createdByName?: string;
+  assignedAdminId?: string;
+  assignedAdminName?: string;
+  status: SupplyStatus;
+  estimatedArrival?: string;
+  totalAmount: number;
+  createdAt: string;
+  items?: SupplyOrderItem[];
 }
 
 export interface CartItem extends Product {
@@ -108,6 +155,7 @@ export interface Sale {
   branchId: string;
   branchName?: string;
   clientId?: string;
+  clientName?: string; // Potential join
   subtotal: number;
   discountAmount: number;
   iva: number;
@@ -116,6 +164,23 @@ export interface Sale {
   paymentMethod: 'cash' | 'card' | 'transfer';
   createdAt: string;
   items: SaleItem[];
+
+  // New fields for Point 3
+  isWholesale: boolean;
+  paymentType: 'contado' | 'credito';
+  departureAdminId?: string;
+  departureAdminName?: string;
+}
+
+// New interface for Price Requests (Point 4)
+export interface PriceRequest {
+  id: string;
+  productId: string;
+  productName?: string;
+  requesterId: string;
+  requesterName?: string;
+  status: 'pending' | 'resolved';
+  createdAt: string;
 }
 
 export interface DiscountRequest {

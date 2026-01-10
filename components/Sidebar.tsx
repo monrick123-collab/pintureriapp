@@ -35,6 +35,10 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       { label: 'Sucursales', path: '/branches', icon: 'location_on' },
       { label: 'Usuarios y Roles', path: '/users', icon: 'manage_accounts' },
     ] : []),
+    ...(isAdmin || isWarehouse ? [
+      { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
+      { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
+    ] : []),
   ];
 
   return (

@@ -33,6 +33,7 @@ const AiAssistant: React.FC = () => {
     };
 
     useEffect(() => {
+        console.log("AiAssistant mounted, user role:", localStorage.getItem('pintamax_user'));
         scrollToBottom();
     }, [messages, isOpen]);
 

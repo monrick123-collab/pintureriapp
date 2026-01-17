@@ -3,6 +3,7 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   SELLER = 'SELLER',
   WAREHOUSE = 'WAREHOUSE',
+  WAREHOUSE_SUB = 'WAREHOUSE_SUB',
   FINANCE = 'FINANCE'
 }
 
@@ -95,6 +96,7 @@ export interface SupplyOrderItem {
   orderId: string;
   productId: string;
   productName?: string;
+  productImage?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

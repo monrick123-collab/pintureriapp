@@ -472,7 +472,14 @@ export const InventoryService = {
             .from('supply_orders')
             .select(`
                 *,
-                branches (name)
+                branches (name),
+                supply_order_items (
+                    product_id,
+                    quantity,
+                    unit_price,
+                    total_price,
+                    products ( name, sku, image )
+                )
             `)
             .order('created_at', { ascending: false });
 
@@ -493,7 +500,17 @@ export const InventoryService = {
             status: s.status,
             estimatedArrival: s.estimated_arrival,
             totalAmount: s.total_amount,
-            createdAt: s.created_at
+            createdAt: s.created_at,
+            items: s.supply_order_items?.map((i: any) => ({
+                id: i.id || 'N/A',
+                orderId: s.id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                unitPrice: i.unit_price,
+                totalPrice: i.total_price,
+                productName: i.products?.name,
+                productImage: i.products?.image
+            }))
         }));
     },
 
@@ -525,6 +542,68 @@ export const InventoryService = {
         if (iError) throw iError;
 
         return order.id;
+    },
+
+    async updateSupplyOrderStatus(orderId: string, status: string, adminId?: string): Promise<void> {
+        const updates: any = { status };
+        if (adminId) updates.assigned_admin_id = adminId;
+        if (status === 'shipped') updates.estimated_arrival = new Date(Date.now() + 86400000).toISOString(); // +1 day estimate
+
+        const { error } = await supabase
+            .from('supply_orders')
+            .update(updates)
+            .eq('id', orderId);
+
+        if (error) throw error;
+    },
+
+    async confirmSupplyOrderArrival(orderId: string): Promise<void> {
+        // 1. Get order items
+        const { data: order, error: fetchError } = await supabase
+            .from('supply_orders')
+            .select(`
+                *,
+                supply_order_items (*)
+            `)
+            .eq('id', orderId)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (order.status !== 'shipped') throw new Error("El pedido no está en estado 'Enviado'");
+
+        // 2. Update status
+        const { error: updateError } = await supabase
+            .from('supply_orders')
+            .update({ status: 'received', updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+
+        if (updateError) throw updateError;
+
+        // 3. Update Inventory for each item
+        for (const item of order.supply_order_items) {
+            // Logic: Insert or Update inventory for this branch
+            const { data: currentInv } = await supabase
+                .from('inventory')
+                .select('*')
+                .eq('branch_id', order.branch_id)
+                .eq('product_id', item.product_id)
+                .single();
+
+            if (currentInv) {
+                await supabase
+                    .from('inventory')
+                    .update({ stock: currentInv.stock + item.quantity, updated_at: new Date().toISOString() })
+                    .eq('id', currentInv.id);
+            } else {
+                await supabase
+                    .from('inventory')
+                    .insert({
+                        branch_id: order.branch_id,
+                        product_id: item.product_id,
+                        stock: item.quantity
+                    });
+            }
+        }
     },
 
     // --- PRICE REQUESTS (Punto 4) ---
@@ -652,7 +731,16 @@ export const InventoryService = {
 
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            description: s.description,
+            category: s.category,
+            amount: s.amount,
+            branchId: s.branch_id,
+            branches: s.branches, // Keeping this for the view which accesses s.branches?.name
+            createdAt: s.created_at,
+            created_at: s.created_at // Keeping snake_case just in case other views use it
+        }));
     },
 
     // --- PACKAGING / LITREADOS (Punto 8) ---

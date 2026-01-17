@@ -106,15 +106,33 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                 quantity: c.quantity,
                 unitPrice: c.product.price
             }));
-            // Assume the warehouse branch ID or similar. 
-            // For now, we'll use 'MAIN' or similar if needed, or if the user is linked to a branch.
-            await InventoryService.createSupplyOrder('BR-MAIN', user.id, items);
+            if (!user.branchId) {
+                alert("Error: No tienes una sucursal asignada.");
+                setLoading(false);
+                return;
+            }
+            await InventoryService.createSupplyOrder(user.branchId, user.id, items);
             setIsSupplyModalOpen(false);
             loadInitialData();
             alert("Pedido a administración creado correctamente.");
         } catch (e) {
             console.error(e);
             alert("Error al crear pedido");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmArrival = async (orderId: string) => {
+        if (!confirm("¿Confirmas que has recibido todos los productos de este pedido? Esto actualizará tu inventario.")) return;
+        try {
+            setLoading(true);
+            await InventoryService.confirmSupplyOrderArrival(orderId);
+            alert("Pedido recibido y stock actualizado correctamente.");
+            loadInitialData();
+        } catch (e) {
+            console.error(e);
+            alert("Error al confirmar recepción.");
         } finally {
             setLoading(false);
         }
@@ -199,7 +217,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                 <select
                                     value={filterBranch}
                                     onChange={(e) => setFilterBranch(e.target.value)}
-                                    className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary/20 outline-none"
+                                    className="px-4 py-2 pr-8 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary/20 outline-none"
                                 >
                                     <option value="ALL">Todas las Sucursales</option>
                                     {branches.map(b => (
@@ -291,13 +309,28 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-5 text-xs font-bold text-slate-500">
-                                                    {order.estimatedArrival ? new Date(order.estimatedArrival).toLocaleDateString() : 'Pendiente'}
+                                                    {order.estimatedArrival && !isNaN(new Date(order.estimatedArrival).getTime())
+                                                        ? new Date(order.estimatedArrival).toLocaleDateString()
+                                                        : 'Pendiente'}
                                                 </td>
                                                 <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
                                                     ${order.totalAmount.toLocaleString()}
                                                 </td>
-                                                <td className="px-8 py-5 text-right text-[10px] font-bold text-slate-400 uppercase">
-                                                    {new Date(order.createdAt).toLocaleDateString()}
+                                                <td className="px-8 py-5 text-right">
+                                                    {order.status === 'shipped' ? (
+                                                        <button
+                                                            onClick={() => handleConfirmArrival(order.id)}
+                                                            className="px-4 py-2 bg-green-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all animate-pulse"
+                                                        >
+                                                            Confirmar Recepción
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                                            {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
+                                                                ? new Date(order.createdAt).toLocaleDateString()
+                                                                : 'Fecha no disp.'}
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

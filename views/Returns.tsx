@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import { User, Product, Return, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
+import AuthorizationModal from '../components/AuthorizationModal';
 
 interface ReturnsProps {
     user: User;
@@ -19,6 +20,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const [reason, setReason] = useState('uso_tienda');
 
     const isAdmin = user.role === UserRole.ADMIN;
+    const isSub = user.role === UserRole.WAREHOUSE_SUB;
+    const [showAuth, setShowAuth] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -69,9 +72,16 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
                     <h1 className="text-xl font-black">Devoluciones a Bodega</h1>
                     {!isAdmin && (
-                        <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Nueva Devolución</button>
+                        <button onClick={() => isSub ? setShowAuth(true) : setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Nueva Devolución</button>
                     )}
                 </header>
+
+                <AuthorizationModal
+                    isOpen={showAuth}
+                    onClose={() => setShowAuth(false)}
+                    onAuthorized={() => setIsModalOpen(true)}
+                    description="El subencargado requiere autorización para generar devoluciones."
+                />
 
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">

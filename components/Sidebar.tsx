@@ -12,7 +12,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
   const isAdmin = user.role === UserRole.ADMIN;
-  const isWarehouse = user.role === UserRole.WAREHOUSE;
+  const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
   const isFinance = user.role === UserRole.FINANCE;
 
   const navItems = [

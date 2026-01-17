@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Client } from '../types';
+import { User, Client, UserRole } from '../types';
 import { ClientService } from '../services/clientService';
+import AuthorizationModal from '../components/AuthorizationModal';
 
 interface ClientsProps {
   user: User;
@@ -15,6 +16,10 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+
+  const isSub = user.role === UserRole.WAREHOUSE_SUB;
+  const [showAuth, setShowAuth] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const [newClient, setNewClient] = useState({
     name: '',
@@ -118,13 +123,28 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
             <span>Inicio / Directorio / Clientes</span>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              const action = () => setIsModalOpen(true);
+              if (isSub) {
+                setPendingAction(() => action);
+                setShowAuth(true);
+              } else {
+                action();
+              }
+            }}
             className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2"
           >
             <span className="material-symbols-outlined">person_add</span>
             <span>Nuevo Cliente</span>
           </button>
         </header>
+
+        <AuthorizationModal
+          isOpen={showAuth}
+          onClose={() => { setShowAuth(false); setPendingAction(null); }}
+          onAuthorized={() => { if (pendingAction) pendingAction(); }}
+          description="El subencargado requiere autorización para gestionar clientes."
+        />
 
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-7xl mx-auto flex flex-col gap-6">
@@ -199,10 +219,26 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                          <button onClick={() => {
+                            const action = () => openEdit(c);
+                            if (isSub) {
+                              setPendingAction(() => action);
+                              setShowAuth(true);
+                            } else {
+                              action();
+                            }
+                          }} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
-                          <button onClick={() => handleDeleteClient(c.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                          <button onClick={() => {
+                            const action = () => handleDeleteClient(c.id);
+                            if (isSub) {
+                              setPendingAction(() => action);
+                              setShowAuth(true);
+                            } else {
+                              action();
+                            }
+                          }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                             <span className="material-symbols-outlined text-lg">delete</span>
                           </button>
                         </div>

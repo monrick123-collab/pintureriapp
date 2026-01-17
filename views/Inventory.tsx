@@ -6,6 +6,7 @@ import { User, Product, Branch, RestockRequest, UserRole, InternalConsumption } 
 import { MOCK_BRANCHES } from '../constants';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
+import AuthorizationModal from '../components/AuthorizationModal';
 
 interface InventoryProps {
   user: User;
@@ -23,7 +24,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [consumptionHistory, setConsumptionHistory] = useState<InternalConsumption[]>([]);
   const [loading, setLoading] = useState(false);
   const isAdmin = user.role === UserRole.ADMIN;
-  const isWarehouse = user.role === UserRole.WAREHOUSE;
+  const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+  const isSub = user.role === UserRole.WAREHOUSE_SUB;
+
+  const [showAuth, setShowAuth] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const isFinance = user.role === UserRole.FINANCE;
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -230,7 +235,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="flex flex-col">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
               <select
-                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none"
+                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8"
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
               >
@@ -261,7 +266,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 <button onClick={() => setViewMode('consumption')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'consumption' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Consumo Local</button>
               </div>
               {viewMode === 'requests' && (
-                <select className="text-xs font-bold bg-white dark:bg-slate-800 border-none rounded-lg px-3 py-1.5 shadow-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <select className="text-xs font-bold bg-white dark:bg-slate-800 border-none rounded-lg px-3 py-1.5 pr-8 shadow-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                   <option value="all">Filtro Estado</option>
                   <option value="pending_admin">Pendientes</option>
                   <option value="shipped">En Camino</option>
@@ -278,7 +283,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                     <input className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar por nombre o SKU..." value={search} onChange={e => setSearch(e.target.value)} />
                   </div>
                   <select
-                    className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl border-none shadow-sm text-sm font-bold text-slate-600"
+                    className="bg-white dark:bg-slate-800 px-4 py-3 pr-10 rounded-2xl border-none shadow-sm text-sm font-bold text-slate-600"
                     value={brandFilter}
                     onChange={e => setBrandFilter(e.target.value)}
                   >
@@ -295,7 +300,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                         <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
                           <th className="px-6 py-5">Marca</th>
-                          <th className="px-6 py-5">Precio</th>
+                          {!isWarehouse && <th className="px-6 py-5">Precio</th>}
                           <th className="px-6 py-5 text-center">Stock</th>
                           <th className="px-8 py-5 text-right">Acciones</th>
                         </tr>
@@ -316,12 +321,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   {p.brand || 'Genérico'}
                                 </span>
                               </td>
-                              <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
+                              {(!isWarehouse) && (
+                                <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
+                              )}
                               <td className="px-6 py-5 text-center"><span className={`text-lg font-black ${stock < 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span></td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
                                   <button
-                                    onClick={() => { setSelectedProduct(p); setIsConsumptionModalOpen(true) }}
+                                    onClick={() => {
+                                      const action = () => { setSelectedProduct(p); setIsConsumptionModalOpen(true) };
+                                      if (isSub) {
+                                        setPendingAction(() => action);
+                                        setShowAuth(true);
+                                      } else {
+                                        action();
+                                      }
+                                    }}
                                     className="px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-lg text-[10px] font-black uppercase hover:bg-amber-500 hover:text-white transition-all"
                                     title="Registrar uso local"
                                   >
@@ -426,6 +441,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             )}
           </div>
         </div>
+
+        <AuthorizationModal
+          isOpen={showAuth}
+          onClose={() => { setShowAuth(false); setPendingAction(null); }}
+          onAuthorized={() => { if (pendingAction) pendingAction(); }}
+          description="El subencargado requiere autorización para registrar uso local."
+        />
 
         {/* MODALS */}
         {(isAddModalOpen || isEditModalOpen) && (

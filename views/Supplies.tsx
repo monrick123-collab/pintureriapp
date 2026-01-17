@@ -87,7 +87,13 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                         </td>
                                         <td className="px-6 py-5">{s.branches?.name}</td>
                                         <td className="px-6 py-5 text-right font-black text-slate-400">${s.amount.toLocaleString()}</td>
-                                        <td className="px-8 py-5 text-right text-xs text-slate-500">{new Date(s.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                            {(s.createdAt && !isNaN(new Date(s.createdAt).getTime()))
+                                                ? new Date(s.createdAt).toLocaleDateString()
+                                                : (s.created_at && !isNaN(new Date(s.created_at).getTime())
+                                                    ? new Date(s.created_at).toLocaleDateString()
+                                                    : '---')}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

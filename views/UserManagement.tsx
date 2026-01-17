@@ -155,7 +155,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                       <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                         <option value="ADMIN">Administrador</option>
                         <option value="SELLER">Vendedor</option>
-                        <option value="WAREHOUSE">Bodeguero</option>
+                        <option value="WAREHOUSE">Encargado de Bodega</option>
+                        <option value="WAREHOUSE_SUB">Subencargado de Bodega</option>
                         <option value="FINANCE">Contador</option>
                       </select>
                     </div>

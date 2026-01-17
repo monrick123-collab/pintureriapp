@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { InventoryService } from '../services/inventoryService';
 import { DiscountService } from '../services/discountService';
-import { RestockRequest, DiscountRequest, User } from '../types';
+import { RestockRequest, DiscountRequest, User, SupplyOrder } from '../types';
 
 interface DashboardProps {
   user: User;
@@ -11,9 +11,19 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+  const msgStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-amber-100 text-amber-700';
+      case 'processing': return 'bg-blue-100 text-blue-700';
+      case 'shipped': return 'bg-purple-100 text-purple-700';
+      default: return 'bg-slate-100 text-slate-500';
+    }
+  };
   const [requests, setRequests] = useState<RestockRequest[]>([]);
   const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([]);
+  const [supplyOrders, setSupplyOrders] = useState<SupplyOrder[]>([]);
   const [sessionSalesTotal, setSessionSalesTotal] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState<SupplyOrder | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -21,12 +31,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadDashboardData = async () => {
     try {
-      const [pendingRestock, pendingDiscounts] = await Promise.all([
+      const [pendingRestock, pendingDiscounts, pendingSupply] = await Promise.all([
         InventoryService.getRestockRequests(undefined, 'pending_admin'),
-        DiscountService.getPendingRequests()
+        DiscountService.getPendingRequests(),
+        InventoryService.getSupplyOrders()
       ]);
       setRequests(pendingRestock);
       setDiscountRequests(pendingDiscounts);
+      setSupplyOrders(pendingSupply.filter((s: any) => s.status !== 'received' && s.status !== 'cancelled'));
 
       const history = JSON.parse(localStorage.getItem('pintamax_sales_history') || '[]');
       setSessionSalesTotal(history.reduce((acc: number, s: any) => acc + s.total, 0));
@@ -72,6 +84,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     } catch (e) {
       console.error(e);
       alert("Error al rechazar descuento.");
+    }
+  };
+
+  const handleUpdateSupply = async (id: string, status: string) => {
+    try {
+      await InventoryService.updateSupplyOrderStatus(id, status, user.id);
+      await loadDashboardData();
+    } catch (e) {
+      console.error(e);
+      alert("Error al actualizar estado del pedido.");
     }
   };
 
@@ -216,6 +238,60 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
           )}
 
+          {supplyOrders.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-blue-600">
+              <div className="flex items-center justify-between mb-8 md:mb-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl text-blue-600">
+                    <span className="material-symbols-outlined text-2xl md:text-3xl">local_shipping</span>
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 dark:text-white">Pedidos de Suministros</h3>
+                    <p className="text-xs md:text-sm text-slate-500 font-medium">Solicitudes de Bodega Central</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {supplyOrders.map(order => (
+                  <div key={order.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[32px] border-2 border-transparent hover:border-blue-600 transition-all flex flex-col group">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{order.branchName}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Folio: S-{order.folio}</span>
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${msgStatusColor(order.status)}`}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <div className="mb-4">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Estimado</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-auto">
+                      <button onClick={() => setSelectedOrder(order)} className="col-span-2 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all uppercase tracking-widest border border-slate-200 dark:border-slate-700">
+                        Ver Detalles ({order.items?.length || 0})
+                      </button>
+                      {order.status === 'pending' && (
+                        <button onClick={() => handleUpdateSupply(order.id, 'processing')} className="col-span-2 py-3 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest">
+                          Procesar
+                        </button>
+                      )}
+                      {order.status === 'processing' && (
+                        <button onClick={() => handleUpdateSupply(order.id, 'shipped')} className="col-span-2 py-3 bg-purple-600 text-white text-[10px] font-black rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all uppercase tracking-widest">
+                          Enviar
+                        </button>
+                      )}
+                      {order.status === 'shipped' && (
+                        <div className="col-span-2 text-center py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          En tránsito
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Data Maintenance Channel */}
           <div className="bg-slate-100 dark:bg-slate-800/50 p-8 rounded-[32px] border-2 border-dashed border-slate-300 dark:border-slate-700">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -251,6 +327,56 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
           </div>
         </div>
+
+        {selectedOrder && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="p-8 md:p-10 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Detalle del Pedido</h3>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Folio S-{selectedOrder.folio} • {selectedOrder.branchName}</p>
+                </div>
+                <button onClick={() => setSelectedOrder(null)} className="p-2 bg-white dark:bg-slate-700 rounded-full shadow-sm hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-slate-400">close</span>
+                </button>
+              </div>
+              <div className="p-0 overflow-y-auto custom-scrollbar flex-1">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10 border-b dark:border-slate-700">
+                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <th className="px-8 py-4">Producto</th>
+                      <th className="px-6 py-4 text-center">Cant.</th>
+                      <th className="px-6 py-4 text-right">Unitario</th>
+                      <th className="px-8 py-4 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-slate-700">
+                    {selectedOrder.items?.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                        <td className="px-8 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="size-10 bg-white border rounded-lg p-1 flex-shrink-0"><img src={item.productImage} className="w-full h-full object-contain" /></div>
+                            <div>
+                              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.productName}</p>
+                              <p className="text-[10px] font-mono text-slate-400">{item.productId.slice(0, 8)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center font-black text-lg">{item.quantity}</td>
+                        <td className="px-6 py-4 text-right text-xs font-bold text-slate-500">${item.unitPrice.toLocaleString()}</td>
+                        <td className="px-8 py-4 text-right font-black text-primary">${item.totalPrice.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Total General</span>
+                <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">${selectedOrder.totalAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

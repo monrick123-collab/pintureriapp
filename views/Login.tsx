@@ -33,6 +33,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // and I will update the import in the next tool call to be safe.
       // OR better: I can construct the user here like the Admin case.
       onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE, name: 'Encargado Bodega', branchId: 'BR-MAIN', id: 'WH-001' });
+    } else if (email.includes('subencargado')) {
+      // Mock login for sub-manager test
+      onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE_SUB, name: 'Subencargado Prueba', branchId: 'BR-MAIN', id: 'SUB-001' });
     } else if (email.includes('contador')) {
       onLogin({ ...MOCK_USER, role: UserRole.FINANCE, name: 'Contador de Pruebas', branchId: 'BR-MAIN', id: 'ACC-001' });
     } else {

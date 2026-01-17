@@ -95,7 +95,7 @@ const AiAssistant: React.FC = () => {
             {/* Floating Action Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`fixed bottom-6 right-6 z-[60] p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${isOpen ? 'bg-slate-800 rotate-90' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse-slow'
+                className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[9999] p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${isOpen ? 'bg-slate-800 rotate-90' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse-slow'
                     }`}
             >
                 {isOpen ? (
@@ -107,7 +107,7 @@ const AiAssistant: React.FC = () => {
 
             {/* Chat Window */}
             <div
-                className={`fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[60] overflow-hidden transition-all duration-300 origin-bottom-right flex flex-col ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'
+                className={`fixed bottom-24 right-6 sm:right-8 w-96 max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[9999] overflow-hidden transition-all duration-300 origin-bottom-right flex flex-col ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'
                     }`}
                 style={{ height: '600px', maxHeight: '70vh' }}
             >

@@ -85,41 +85,43 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
 
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
-                                <tr>
-                                    <th className="px-8 py-5">Producto</th>
-                                    <th className="px-6 py-5">Cantidad</th>
-                                    <th className="px-6 py-5">Sucursal</th>
-                                    <th className="px-6 py-5">Motivo</th>
-                                    <th className="px-6 py-5">Estado</th>
-                                    <th className="px-8 py-5 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y dark:divide-slate-700">
-                                {returns.map((r: any) => (
-                                    <tr key={r.id}>
-                                        <td className="px-8 py-5 font-bold">{r.products?.name}</td>
-                                        <td className="px-6 py-5 font-black">{r.quantity}</td>
-                                        <td className="px-6 py-5">{r.branches?.name}</td>
-                                        <td className="px-6 py-5 capitalize">{r.reason.replace('_', ' ')}</td>
-                                        <td className="px-6 py-5">
-                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                {translateStatus(r.status)}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            {isAdmin && r.status === 'pending_authorization' && (
-                                                <div className="flex justify-end gap-2">
-                                                    <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
-                                                    <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
-                                                </div>
-                                            )}
-                                        </td>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
+                                    <tr>
+                                        <th className="px-8 py-5">Producto</th>
+                                        <th className="px-6 py-5">Cantidad</th>
+                                        <th className="px-6 py-5">Sucursal</th>
+                                        <th className="px-6 py-5">Motivo</th>
+                                        <th className="px-6 py-5">Estado</th>
+                                        <th className="px-8 py-5 text-right">Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y dark:divide-slate-700">
+                                    {returns.map((r: any) => (
+                                        <tr key={r.id}>
+                                            <td className="px-8 py-5 font-bold">{r.products?.name}</td>
+                                            <td className="px-6 py-5 font-black">{r.quantity}</td>
+                                            <td className="px-6 py-5">{r.branches?.name}</td>
+                                            <td className="px-6 py-5 capitalize">{r.reason.replace('_', ' ')}</td>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    {translateStatus(r.status)}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                {isAdmin && r.status === 'pending_authorization' && (
+                                                    <div className="flex justify-end gap-2">
+                                                        <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
+                                                        <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

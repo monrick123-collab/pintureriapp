@@ -94,41 +94,43 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
-                                <tr>
-                                    <th className="px-8 py-5">Producto Granel</th>
-                                    <th className="px-6 py-5">Sucursal Responsable</th>
-                                    <th className="px-6 py-5">Envase Destino</th>
-                                    <th className="px-6 py-5 text-center">Cant. Tambos</th>
-                                    <th className="px-6 py-5">Estado</th>
-                                    <th className="px-8 py-5 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y dark:divide-slate-700">
-                                {requests.map((r: any) => (
-                                    <tr key={r.id}>
-                                        <td className="px-8 py-5 font-bold">{r.products?.name}</td>
-                                        <td className="px-6 py-5">{r.branches?.name}</td>
-                                        <td className="px-6 py-5 font-black uppercase text-xs">{r.target_package_type}</td>
-                                        <td className="px-6 py-5 text-center font-black">{r.quantity_drum}</td>
-                                        <td className="px-6 py-5">
-                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                {translateStatus(r.status)}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            {isWarehouse && r.status === 'processing' && (
-                                                <button onClick={() => handleUpdateStatus(r.id, 'completed')} className="text-xs font-black text-primary uppercase hover:underline">Finalizar</button>
-                                            )}
-                                            {user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
-                                                <button onClick={() => handleUpdateStatus(r.id, 'processing')} className="text-xs font-black text-blue-500 uppercase hover:underline">Iniciar Envasado</button>
-                                            )}
-                                        </td>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
+                                    <tr>
+                                        <th className="px-8 py-5">Producto Granel</th>
+                                        <th className="px-6 py-5">Sucursal Responsable</th>
+                                        <th className="px-6 py-5">Envase Destino</th>
+                                        <th className="px-6 py-5 text-center">Cant. Tambos</th>
+                                        <th className="px-6 py-5">Estado</th>
+                                        <th className="px-8 py-5 text-right">Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y dark:divide-slate-700">
+                                    {requests.map((r: any) => (
+                                        <tr key={r.id}>
+                                            <td className="px-8 py-5 font-bold">{r.products?.name}</td>
+                                            <td className="px-6 py-5">{r.branches?.name}</td>
+                                            <td className="px-6 py-5 font-black uppercase text-xs">{r.target_package_type}</td>
+                                            <td className="px-6 py-5 text-center font-black">{r.quantity_drum}</td>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    {translateStatus(r.status)}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                {isWarehouse && r.status === 'processing' && (
+                                                    <button onClick={() => handleUpdateStatus(r.id, 'completed')} className="text-xs font-black text-primary uppercase hover:underline">Finalizar</button>
+                                                )}
+                                                {user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
+                                                    <button onClick={() => handleUpdateStatus(r.id, 'processing')} className="text-xs font-black text-blue-500 uppercase hover:underline">Iniciar Envasado</button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

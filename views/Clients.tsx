@@ -166,87 +166,89 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase text-slate-400 font-black tracking-widest">
-                    <th className="px-6 py-4">Información del Cliente</th>
-                    <th className="px-6 py-4">RFC / Contacto</th>
-                    <th className="px-6 py-4">Ubicación</th>
-                    <th className="px-6 py-4">Crédito</th>
-                    <th className="px-6 py-4">Tipo</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {filteredClients.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`size-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm ${c.type === 'Empresa' ? 'bg-indigo-500' : 'bg-orange-500'}`}>
-                            {c.name.charAt(0)}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">{c.name}</span>
-                            <span className="text-[10px] text-slate-500 font-mono tracking-tighter">{c.id}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-600 dark:text-slate-300 font-mono uppercase">{c.taxId}</span>
-                          <span className="text-[10px] text-slate-400">{c.email} • {c.phone}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.municipality || 'N/A'}</span>
-                          <span className="text-[10px] text-slate-400">{c.locality || '-'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className={`text-xs font-black ${c.isActiveCredit ? 'text-green-600' : 'text-slate-400'}`}>
-                            {c.isActiveCredit ? `$${(c.creditLimit || 0).toLocaleString()}` : 'Sin Crédito'}
-                          </span>
-                          {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días</span>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${c.type === 'Empresa' ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'
-                          }`}>
-                          {c.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => {
-                            const action = () => openEdit(c);
-                            if (isSub) {
-                              setPendingAction(() => action);
-                              setShowAuth(true);
-                            } else {
-                              action();
-                            }
-                          }} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-lg">edit</span>
-                          </button>
-                          <button onClick={() => {
-                            const action = () => handleDeleteClient(c.id);
-                            if (isSub) {
-                              setPendingAction(() => action);
-                              setShowAuth(true);
-                            } else {
-                              action();
-                            }
-                          }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-lg">delete</span>
-                          </button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase text-slate-400 font-black tracking-widest">
+                      <th className="px-6 py-4">Información del Cliente</th>
+                      <th className="px-6 py-4">RFC / Contacto</th>
+                      <th className="px-6 py-4">Ubicación</th>
+                      <th className="px-6 py-4">Crédito</th>
+                      <th className="px-6 py-4">Tipo</th>
+                      <th className="px-6 py-4 text-right">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {filteredClients.map(c => (
+                      <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm ${c.type === 'Empresa' ? 'bg-indigo-500' : 'bg-orange-500'}`}>
+                              {c.name.charAt(0)}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white">{c.name}</span>
+                              <span className="text-[10px] text-slate-500 font-mono tracking-tighter">{c.id}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-600 dark:text-slate-300 font-mono uppercase">{c.taxId}</span>
+                            <span className="text-[10px] text-slate-400">{c.email} • {c.phone}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.municipality || 'N/A'}</span>
+                            <span className="text-[10px] text-slate-400">{c.locality || '-'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className={`text-xs font-black ${c.isActiveCredit ? 'text-green-600' : 'text-slate-400'}`}>
+                              {c.isActiveCredit ? `$${(c.creditLimit || 0).toLocaleString()}` : 'Sin Crédito'}
+                            </span>
+                            {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${c.type === 'Empresa' ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                            {c.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => {
+                              const action = () => openEdit(c);
+                              if (isSub) {
+                                setPendingAction(() => action);
+                                setShowAuth(true);
+                              } else {
+                                action();
+                              }
+                            }} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                              <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onClick={() => {
+                              const action = () => handleDeleteClient(c.id);
+                              if (isSub) {
+                                setPendingAction(() => action);
+                                setShowAuth(true);
+                              } else {
+                                action();
+                              }
+                            }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {filteredClients.length === 0 && (
                 <div className="px-6 py-12 text-center flex flex-col items-center gap-2">
                   <span className="material-symbols-outlined text-5xl text-slate-200">person_search</span>

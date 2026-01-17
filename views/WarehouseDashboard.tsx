@@ -225,42 +225,44 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                     ))}
                                 </select>
                             </div>
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <th className="px-8 py-5">Folio</th>
-                                        <th className="px-6 py-5">Sucursal</th>
-                                        <th className="px-6 py-5">Fecha</th>
-                                        <th className="px-6 py-5 text-right">Total</th>
-                                        <th className="px-8 py-5 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {sheets.filter(s => filterBranch === 'ALL' || s.branchId === filterBranch).map(sheet => (
-                                        <tr key={sheet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                            <td className="px-8 py-5 font-black text-primary">#{sheet.folio}</td>
-                                            <td className="px-6 py-5">
-                                                <p className="font-bold text-slate-900 dark:text-white">{sheet.branchName}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{sheet.branchId}</p>
-                                            </td>
-                                            <td className="px-6 py-5 text-xs font-bold text-slate-500">
-                                                {new Date(sheet.createdAt).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
-                                                ${sheet.totalAmount.toLocaleString()}
-                                            </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <Link
-                                                    to={`/shipping-note/${sheet.id}`}
-                                                    className="p-2 text-slate-400 hover:text-primary transition-colors inline-block"
-                                                >
-                                                    <span className="material-symbols-outlined">print</span>
-                                                </Link>
-                                            </td>
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                                        <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <th className="px-8 py-5">Folio</th>
+                                            <th className="px-6 py-5">Sucursal</th>
+                                            <th className="px-6 py-5">Fecha</th>
+                                            <th className="px-6 py-5 text-right">Total</th>
+                                            <th className="px-8 py-5 text-right">Acciones</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {sheets.filter(s => filterBranch === 'ALL' || s.branchId === filterBranch).map(sheet => (
+                                            <tr key={sheet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                                <td className="px-8 py-5 font-black text-primary">#{sheet.folio}</td>
+                                                <td className="px-6 py-5">
+                                                    <p className="font-bold text-slate-900 dark:text-white">{sheet.branchName}</p>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{sheet.branchId}</p>
+                                                </td>
+                                                <td className="px-6 py-5 text-xs font-bold text-slate-500">
+                                                    {new Date(sheet.createdAt).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
+                                                    ${sheet.totalAmount.toLocaleString()}
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <Link
+                                                        to={`/shipping-note/${sheet.id}`}
+                                                        className="p-2 text-slate-400 hover:text-primary transition-colors inline-block"
+                                                    >
+                                                        <span className="material-symbols-outlined">print</span>
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                             {sheets.length === 0 && (
                                 <div className="p-20 text-center text-slate-400 font-bold">No hay notas de resurtido registradas.</div>
                             )}
@@ -278,64 +280,66 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                             </div>
 
                             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                                        <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <th className="px-8 py-5">Folio</th>
-                                            <th className="px-6 py-5">Estado</th>
-                                            <th className="px-6 py-5">Atiende</th>
-                                            <th className="px-6 py-5">Arribo Est.</th>
-                                            <th className="px-6 py-5 text-right">Total</th>
-                                            <th className="px-8 py-5 text-right">Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {supplyOrders.map(order => (
-                                            <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                                <td className="px-8 py-5 font-black text-blue-600">S-{order.folio}</td>
-                                                <td className="px-6 py-5">
-                                                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                        {translateStatus(order.status)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    {order.assignedAdminName ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="size-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-black">{order.assignedAdminName[0]}</div>
-                                                            <span className="text-xs font-bold text-slate-600">{order.assignedAdminName}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400 italic">No asignado</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-5 text-xs font-bold text-slate-500">
-                                                    {order.estimatedArrival && !isNaN(new Date(order.estimatedArrival).getTime())
-                                                        ? new Date(order.estimatedArrival).toLocaleDateString()
-                                                        : 'Pendiente'}
-                                                </td>
-                                                <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
-                                                    ${order.totalAmount.toLocaleString()}
-                                                </td>
-                                                <td className="px-8 py-5 text-right">
-                                                    {order.status === 'shipped' ? (
-                                                        <button
-                                                            onClick={() => handleConfirmArrival(order.id)}
-                                                            className="px-4 py-2 bg-green-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all animate-pulse"
-                                                        >
-                                                            Confirmar Recepción
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">
-                                                            {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
-                                                                ? new Date(order.createdAt).toLocaleDateString()
-                                                                : 'Fecha no disp.'}
-                                                        </span>
-                                                    )}
-                                                </td>
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                <th className="px-8 py-5">Folio</th>
+                                                <th className="px-6 py-5">Estado</th>
+                                                <th className="px-6 py-5">Atiende</th>
+                                                <th className="px-6 py-5">Arribo Est.</th>
+                                                <th className="px-6 py-5 text-right">Total</th>
+                                                <th className="px-8 py-5 text-right">Fecha</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {supplyOrders.map(order => (
+                                                <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                                    <td className="px-8 py-5 font-black text-blue-600">S-{order.folio}</td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            {translateStatus(order.status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        {order.assignedAdminName ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="size-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-black">{order.assignedAdminName[0]}</div>
+                                                                <span className="text-xs font-bold text-slate-600">{order.assignedAdminName}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-400 italic">No asignado</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">
+                                                        {order.estimatedArrival && !isNaN(new Date(order.estimatedArrival).getTime())
+                                                            ? new Date(order.estimatedArrival).toLocaleDateString()
+                                                            : 'Pendiente'}
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
+                                                        ${order.totalAmount.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        {order.status === 'shipped' ? (
+                                                            <button
+                                                                onClick={() => handleConfirmArrival(order.id)}
+                                                                className="px-4 py-2 bg-green-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all animate-pulse"
+                                                            >
+                                                                Confirmar Recepción
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                                                {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
+                                                                    ? new Date(order.createdAt).toLocaleDateString()
+                                                                    : 'Fecha no disp.'}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                                 {supplyOrders.length === 0 && (
                                     <div className="p-20 text-center text-slate-400 font-bold">No hay pedidos a administración registrados.</div>
                                 )}

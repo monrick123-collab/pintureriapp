@@ -90,42 +90,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500 font-semibold tracking-wide">
-                    <th className="px-6 py-4">Usuario</th>
-                    <th className="px-6 py-4">Rol</th>
-                    <th className="px-6 py-4">Sucursal</th>
-                    <th className="px-6 py-4">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                            {u.full_name?.charAt(0) || '?'}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold">{u.full_name}</span>
-                            <span className="text-xs text-slate-500">{u.email}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.branch_id || '---'}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-green-600">Activo</span>
-                      </td>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500 font-semibold tracking-wide">
+                      <th className="px-6 py-4">Usuario</th>
+                      <th className="px-6 py-4">Rol</th>
+                      <th className="px-6 py-4">Sucursal</th>
+                      <th className="px-6 py-4">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {users.map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                              {u.full_name?.charAt(0) || '?'}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold">{u.full_name}</span>
+                              <span className="text-xs text-slate-500">{u.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.branch_id || '---'}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-green-600">Activo</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

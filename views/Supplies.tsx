@@ -66,38 +66,40 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
-                                <tr>
-                                    <th className="px-8 py-5">Descripción</th>
-                                    <th className="px-6 py-5">Categoría</th>
-                                    <th className="px-6 py-5">Sucursal Destino</th>
-                                    <th className="px-6 py-5 text-right">Valor (Solo Control)</th>
-                                    <th className="px-8 py-5 text-right">Fecha</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y dark:divide-slate-700">
-                                {supplies.map((s: any) => (
-                                    <tr key={s.id}>
-                                        <td className="px-8 py-5 font-bold">{s.description}</td>
-                                        <td className="px-6 py-5">
-                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${s.category === 'limpieza' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                                {s.category}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-5">{s.branches?.name}</td>
-                                        <td className="px-6 py-5 text-right font-black text-slate-400">${s.amount.toLocaleString()}</td>
-                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
-                                            {(s.createdAt && !isNaN(new Date(s.createdAt).getTime()))
-                                                ? new Date(s.createdAt).toLocaleDateString()
-                                                : (s.created_at && !isNaN(new Date(s.created_at).getTime())
-                                                    ? new Date(s.created_at).toLocaleDateString()
-                                                    : '---')}
-                                        </td>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
+                                    <tr>
+                                        <th className="px-8 py-5">Descripción</th>
+                                        <th className="px-6 py-5">Categoría</th>
+                                        <th className="px-6 py-5">Sucursal Destino</th>
+                                        <th className="px-6 py-5 text-right">Valor (Solo Control)</th>
+                                        <th className="px-8 py-5 text-right">Fecha</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y dark:divide-slate-700">
+                                    {supplies.map((s: any) => (
+                                        <tr key={s.id}>
+                                            <td className="px-8 py-5 font-bold">{s.description}</td>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${s.category === 'limpieza' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                                    {s.category}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">{s.branches?.name}</td>
+                                            <td className="px-6 py-5 text-right font-black text-slate-400">${s.amount.toLocaleString()}</td>
+                                            <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                                {(s.createdAt && !isNaN(new Date(s.createdAt).getTime()))
+                                                    ? new Date(s.createdAt).toLocaleDateString()
+                                                    : (s.created_at && !isNaN(new Date(s.created_at).getTime())
+                                                        ? new Date(s.created_at).toLocaleDateString()
+                                                        : '---')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

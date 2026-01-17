@@ -46,8 +46,8 @@ export const AccountingService = {
         const totalSales = salesData.reduce((acc, s) => acc + Number(s.total), 0);
         let totalCogs = 0; // Cost of Goods Sold
 
-        salesData.forEach((sale: any) => {
-            sale.sale_items.forEach((item: any) => {
+        (salesData || []).forEach((sale: any) => {
+            (sale.sale_items || []).forEach((item: any) => {
                 const cost = item.products?.cost_price || 0;
                 totalCogs += (item.quantity * cost);
             });

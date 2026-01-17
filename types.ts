@@ -63,6 +63,7 @@ export interface RestockSheet {
   totalAmount: number;
   createdAt: string;
   status: 'pending' | 'completed' | 'cancelled';
+  branchName?: string;
   items?: RestockRequest[]; // Joined items
 }
 
@@ -140,6 +141,11 @@ export interface Client {
   taxId: string;
   address: string;
   type: 'Individual' | 'Empresa';
+  municipality?: string;
+  locality?: string;
+  creditLimit?: number;
+  creditDays?: number;
+  isActiveCredit?: boolean;
 }
 
 export interface SaleItem {
@@ -155,7 +161,7 @@ export interface Sale {
   branchId: string;
   branchName?: string;
   clientId?: string;
-  clientName?: string; // Potential join
+  clientName?: string;
   subtotal: number;
   discountAmount: number;
   iva: number;
@@ -164,15 +170,81 @@ export interface Sale {
   paymentMethod: 'cash' | 'card' | 'transfer';
   createdAt: string;
   items: SaleItem[];
-
-  // New fields for Point 3
   isWholesale: boolean;
   paymentType: 'contado' | 'credito';
   departureAdminId?: string;
   departureAdminName?: string;
+  creditDays?: number;
 }
 
-// New interface for Price Requests (Point 4)
+export interface Quotation {
+  id: string;
+  folio: number;
+  clientId?: string;
+  clientName?: string;
+  items: SaleItem[];
+  subtotal: number;
+  discountAmount: number;
+  iva: number;
+  total: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  branchId: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface Return {
+  id: string;
+  branchId: string;
+  productId: string;
+  quantity: number;
+  reason: string;
+  status: 'pending_authorization' | 'approved' | 'rejected';
+  authorizedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InternalSupply {
+  id: string;
+  branchId: string;
+  description: string;
+  amount: number;
+  category: 'limpieza' | 'papeleria';
+  createdAt: string;
+}
+
+export interface PackagingRequest {
+  id: string;
+  bulkProductId: string;
+  targetPackageType: 'litro' | 'galon';
+  quantityDrum: number;
+  status: 'sent_to_branch' | 'processing' | 'completed' | 'cancelled';
+  branchId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientPayment {
+  id: string;
+  clientId: string;
+  amount: number;
+  paymentMethod: 'cash' | 'transfer';
+  receivedByAdminId?: string;
+  authorizedByAdminId?: string;
+  transferReference?: string;
+  paymentStatus: 'on_time' | 'late';
+  createdAt: string;
+}
+
+export interface ClientMarketingSpend {
+  id: string;
+  clientId: string;
+  description: string;
+  amount: number;
+  createdAt: string;
+}
+
 export interface PriceRequest {
   id: string;
   productId: string;

@@ -298,7 +298,17 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-2">
                         <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1) }} className="size-5 rounded border flex items-center justify-center text-xs">-</button>
-                        <span className="text-xs font-bold">{item.quantity}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-12 text-center text-xs font-bold bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
+                          value={item.quantity}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                          }}
+                        />
                         <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1) }} className="size-5 rounded border flex items-center justify-center text-xs">+</button>
                       </div>
                       <div className="flex flex-col items-end">

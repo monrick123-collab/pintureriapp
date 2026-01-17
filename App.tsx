@@ -10,6 +10,9 @@ import UserManagement from './views/UserManagement';
 import Clients from './views/Clients';
 import Branches from './views/Branches';
 import Quotations from './views/Quotations';
+import Returns from './views/Returns';
+import Supplies from './views/Supplies';
+import Packaging from './views/Packaging';
 import SalesHistory from './views/SalesHistory';
 import WarehouseDashboard from './views/WarehouseDashboard';
 import ShippingNote from './views/ShippingNote';
@@ -69,6 +72,9 @@ const App: React.FC = () => {
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/quotations" element={user ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/returns" element={user ? <Returns user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/supplies" element={user ? <Supplies user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/packaging" element={user ? <Packaging user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
 
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/wholesale-history" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE) ? <WholesaleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

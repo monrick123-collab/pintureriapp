@@ -1,4 +1,5 @@
-
+import React from 'react';
+import Sidebar from '../components/Sidebar';
 import { User, UserRole } from '../types';
 import { UserService } from '../services/userService';
 import { InventoryService } from '../services/inventoryService';
@@ -14,7 +15,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
   const [loading, setLoading] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    id: '', name: '', email: '', role: 'SELLER', branch_id: 'BR-MAIN'
+    id: '', name: '', email: '', role: 'SELLER', branchId: 'BR-MAIN'
   });
 
   React.useEffect(() => {
@@ -42,7 +43,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
     try {
       await UserService.createProfile(formData);
       setIsModalOpen(false);
-      setFormData({ id: '', name: '', email: '', role: 'SELLER', branch_id: 'BR-MAIN' });
+      setFormData({ id: '', name: '', email: '', role: 'SELLER', branchId: 'BR-MAIN' });
       loadData();
       alert("Usuario creado correctamente");
     } catch (e: any) {
@@ -132,45 +133,47 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
         {/* Modal Nuevo Usuario */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-8 transform animate-in zoom-in-95">
-              <h3 className="text-xl font-bold mb-6">Crear Nuevo Usuario</h3>
-              <form onSubmit={handleCreateUser} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-slate-400">ID de Usuario (Mock)</label>
-                  <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: WH-002" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-slate-400">Nombre Completo</label>
-                  <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-slate-400">Correo Electrónico</label>
-                  <input required type="email" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform animate-in zoom-in-95">
+              <div className="p-8 overflow-y-auto">
+                <h3 className="text-xl font-bold mb-6">Crear Nuevo Usuario</h3>
+                <form onSubmit={handleCreateUser} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-slate-400">Rol</label>
-                    <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
-                      <option value="ADMIN">Administrador</option>
-                      <option value="SELLER">Vendedor</option>
-                      <option value="WAREHOUSE">Bodeguero</option>
-                      <option value="FINANCE">Contador</option>
-                    </select>
+                    <label className="text-[10px] font-bold uppercase text-slate-400">ID de Usuario (Mock)</label>
+                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: WH-002" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-slate-400">Sucursal</label>
-                    <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.branch_id} onChange={e => setFormData({ ...formData, branch_id: e.target.value })}>
-                      {branches.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                    </select>
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Nombre Completo</label>
+                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                   </div>
-                </div>
-                <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
-                  <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg">Guardar</button>
-                </div>
-              </form>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Correo Electrónico</label>
+                    <input required type="email" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Rol</label>
+                      <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="SELLER">Vendedor</option>
+                        <option value="WAREHOUSE">Bodeguero</option>
+                        <option value="FINANCE">Contador</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Sucursal</label>
+                      <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.branchId} onChange={e => setFormData({ ...formData, branchId: e.target.value })}>
+                        {branches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
+                    <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg">Guardar</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

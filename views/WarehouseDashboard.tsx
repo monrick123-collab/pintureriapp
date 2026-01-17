@@ -25,6 +25,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
     // Form state for new restock
     const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterBranch, setFilterBranch] = useState<string>('ALL');
 
     const navigate = useNavigate();
 
@@ -194,6 +195,18 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                         </div>
                     ) : currentTab === 'sheets' ? (
                         <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-end">
+                                <select
+                                    value={filterBranch}
+                                    onChange={(e) => setFilterBranch(e.target.value)}
+                                    className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary/20 outline-none"
+                                >
+                                    <option value="ALL">Todas las Sucursales</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                                     <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -205,11 +218,11 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {sheets.map(sheet => (
+                                    {sheets.filter(s => filterBranch === 'ALL' || s.branchId === filterBranch).map(sheet => (
                                         <tr key={sheet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                                             <td className="px-8 py-5 font-black text-primary">#{sheet.folio}</td>
                                             <td className="px-6 py-5">
-                                                <p className="font-bold text-slate-900 dark:text-white">{(sheet as any).branchName}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white">{sheet.branchName}</p>
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{sheet.branchId}</p>
                                             </td>
                                             <td className="px-6 py-5 text-xs font-bold text-slate-500">
@@ -360,7 +373,16 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                             <button onClick={() => updateCartQty(item.product.id, item.quantity - 1)} className="text-slate-400 hover:text-red-500 transition-colors">
                                                 <span className="material-symbols-outlined text-sm">remove</span>
                                             </button>
-                                            <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    updateCartQty(item.product.id, Math.max(0, val));
+                                                }}
+                                            />
                                             <button onClick={() => updateCartQty(item.product.id, item.quantity + 1)} className="text-slate-400 hover:text-primary transition-colors">
                                                 <span className="material-symbols-outlined text-sm">add</span>
                                             </button>
@@ -462,7 +484,16 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                             <button onClick={() => updateCartQty(item.product.id, item.quantity - 1)} className="text-slate-400 hover:text-red-500 transition-colors">
                                                 <span className="material-symbols-outlined text-sm">remove</span>
                                             </button>
-                                            <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    updateCartQty(item.product.id, Math.max(0, val));
+                                                }}
+                                            />
                                             <button onClick={() => updateCartQty(item.product.id, item.quantity + 1)} className="text-slate-400 hover:text-blue-600 transition-colors">
                                                 <span className="material-symbols-outlined text-sm">add</span>
                                             </button>

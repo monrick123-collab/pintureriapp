@@ -17,7 +17,8 @@ export const SalesService = {
             iva: number,
             isWholesale?: boolean,
             paymentType?: 'contado' | 'credito',
-            departureAdminId?: string
+            departureAdminId?: string,
+            creditDays?: number
         }
     ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
@@ -50,6 +51,7 @@ export const SalesService = {
             if (extra?.isWholesale !== undefined) updates.is_wholesale = extra.isWholesale;
             if (extra?.paymentType) updates.payment_type = extra.paymentType;
             if (extra?.departureAdminId) updates.departure_admin_id = extra.departureAdminId;
+            if (extra?.creditDays !== undefined) updates.credit_days = extra.creditDays;
 
             if (Object.keys(updates).length > 0) {
                 await supabase
@@ -75,7 +77,7 @@ export const SalesService = {
 
         if (error) throw error;
 
-        return data.map((s: any) => ({
+        return (data || []).map((s: any) => ({
             id: s.id,
             branchId: s.branch_id,
             clientId: s.client_id,
@@ -90,7 +92,7 @@ export const SalesService = {
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
-            items: s.sale_items.map((i: any) => ({
+            items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
                 quantity: i.quantity,
@@ -121,7 +123,7 @@ export const SalesService = {
 
         if (error) throw error;
 
-        return data.map((s: any) => ({
+        return (data || []).map((s: any) => ({
             id: s.id,
             branchId: s.branch_id,
             branchName: s.branch?.name,
@@ -138,7 +140,7 @@ export const SalesService = {
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
             departureAdminName: s.departure_admin_id, // Fallback to ID
-            items: s.sale_items.map((i: any) => ({
+            items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
                 quantity: i.quantity,
@@ -156,7 +158,7 @@ export const SalesService = {
 
         if (error) throw error;
 
-        return data.map((d: any) => ({
+        return (data || []).map((d: { id: string, full_name: string | null }) => ({
             id: d.id,
             name: d.full_name || 'Sin nombre'
         }));
@@ -191,7 +193,7 @@ export const SalesService = {
             paymentType: data.payment_type,
             departureAdminId: data.departure_admin_id,
             departureAdminName: data.departure_admin_id,
-            items: data.sale_items.map((i: any) => ({
+            items: (data.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
                 quantity: i.quantity,

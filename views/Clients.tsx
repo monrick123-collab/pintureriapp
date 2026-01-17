@@ -22,7 +22,12 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
     phone: '',
     taxId: '',
     address: '',
-    type: 'Individual' as 'Individual' | 'Empresa'
+    type: 'Individual' as 'Individual' | 'Empresa',
+    municipality: '',
+    locality: '',
+    creditLimit: 0,
+    creditDays: 0,
+    isActiveCredit: false
   });
 
   useEffect(() => {
@@ -83,7 +88,12 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
       phone: c.phone,
       taxId: c.taxId,
       address: c.address,
-      type: c.type
+      type: c.type,
+      municipality: c.municipality || '',
+      locality: c.locality || '',
+      creditLimit: c.creditLimit || 0,
+      creditDays: c.creditDays || 0,
+      isActiveCredit: c.isActiveCredit || false
     });
     setIsModalOpen(true);
   };
@@ -92,7 +102,10 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
     setIsModalOpen(false);
     setIsEditMode(false);
     setSelectedClientId(null);
-    setNewClient({ name: '', email: '', phone: '', taxId: '', address: '', type: 'Individual' });
+    setNewClient({
+      name: '', email: '', phone: '', taxId: '', address: '', type: 'Individual',
+      municipality: '', locality: '', creditLimit: 0, creditDays: 0, isActiveCredit: false
+    });
   };
 
   return (
@@ -138,6 +151,8 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                   <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase text-slate-400 font-black tracking-widest">
                     <th className="px-6 py-4">Información del Cliente</th>
                     <th className="px-6 py-4">RFC / Contacto</th>
+                    <th className="px-6 py-4">Ubicación</th>
+                    <th className="px-6 py-4">Crédito</th>
                     <th className="px-6 py-4">Tipo</th>
                     <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
@@ -160,6 +175,20 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-slate-600 dark:text-slate-300 font-mono uppercase">{c.taxId}</span>
                           <span className="text-[10px] text-slate-400">{c.email} • {c.phone}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.municipality || 'N/A'}</span>
+                          <span className="text-[10px] text-slate-400">{c.locality || '-'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className={`text-xs font-black ${c.isActiveCredit ? 'text-green-600' : 'text-slate-400'}`}>
+                            {c.isActiveCredit ? `$${(c.creditLimit || 0).toLocaleString()}` : 'Sin Crédito'}
+                          </span>
+                          {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -195,14 +224,14 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
         {/* MODAL: ADD/EDIT CLIENT */}
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
+              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 shrink-0">
                 <h3 className="font-black text-xl text-slate-900 dark:text-white">{isEditMode ? 'Editar Perfil' : 'Registro de Cliente'}</h3>
                 <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-6">
+              <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-6 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre Completo</label>
@@ -229,8 +258,38 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RFC / Tax Identifier</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RFC / Identificación Fiscal</label>
                   <input required className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-bold uppercase" value={newClient.taxId} onChange={e => setNewClient({ ...newClient, taxId: e.target.value.toUpperCase() })} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Municipio</label>
+                    <input className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold" value={newClient.municipality} onChange={e => setNewClient({ ...newClient, municipality: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidad</label>
+                    <input className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold" value={newClient.locality} onChange={e => setNewClient({ ...newClient, locality: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase">¿Habilitar Crédito?</label>
+                    <input type="checkbox" className="size-5 rounded border-slate-300 text-primary focus:ring-primary" checked={newClient.isActiveCredit} onChange={e => setNewClient({ ...newClient, isActiveCredit: e.target.checked })} />
+                  </div>
+                  {newClient.isActiveCredit && (
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite ($)</label>
+                        <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditLimit} onChange={e => setNewClient({ ...newClient, creditLimit: parseFloat(e.target.value) || 0 })} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días Plazo</label>
+                        <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditDays} onChange={e => setNewClient({ ...newClient, creditDays: parseInt(e.target.value) || 0 })} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">

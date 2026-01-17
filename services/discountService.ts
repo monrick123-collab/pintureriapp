@@ -77,7 +77,7 @@ export const DiscountService = {
             .subscribe();
     },
 
-    mapDbRequest(r: any): DiscountRequest {
+    mapDbRequest(r: Record<string, any>): DiscountRequest {
         return {
             id: r.id,
             requesterId: r.requester_id,

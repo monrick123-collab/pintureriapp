@@ -7,7 +7,7 @@ export const ClientService = {
         const { data, error } = await supabase
             .from('clients')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('name', { ascending: true });
 
         if (error) throw error;
 
@@ -18,7 +18,12 @@ export const ClientService = {
             phone: c.phone || '',
             taxId: c.tax_id || '',
             address: c.address || '',
-            type: c.type as 'Individual' | 'Empresa'
+            type: c.type as 'Individual' | 'Empresa',
+            municipality: c.municipality,
+            locality: c.locality,
+            creditLimit: c.credit_limit,
+            creditDays: c.credit_days,
+            isActiveCredit: c.is_active_credit
         }));
     },
 
@@ -31,7 +36,12 @@ export const ClientService = {
                 phone: client.phone,
                 tax_id: client.taxId,
                 address: client.address,
-                type: client.type
+                type: client.type,
+                municipality: client.municipality,
+                locality: client.locality,
+                credit_limit: client.creditLimit,
+                credit_days: client.creditDays,
+                is_active_credit: client.isActiveCredit
             }])
             .select()
             .single();
@@ -45,7 +55,12 @@ export const ClientService = {
             phone: data.phone,
             taxId: data.tax_id,
             address: data.address,
-            type: data.type
+            type: data.type,
+            municipality: data.municipality,
+            locality: data.locality,
+            creditLimit: data.credit_limit,
+            creditDays: data.credit_days,
+            isActiveCredit: data.is_active_credit
         };
     },
 
@@ -57,6 +72,11 @@ export const ClientService = {
         if (client.taxId !== undefined) updates.tax_id = client.taxId;
         if (client.address !== undefined) updates.address = client.address;
         if (client.type) updates.type = client.type;
+        if (client.municipality !== undefined) updates.municipality = client.municipality;
+        if (client.locality !== undefined) updates.locality = client.locality;
+        if (client.creditLimit !== undefined) updates.credit_limit = client.creditLimit;
+        if (client.creditDays !== undefined) updates.credit_days = client.creditDays;
+        if (client.isActiveCredit !== undefined) updates.is_active_credit = client.isActiveCredit;
         updates.updated_at = new Date().toISOString();
 
         const { error } = await supabase
@@ -65,6 +85,74 @@ export const ClientService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async registerPayment(payment: {
+        clientId: string,
+        amount: number,
+        paymentMethod: string,
+        receivedByAdminId?: string,
+        authorizedByAdminId?: string,
+        transferReference?: string,
+        paymentStatus: string
+    }) {
+        const { data, error } = await supabase
+            .from('client_payments')
+            .insert([{
+                client_id: payment.clientId,
+                amount: payment.amount,
+                payment_method: payment.paymentMethod,
+                received_by_admin_id: payment.receivedByAdminId,
+                authorized_by_admin_id: payment.authorizedByAdminId,
+                transfer_reference: payment.transferReference,
+                payment_status: payment.paymentStatus
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getClientPayments(clientId: string) {
+        const { data, error } = await supabase
+            .from('client_payments')
+            .select('*')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    async addMarketingSpend(spend: {
+        clientId: string,
+        description: string,
+        amount: number
+    }) {
+        const { data, error } = await supabase
+            .from('client_marketing_spend')
+            .insert([{
+                client_id: spend.clientId,
+                description: spend.description,
+                amount: spend.amount
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getMarketingHistory(clientId: string) {
+        const { data, error } = await supabase
+            .from('client_marketing_spend')
+            .select('*')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
     },
 
     async deleteClient(id: string): Promise<void> {

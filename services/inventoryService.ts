@@ -3,16 +3,16 @@ import { supabase } from './supabase';
 import { Product, Branch, RestockRequest } from '../types';
 
 // Convertir respuesta de DB a Tipos de App
-const mapDbProduct = (item: any): Product => ({
+const mapDbProduct = (item: Record<string, any>): Product => ({
     id: item.product_id || item.id, // Maneja joined tables
-    sku: item.sku || item.products?.sku,
-    name: item.name || item.products?.name,
-    category: item.category || item.products?.category,
+    sku: item.sku || item.products?.sku || '',
+    name: item.name || item.products?.name || 'Producto sin nombre',
+    category: item.category || item.products?.category || 'Sin categoría',
     brand: item.brand || item.products?.brand, // New field
-    description: item.description || item.products?.description,
+    description: item.description || item.products?.description || '',
     price: parseFloat(item.price || item.products?.price || '0'),
-    image: item.image || item.products?.image,
-    status: item.status || item.products?.status,
+    image: item.image || item.products?.image || '',
+    status: (item.status || item.products?.status || 'out') as 'available' | 'low' | 'out' | 'expired',
     stock: item.stock || 0,
     wholesalePrice: parseFloat(item.wholesale_price || item.products?.wholesale_price || '0'),
     wholesaleMinQty: parseInt(item.wholesale_min_qty || item.products?.wholesale_min_qty || '12'),
@@ -33,8 +33,8 @@ export const InventoryService = {
         // Para obtener el inventario detallado, necesitamos otra consulta
         const { data: inventoryData } = await supabase.from('inventory').select('*');
 
-        return data.map(p => {
-            const prodInv = inventoryData?.filter((i: any) => i.product_id === p.id) || [];
+        return (data || []).map(p => {
+            const prodInv = (inventoryData || []).filter((i: any) => i.product_id === p.id) || [];
             const inventoryMap: Record<string, number> = {};
             prodInv.forEach((i: any) => inventoryMap[i.branch_id] = i.stock);
 
@@ -61,7 +61,7 @@ export const InventoryService = {
 
         if (error) throw error;
 
-        return data.map(item => ({
+        return (data || []).map(item => ({
             ...mapDbProduct(item.products),
             stock: item.stock,
             inventory: { [branchId]: item.stock } // Partial view
@@ -237,7 +237,7 @@ export const InventoryService = {
         const { data, error } = await query;
         if (error) throw error;
 
-        return data.map((r: any) => ({
+        return (data || []).map((r: any) => ({
             id: r.id,
             branchId: r.branch_id,
             branchName: r.branches?.name,
@@ -338,7 +338,7 @@ export const InventoryService = {
         const { data, error } = await query;
         if (error) throw error;
 
-        return data.map((item: any) => ({
+        return (data || []).map((item: any) => ({
             id: item.id,
             productId: item.product_id,
             productName: item.products?.name,
@@ -369,7 +369,7 @@ export const InventoryService = {
         const { data, error } = await query;
         if (error) throw error;
 
-        return data.map(s => ({
+        return (data || []).map(s => ({
             id: s.id,
             branchId: s.branch_id,
             branchName: s.branches?.name,
@@ -404,7 +404,7 @@ export const InventoryService = {
         return {
             ...sheet,
             branchName: sheet.branches?.name,
-            items: items.map(i => ({
+            items: (items || []).map(i => ({
                 ...i,
                 product: mapDbProduct(i.products)
             }))
@@ -575,6 +575,126 @@ export const InventoryService = {
             requester_id: userId,
             status: 'pending'
         });
+        if (error) throw error;
+    },
+
+    // --- RETURNS FLOW (Punto 6) ---
+
+    async createReturnRequest(branchId: string, productId: string, quantity: number, reason: string): Promise<void> {
+        const { error } = await supabase
+            .from('returns')
+            .insert({
+                branch_id: branchId,
+                product_id: productId,
+                quantity: quantity,
+                reason: reason,
+                status: 'pending_authorization'
+            });
+        if (error) throw error;
+    },
+
+    async getReturnRequests(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('returns')
+            .select(`
+                *,
+                products (name, sku),
+                branches (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) query = query.eq('branch_id', branchId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
+    async authorizeReturn(returnId: string, adminId: string, approved: boolean): Promise<void> {
+        const { error } = await supabase
+            .from('returns')
+            .update({
+                status: approved ? 'approved' : 'rejected',
+                authorized_by: adminId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', returnId);
+        if (error) throw error;
+
+        // Nota: El ajuste de inventario real debería hacerse mediante una RPC 
+        // para asegurar atomicidad si es aprobado.
+    },
+
+    // --- INTERNAL SUPPLIES (Punto 7) ---
+
+    async createInternalSupply(supply: any): Promise<void> {
+        const { error } = await supabase
+            .from('internal_supplies')
+            .insert({
+                branch_id: supply.branchId,
+                description: supply.description,
+                amount: supply.amount,
+                category: supply.category
+            });
+        if (error) throw error;
+    },
+
+    async getInternalSupplies(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('internal_supplies')
+            .select(`
+                *,
+                branches (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) query = query.eq('branch_id', branchId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
+    // --- PACKAGING / LITREADOS (Punto 8) ---
+
+    async createPackagingRequest(request: any): Promise<void> {
+        const { error } = await supabase
+            .from('packaging_requests')
+            .insert({
+                bulk_product_id: request.bulkProductId,
+                target_package_type: request.targetPackageType,
+                quantity_drum: request.quantityDrum,
+                branch_id: request.branchId,
+                status: 'sent_to_branch'
+            });
+        if (error) throw error;
+    },
+
+    async getPackagingRequests(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('packaging_requests')
+            .select(`
+                *,
+                products (name, sku),
+                branches (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) query = query.eq('branch_id', branchId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
+    async updatePackagingStatus(requestId: string, status: string): Promise<void> {
+        const { error } = await supabase
+            .from('packaging_requests')
+            .update({
+                status: status,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', requestId);
         if (error) throw error;
     }
 };

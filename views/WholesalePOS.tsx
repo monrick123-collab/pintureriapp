@@ -26,6 +26,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [creditDays, setCreditDays] = useState(0);
 
     useEffect(() => {
         loadInitialData();
@@ -103,7 +104,8 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                     paymentType,
                     departureAdminId: selectedAdminId,
                     subtotal,
-                    iva
+                    iva,
+                    creditDays
                 }
             );
 
@@ -142,24 +144,33 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                     </button>
                 </header>
 
-                <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900">
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900 relative">
+                    <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isCartOpen ? 'lg:mr-[400px]' : ''}`}>
                         <div className="p-6 pb-2 space-y-4">
                             <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-14 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                                 <div className="flex items-center justify-center px-4 text-slate-400"><span className="material-symbols-outlined">search</span></div>
                                 <input className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold" placeholder="Buscar producto por SKU o nombre..." value={search} onChange={e => setSearch(e.target.value)} />
                             </div>
-                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                {['Todos', 'Interiores', 'Exteriores', 'Esmaltes', 'Accesorios'].map(cat => (
-                                    <button key={cat} onClick={() => setCategory(cat)} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all ${category === cat ? 'bg-primary text-white' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-400'}`}>
-                                        {cat}
-                                    </button>
-                                ))}
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                    {['Todos', 'Interiores', 'Exteriores', 'Esmaltes', 'Accesorios'].map(cat => (
+                                        <button key={cat} onClick={() => setCategory(cat)} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all ${category === cat ? 'bg-primary text-white' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-400'}`}>
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => setIsCartOpen(!isCartOpen)}
+                                    className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${isCartOpen ? 'bg-slate-200 text-slate-600' : 'bg-primary text-white shadow-lg shadow-primary/20'}`}
+                                >
+                                    <span className="material-symbols-outlined text-base">{isCartOpen ? 'last_page' : 'shopping_cart'}</span>
+                                    {isCartOpen ? 'Ocultar Carrito' : 'Ver Carrito'}
+                                </button>
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isCartOpen ? 'xl:grid-cols-3' : 'xl:grid-cols-4 2xl:grid-cols-5'} gap-4 transition-all`}>
                                 {filteredProducts.map(p => (
                                     <div key={p.id} className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md" onClick={() => addToCart(p)}>
                                         <div className="aspect-square bg-slate-50 dark:bg-slate-900/50 p-4 relative">
@@ -181,12 +192,12 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                     </div>
 
                     {/* Cart Sidebar */}
-                    <div className={`fixed lg:static inset-y-0 right-0 w-[400px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col z-50 transition-transform duration-300 ${isCartOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+                    <div className={`fixed inset-y-0 right-0 w-full sm:w-[400px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col z-50 transition-transform duration-300 shadow-2xl lg:shadow-none ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                         <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
                             <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Carrito de Venta</h3>
                             <div className="flex gap-2">
                                 <button onClick={() => setCart([])} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
-                                <button onClick={() => setIsCartOpen(false)} className="lg:hidden p-2 text-slate-400"><span className="material-symbols-outlined">close</span></button>
+                                <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined">close</span></button>
                             </div>
                         </div>
 
@@ -200,7 +211,16 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                                         <div className="flex justify-between items-center mt-2">
                                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-1 rounded-lg border dark:border-slate-700">
                                                 <button onClick={() => updateQuantity(item.id, -1)} className="size-6 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"><span className="material-symbols-outlined text-sm">remove</span></button>
-                                                <span className="text-xs font-black w-6 text-center">{item.quantity}</span>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
+                                                    value={item.quantity}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 0;
+                                                        setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                                                    }}
+                                                />
                                                 <button onClick={() => updateQuantity(item.id, 1)} className="size-6 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"><span className="material-symbols-outlined text-sm">add</span></button>
                                             </div>
                                             <p className="text-xs font-black text-primary">${((item.wholesalePrice || item.price) * item.quantity).toLocaleString()}</p>
@@ -220,7 +240,15 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Cliente</label>
-                                    <select className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold" value={selectedClient?.id || ''} onChange={e => setSelectedClient(clients.find(c => c.id === e.target.value) || null)}>
+                                    <select
+                                        className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold"
+                                        value={selectedClient?.id || ''}
+                                        onChange={e => {
+                                            const client = clients.find(c => c.id === e.target.value) || null;
+                                            setSelectedClient(client);
+                                            if (client) setCreditDays(client.creditDays || 0);
+                                        }}
+                                    >
                                         <option value="">Seleccionar Cliente...</option>
                                         {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
@@ -239,6 +267,19 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                                         <button onClick={() => setPaymentType('credito')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentType === 'credito' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>Crédito</button>
                                     </div>
                                 </div>
+
+                                {paymentType === 'credito' && (
+                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plazo de Crédito (Días)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-black"
+                                            value={creditDays}
+                                            onChange={e => setCreditDays(parseInt(e.target.value) || 0)}
+                                            placeholder="Días"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="pt-6 border-t dark:border-slate-800 space-y-2">

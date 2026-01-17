@@ -91,7 +91,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await InventoryService.createProduct(formData as any);
+      await InventoryService.createProduct(formData as Omit<Product, 'id' | 'inventory'>);
       await loadData();
       setIsAddModalOpen(false);
       resetForm();
@@ -104,7 +104,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     e.preventDefault();
     if (!selectedProduct) return;
     try {
-      await (InventoryService as any).updateProduct(selectedProduct.id, formData);
+      await InventoryService.updateProduct(selectedProduct.id, formData as Partial<Product>);
       await loadData();
       setIsEditModalOpen(false);
       resetForm();
@@ -295,7 +295,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                         <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
                           <th className="px-6 py-5">Marca</th>
-                          {!isWarehouse && <th className="px-6 py-5">Precio</th>}
+                          <th className="px-6 py-5">Precio</th>
                           <th className="px-6 py-5 text-center">Stock</th>
                           <th className="px-8 py-5 text-right">Acciones</th>
                         </tr>
@@ -316,7 +316,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   {p.brand || 'Genérico'}
                                 </span>
                               </td>
-                              {!isWarehouse && <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>}
+                              <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
                               <td className="px-6 py-5 text-center"><span className={`text-lg font-black ${stock < 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span></td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
@@ -327,7 +327,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   >
                                     Uso Local
                                   </button>
-                                  {isWarehouse && (
+                                  {(isWarehouse || p.price === 0) && (
                                     <button
                                       onClick={() => handleRequestPrice(p.id)}
                                       className="px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all"

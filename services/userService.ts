@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { User, UserRole } from '../types';
 
 export const UserService = {
-    async getProfiles(): Promise<any[]> {
+    async getProfiles(): Promise<Record<string, any>[]> {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')

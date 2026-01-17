@@ -433,7 +433,16 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 rounded-xl p-0.5">
                         <button onClick={() => updateQty(item.id, -1)} className="size-7 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-lg text-lg font-bold transition-colors">-</button>
-                        <span className="text-xs font-black w-8 text-center">{item.quantity}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                          }}
+                        />
                         <button onClick={() => updateQty(item.id, 1)} className="size-7 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-lg text-lg font-bold transition-colors">+</button>
                       </div>
                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
@@ -522,48 +531,50 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
         {isDiscountModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden p-8 md:p-10">
-              <h2 className="text-2xl font-black mb-6">Descuento Especial</h2>
-              <div className="space-y-6">
-                <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl">
-                  {(['percentage', 'fixed'] as const).map(type => (
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="p-8 md:p-10 overflow-y-auto">
+                <h2 className="text-2xl font-black mb-6">Descuento Especial</h2>
+                <div className="space-y-6">
+                  <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl">
+                    {(['percentage', 'fixed'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setDiscountType(type)}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${discountType === type ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}
+                      >
+                        {type === 'percentage' ? 'Porcentaje' : 'Monto Fijo'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Monto</label>
+                    <input
+                      type="number"
+                      value={discountValue}
+                      onChange={e => setDiscountValue(e.target.value)}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 rounded-2xl font-black text-xl outline-none focus:border-primary transition-all"
+                      placeholder={discountType === 'percentage' ? 'Ej: 15' : 'Ej: 500'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Justificación</label>
+                    <textarea
+                      value={discountReason}
+                      onChange={e => setDiscountReason(e.target.value)}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 rounded-2xl font-bold text-sm h-32 resize-none outline-none focus:border-primary transition-all"
+                      placeholder="Motivo..."
+                    />
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <button onClick={() => setIsDiscountModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
                     <button
-                      key={type}
-                      onClick={() => setDiscountType(type)}
-                      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${discountType === type ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}
+                      onClick={handleRequestDiscount}
+                      disabled={!discountValue || !discountReason || loading}
+                      className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 disabled:opacity-50 uppercase text-xs tracking-widest"
                     >
-                      {type === 'percentage' ? 'Porcentaje' : 'Monto Fijo'}
+                      {loading ? 'Enviando...' : 'Pedir Descuento'}
                     </button>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Monto</label>
-                  <input
-                    type="number"
-                    value={discountValue}
-                    onChange={e => setDiscountValue(e.target.value)}
-                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 rounded-2xl font-black text-xl outline-none focus:border-primary transition-all"
-                    placeholder={discountType === 'percentage' ? 'Ej: 15' : 'Ej: 500'}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Justificación</label>
-                  <textarea
-                    value={discountReason}
-                    onChange={e => setDiscountReason(e.target.value)}
-                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 rounded-2xl font-bold text-sm h-32 resize-none outline-none focus:border-primary transition-all"
-                    placeholder="Motivo..."
-                  />
-                </div>
-                <div className="flex gap-4 pt-4">
-                  <button onClick={() => setIsDiscountModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
-                  <button
-                    onClick={handleRequestDiscount}
-                    disabled={!discountValue || !discountReason || loading}
-                    className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 disabled:opacity-50 uppercase text-xs tracking-widest"
-                  >
-                    {loading ? 'Enviando...' : 'Pedir Descuento'}
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>

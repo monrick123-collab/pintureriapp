@@ -26,6 +26,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
     ] : []),
     { label: 'Cotizador', path: '/quotations', icon: 'request_quote' },
     { label: 'Inventario', path: '/inventory', icon: 'inventory_2' },
+    { label: 'Devoluciones', path: '/returns', icon: 'keyboard_return' },
+    ...(isAdmin || isWarehouse ? [
+      { label: 'Suministros', path: '/supplies', icon: 'dry_cleaning' },
+      { label: 'Envasado', path: '/packaging', icon: 'colors' },
+    ] : []),
     { label: 'Historial Ventas', path: '/sales-history', icon: 'receipt_long' },
     { label: 'Clientes', path: '/clients', icon: 'group' },
     ...(isAdmin ? [

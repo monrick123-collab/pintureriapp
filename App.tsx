@@ -12,6 +12,7 @@ import Branches from './views/Branches';
 import Quotations from './views/Quotations';
 import Returns from './views/Returns';
 import Supplies from './views/Supplies';
+import AiAssistant from './components/AiAssistant';
 import Packaging from './views/Packaging';
 import SalesHistory from './views/SalesHistory';
 import WarehouseDashboard from './views/WarehouseDashboard';
@@ -82,6 +83,7 @@ const App: React.FC = () => {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {user && <AiAssistant />}
       </div>
     </BrowserRouter>
   );

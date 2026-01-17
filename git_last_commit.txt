@@ -1,0 +1,5 @@
+commit cb8c2c030b68f7c937e92e04244269a2a58cd528
+Author: monrick123-collab <monrick123@gmail.com>
+Date:   Sat Jan 17 16:30:53 2026 -0600
+
+    fix(ui): improved mobile responsiveness for warehouse tables

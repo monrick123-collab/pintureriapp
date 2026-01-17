@@ -195,45 +195,49 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
               </div>
 
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/50">
-                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <th className="px-6 py-4">Descripción</th>
-                      <th className="px-6 py-4">Categoría</th>
-                      <th className="px-6 py-4">Sucursal</th>
-                      <th className="px-6 py-4">Fecha</th>
-                      <th className="px-6 py-4 text-right">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
-                    {expenses.map(e => (
-                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                        <td className="px-6 py-4 text-sm font-bold">{e.description}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-tighter text-slate-500">{translateStatus(e.category)}</span>
-                        </td>
-                        <td className="px-6 py-4 text-xs font-medium text-slate-400">{e.branchId}</td>
-                        <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">${e.amount.toLocaleString()}</td>
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50">
+                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <th className="px-6 py-4">Descripción</th>
+                        <th className="px-6 py-4">Categoría</th>
+                        <th className="px-6 py-4">Sucursal</th>
+                        <th className="px-6 py-4">Fecha</th>
+                        <th className="px-6 py-4 text-right">Monto</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {expenses.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay gastos registrados en este periodo.</div>}
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                      {expenses.map(e => (
+                        <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                          <td className="px-6 py-4 text-sm font-bold">{e.description}</td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-tighter text-slate-500">{translateStatus(e.category)}</span>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-medium text-slate-400">{e.branchId}</td>
+                          <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">${e.amount.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+              {expenses.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay gastos registrados en este periodo.</div>}
+            </div>
             </div>
           )}
 
-          {activeTab === 'inventory' && (
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="font-black text-xl">Gestión de Catálogo y Precios</h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Solicitudes Pendientes de Bodega</p>
-                </div>
+        {activeTab === 'inventory' && (
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-black text-xl">Gestión de Catálogo y Precios</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Solicitudes Pendientes de Bodega</p>
               </div>
+            </div>
 
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 dark:bg-slate-900/50">
                     <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -272,92 +276,101 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
                     ))}
                   </tbody>
                 </table>
-                {priceRequests.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay solicitudes de precio pendientes.</div>}
               </div>
             </div>
-          )}
-
-          {activeTab === 'audit' && (
-            <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
-              <span className="material-symbols-outlined text-6xl mb-4">construction</span>
-              <h3 className="text-2xl font-black uppercase tracking-widest">Módulo en Desarrollo</h3>
-              <p className="max-w-md mt-2 font-bold">Estamos conectando los flujos de auditoría y valoración en tiempo real con la base de datos de Supabase.</p>
-            </div>
-          )}
-        </div>
-
-        {/* MODAL: ASIGNAR PRECIO */}
-        {isPriceModalOpen && selectedRequest && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95">
-              <h3 className="text-xl font-black mb-1 uppercase tracking-tighter text-slate-900 dark:text-white">Asignar Precio</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">{selectedRequest.productName}</p>
-
-              <form onSubmit={handleResolvePrice} className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Precio al Público ($)</label>
-                  <input
-                    type="number"
-                    required
-                    autoFocus
-                    step="0.01"
-                    className="w-full p-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-black text-4xl text-center focus:border-primary outline-none transition-all"
-                    value={newPrice}
-                    onChange={e => setNewPrice(parseFloat(e.target.value))}
-                  />
-                </div>
-
-                <div className="flex gap-4 pt-2">
-                  <button type="button" onClick={() => { setIsPriceModalOpen(false); setSelectedRequest(null); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
-                  <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-xs tracking-widest">Confirmar</button>
-                </div>
-              </form>
-            </div>
+            {priceRequests.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">No hay solicitudes de precio pendientes.</div>}
           </div>
-        )}
-
-        {/* MODAL: NUEVO GASTO */}
-        {isExpenseModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-8 animate-in zoom-in-95">
-              <h3 className="text-xl font-black mb-6">Registrar Gasto Operativo</h3>
-              <form onSubmit={handleAddExpense} className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Descripción</label>
-                  <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Monto ($)</label>
-                    <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black" value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Categoría</label>
-                    <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value as any })}>
-                      <option value="renta">Renta</option>
-                      <option value="servicios">Servicios</option>
-                      <option value="salarios">Salarios</option>
-                      <option value="suministros">Suministros</option>
-                      <option value="otros">Otros</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Sucursal</label>
-                  <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.branchId} onChange={e => setNewExpense({ ...newExpense, branchId: e.target.value })}>
-                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-                <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
-                  <button type="submit" className="flex-1 py-3 bg-primary text-white font-black rounded-xl shadow-lg">Guardar</button>
-                </div>
-              </form>
             </div>
-          </div>
-        )}
-      </main>
+  )
+}
+
+{
+  activeTab === 'audit' && (
+    <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
+      <span className="material-symbols-outlined text-6xl mb-4">construction</span>
+      <h3 className="text-2xl font-black uppercase tracking-widest">Módulo en Desarrollo</h3>
+      <p className="max-w-md mt-2 font-bold">Estamos conectando los flujos de auditoría y valoración en tiempo real con la base de datos de Supabase.</p>
     </div>
+  )
+}
+        </div >
+
+  {/* MODAL: ASIGNAR PRECIO */ }
+{
+  isPriceModalOpen && selectedRequest && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95">
+        <h3 className="text-xl font-black mb-1 uppercase tracking-tighter text-slate-900 dark:text-white">Asignar Precio</h3>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">{selectedRequest.productName}</p>
+
+        <form onSubmit={handleResolvePrice} className="space-y-6">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Precio al Público ($)</label>
+            <input
+              type="number"
+              required
+              autoFocus
+              step="0.01"
+              className="w-full p-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-black text-4xl text-center focus:border-primary outline-none transition-all"
+              value={newPrice}
+              onChange={e => setNewPrice(parseFloat(e.target.value))}
+            />
+          </div>
+
+          <div className="flex gap-4 pt-2">
+            <button type="button" onClick={() => { setIsPriceModalOpen(false); setSelectedRequest(null); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
+            <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-xs tracking-widest">Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+{/* MODAL: NUEVO GASTO */ }
+{
+  isExpenseModalOpen && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-8 animate-in zoom-in-95">
+        <h3 className="text-xl font-black mb-6">Registrar Gasto Operativo</h3>
+        <form onSubmit={handleAddExpense} className="space-y-4">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Descripción</label>
+            <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Monto ($)</label>
+              <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black" value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Categoría</label>
+              <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value as any })}>
+                <option value="renta">Renta</option>
+                <option value="servicios">Servicios</option>
+                <option value="salarios">Salarios</option>
+                <option value="suministros">Suministros</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Sucursal</label>
+            <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold" value={newExpense.branchId} onChange={e => setNewExpense({ ...newExpense, branchId: e.target.value })}>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-4 pt-4">
+            <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
+            <button type="submit" className="flex-1 py-3 bg-primary text-white font-black rounded-xl shadow-lg">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+      </main >
+    </div >
   );
 };
 

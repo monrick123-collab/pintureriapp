@@ -341,34 +341,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 </button>
               </div>
               <div className="p-0 overflow-y-auto custom-scrollbar flex-1">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10 border-b dark:border-slate-700">
-                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <th className="px-8 py-4">Producto</th>
-                      <th className="px-6 py-4 text-center">Cant.</th>
-                      <th className="px-6 py-4 text-right">Unitario</th>
-                      <th className="px-8 py-4 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y dark:divide-slate-700">
-                    {selectedOrder.items?.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                        <td className="px-8 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="size-10 bg-white border rounded-lg p-1 flex-shrink-0"><img src={item.productImage} className="w-full h-full object-contain" /></div>
-                            <div>
-                              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.productName}</p>
-                              <p className="text-[10px] font-mono text-slate-400">{item.productId.slice(0, 8)}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center font-black text-lg">{item.quantity}</td>
-                        <td className="px-6 py-4 text-right text-xs font-bold text-slate-500">${item.unitPrice.toLocaleString()}</td>
-                        <td className="px-8 py-4 text-right font-black text-primary">${item.totalPrice.toLocaleString()}</td>
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10 border-b dark:border-slate-700">
+                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <th className="px-8 py-4">Producto</th>
+                        <th className="px-6 py-4 text-center">Cant.</th>
+                        <th className="px-6 py-4 text-right">Unitario</th>
+                        <th className="px-8 py-4 text-right">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y dark:divide-slate-700">
+                      {selectedOrder.items?.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="size-10 bg-white border rounded-lg p-1 flex-shrink-0"><img src={item.productImage} className="w-full h-full object-contain" /></div>
+                              <div>
+                                <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.productName}</p>
+                                <p className="text-[10px] font-mono text-slate-400">{item.productId.slice(0, 8)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center font-black text-lg">{item.quantity}</td>
+                          <td className="px-6 py-4 text-right text-xs font-bold text-slate-500">${item.unitPrice.toLocaleString()}</td>
+                          <td className="px-8 py-4 text-right font-black text-primary">${item.totalPrice.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Total General</span>

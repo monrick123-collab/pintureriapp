@@ -49,6 +49,8 @@ export const InventoryService = {
 
     // Obtener productos filtrados por sucursal específica
     async getProductsByBranch(branchId: string): Promise<Product[]> {
+        if (branchId === 'ALL') return this.getProducts();
+
         // Join products + inventory
         const { data, error } = await supabase
             .from('inventory')

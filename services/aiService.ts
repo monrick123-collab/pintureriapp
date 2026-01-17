@@ -94,9 +94,10 @@ export class AiService {
             const result = await chat.sendMessage(userMessage);
             const response = await result.response;
             return response.text();
-        } catch (error) {
-            console.error("Gemini Error:", error);
-            return "Lo siento, tuve un problema al procesar tu consulta. Verifica tu conexión o la API Key.";
+        } catch (error: any) {
+            console.error("DEBUG - Gemini Error Full Object:", error);
+            const errorMessage = error?.message || "Error desconocido";
+            return `Lo siento, tuve un problema: ${errorMessage}. Verifica tu conexión o la API Key.`;
         }
     }
 }

@@ -58,8 +58,10 @@ export class AiService {
                 roleInstruction = "Eres el asesor técnico de ventas de Pintamax. Tu objetivo es ayudar al cliente a elegir el producto correcto, explicar beneficios técnicos y verificar disponibilidad inmediata.";
         }
 
-        const productSummary = context.products.map(p =>
-            `- ${p.name} (${p.category}): $${p.price}. Stock: ${JSON.stringify(p.inventory)}`
+        // OPTIMIZATION: Limit context to avoid hitting Token Limits (TPM)
+        // Only send name, price and total stock. Skip description and images.
+        const productSummary = context.products.slice(0, 50).map(p =>
+            `- ${p.name} ($${p.price}) Stock:${Object.values(p.inventory || {}).reduce((a: any, b: any) => a + b, 0)}`
         ).join('\n');
 
         const systemPrompt = `

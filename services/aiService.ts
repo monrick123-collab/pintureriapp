@@ -4,6 +4,7 @@ import { Product } from "../types";
 
 // API Key should be set in Vercel Environment Variables as VITE_GROQ_API_KEY
 // Fallback to hardcoded key for immediate testing (as provided by user)
+const API_KEY_STORAGE_KEY = 'pintamax_groq_api_key';
 const DEFAULT_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 export class AiService {
@@ -13,12 +14,23 @@ export class AiService {
     static initialize() {
         // Groq SDK automatically looks for GROQ_API_KEY env var, but in browser we need to pass it
         // dangerousApiKey: true is required for client-side usage (safe because we have low limits/free tier)
-        if (!this.groq) {
+        const key = localStorage.getItem(API_KEY_STORAGE_KEY) || DEFAULT_API_KEY;
+        if (key && !this.groq) {
             this.groq = new Groq({
-                apiKey: DEFAULT_API_KEY,
+                apiKey: key,
                 dangerouslyAllowBrowser: true
             });
         }
+    }
+
+    static setApiKey(key: string) {
+        localStorage.setItem(API_KEY_STORAGE_KEY, key);
+        this.groq = null; // Force re-initialization
+        this.initialize();
+    }
+
+    static hasApiKey(): boolean {
+        return !!localStorage.getItem(API_KEY_STORAGE_KEY) || !!DEFAULT_API_KEY;
     }
 
     static async sendMessage(

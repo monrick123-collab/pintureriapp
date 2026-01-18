@@ -119,7 +119,7 @@ const AiAssistant: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="font-black text-white text-sm">Asistente Pintamax</h3>
-                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Powered by Gemini 1.5</p>
+                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Powered by Llama 3 (Groq)</p>
                     </div>
                 </div>
 

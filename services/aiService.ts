@@ -107,4 +107,78 @@ export class AiService {
             return `Lo siento, tuve un problema conectando con Groq: ${errorMessage}.`;
         }
     }
+
+
+    static async generateBusinessInsights(
+        context: {
+            sales: any[], // Simplified Sale Interface
+            products: Product[]
+        }
+    ): Promise<string> {
+        this.initialize();
+
+        // 1. Prepare Data Summary for AI
+        const totalSales = context.sales.reduce((sum, s) => sum + s.total, 0);
+
+        // Find top selling products
+        const productSales: Record<string, number> = {};
+        context.sales.forEach(s => {
+            s.items.forEach((i: any) => {
+                productSales[i.productName] = (productSales[i.productName] || 0) + i.quantity;
+            });
+        });
+
+        const topProducts = Object.entries(productSales)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([name, qty]) => `${name} (${qty} vendidos)`)
+            .join(', ');
+
+        const lowStock = context.products
+            .filter(p => Object.values(p.inventory).reduce((a: any, b: any) => a + b, 0) < 10)
+            .slice(0, 5)
+            .map(p => p.name)
+            .join(', ');
+
+        const systemPrompt = `
+            ACTÚA COMO UN CONSULTOR DE NEGOCIOS EXPERTO PARA PINTAMAX (Pinturería).
+            
+            DATOS DE LA SEMANA/MES:
+            - Ventas Totales: $${totalSales.toLocaleString()}
+            - Productos Estrella: ${topProducts || 'Sin datos suficientes'}
+            - Alerta Stock Bajo: ${lowStock || 'Ninguno crítico'}
+
+            TU TAREA:
+            Genera 3 consejos estratégicos MUY BREVES Y ACCIONABLES (máximo 15 palabras cada uno) en formato JSON estricto.
+            Deben enfocarse en: 1) Aumentar margen, 2) Mover inventario estancado, o 3) Prevenir quiebres de stock.
+            
+            FORMATO RESPUESTA JSON:
+            {
+                "tips": [
+                    { "title": "Promoción", "description": "Haz pack de rodillos con pintura..." },
+                    { "title": "Reabastece", "description": "Pide más Impermeabilizante antes del viernes..." },
+                    { "title": "Oportunidad", "description": "Sube precio a X..." }
+                ]
+            }
+            SOLO JSON VALIDO. SIN EXPLICACIONES.
+        `;
+
+        try {
+            if (!this.groq) throw new Error("Groq client not initialized");
+
+            const completion = await this.groq.chat.completions.create({
+                messages: [{ role: "user", content: systemPrompt }],
+                model: this.modelName,
+                temperature: 0.4,
+                response_format: { type: "json_object" },
+                max_tokens: 300,
+            });
+
+            return completion.choices[0]?.message?.content || '{"tips": []}';
+
+        } catch (error: any) {
+            console.error("DEBUG - Groq Insights Error:", error);
+            return '{"tips": []}';
+        }
+    }
 }

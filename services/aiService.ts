@@ -5,7 +5,7 @@ import { Product } from "../types";
 // NOTE: In production, this should be an environment variable.
 // For development, we'll ask the user to input it or set it in localStorage.
 const API_KEY_STORAGE_KEY = 'pintamax_gemini_api_key';
-const DEFAULT_API_KEY = "AIzaSyBoW3_hQOtggteBgDQgx5k_pzeb_4Wa4CI"; // Hardcoded per user request
+const DEFAULT_API_KEY = "AIzaSyATyeV5K_x2fcWrSaotLAIY-KxBTJ6j8cU"; // Updated API Key
 
 export class AiService {
     private static genAI: GoogleGenerativeAI | null = null;

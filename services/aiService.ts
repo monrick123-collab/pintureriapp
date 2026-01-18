@@ -4,8 +4,8 @@ import { Product } from "../types";
 
 // NOTE: In production, this should be an environment variable.
 // For development, we'll ask the user to input it or set it in localStorage.
-const API_KEY_STORAGE_KEY = 'pintamax_gemini_api_key';
-const DEFAULT_API_KEY = "AIzaSyATyeV5K_x2fcWrSaotLAIY-KxBTJ6j8cU"; // Updated API Key
+// API Key should be set in Vercel Environment Variables as VITE_GEMINI_API_KEY
+const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 export class AiService {
     private static genAI: GoogleGenerativeAI | null = null;

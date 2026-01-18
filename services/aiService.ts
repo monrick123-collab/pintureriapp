@@ -9,7 +9,7 @@ const DEFAULT_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 export class AiService {
     private static groq: Groq | null = null;
-    private static modelName = "llama3-70b-8192";
+    private static modelName = "llama-3.3-70b-versatile";
 
     static initialize() {
         // Groq SDK automatically looks for GROQ_API_KEY env var, but in browser we need to pass it

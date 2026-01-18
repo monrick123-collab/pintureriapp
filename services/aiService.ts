@@ -16,9 +16,9 @@ export class AiService {
         const key = localStorage.getItem(API_KEY_STORAGE_KEY) || DEFAULT_API_KEY;
         if (key) {
             this.genAI = new GoogleGenerativeAI(key);
-            // Usar gemini-1.5-flash: el estándar actual que fue "encontrado" previamente
+            // Usar gemini-2.0-flash-exp: El único modelo que ha respondido (aunque sea con error de cuota antes)
             this.model = this.genAI.getGenerativeModel(
-                { model: "gemini-1.5-flash" }
+                { model: "gemini-2.0-flash-exp" }
             );
         }
     }

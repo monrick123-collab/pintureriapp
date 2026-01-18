@@ -15,7 +15,11 @@ export class AiService {
         const key = localStorage.getItem(API_KEY_STORAGE_KEY) || DEFAULT_API_KEY;
         if (key) {
             this.genAI = new GoogleGenerativeAI(key);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            // Use stable v1 version and the standard flash model name
+            this.model = this.genAI.getGenerativeModel(
+                { model: "gemini-1.5-flash" },
+                { apiVersion: 'v1' }
+            );
         }
     }
 

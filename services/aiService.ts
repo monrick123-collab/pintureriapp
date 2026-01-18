@@ -17,8 +17,8 @@ export class AiService {
             this.genAI = new GoogleGenerativeAI(key);
             // Use stable v1 version and the standard flash model name
             this.model = this.genAI.getGenerativeModel(
-                { model: "gemini-1.5-flash" },
-                { apiVersion: 'v1' }
+                { model: "gemini-1.5-flash-latest" },
+                { apiVersion: 'v1beta' }
             );
         }
     }

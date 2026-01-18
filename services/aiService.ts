@@ -16,9 +16,9 @@ export class AiService {
         const key = localStorage.getItem(API_KEY_STORAGE_KEY) || DEFAULT_API_KEY;
         if (key) {
             this.genAI = new GoogleGenerativeAI(key);
-            // Usar gemini-1.5-pro: el modelo más estable y con mejor soporte en free tier
+            // Usar gemini-pro: el modelo legacy más compatible universalmente
             this.model = this.genAI.getGenerativeModel(
-                { model: "gemini-1.5-pro" }
+                { model: "gemini-pro" }
             );
         }
     }

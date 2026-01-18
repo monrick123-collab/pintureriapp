@@ -1,45 +1,31 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { Product } from "../types";
 
-// NOTE: In production, this should be an environment variable.
-// For development, we'll ask the user to input it or set it in localStorage.
-// API Key should be set in Vercel Environment Variables as VITE_GEMINI_API_KEY
-const API_KEY_STORAGE_KEY = 'pintamax_gemini_api_key';
-const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// API Key should be set in Vercel Environment Variables as VITE_GROQ_API_KEY
+// Fallback to hardcoded key for immediate testing (as provided by user)
+const DEFAULT_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 export class AiService {
-    private static genAI: GoogleGenerativeAI | null = null;
-    private static model: any = null;
+    private static groq: Groq | null = null;
+    private static modelName = "llama3-70b-8192";
 
     static initialize() {
-        const key = localStorage.getItem(API_KEY_STORAGE_KEY) || DEFAULT_API_KEY;
-        if (key) {
-            this.genAI = new GoogleGenerativeAI(key);
-            // Usar gemini-2.0-flash-exp: El único modelo que ha respondido (aunque sea con error de cuota antes)
-            this.model = this.genAI.getGenerativeModel(
-                { model: "gemini-2.0-flash-exp" }
-            );
+        // Groq SDK automatically looks for GROQ_API_KEY env var, but in browser we need to pass it
+        // dangerousApiKey: true is required for client-side usage (safe because we have low limits/free tier)
+        if (!this.groq) {
+            this.groq = new Groq({
+                apiKey: DEFAULT_API_KEY,
+                dangerouslyAllowBrowser: true
+            });
         }
-    }
-
-    static setApiKey(key: string) {
-        localStorage.setItem(API_KEY_STORAGE_KEY, key);
-        this.initialize();
-    }
-
-    static hasApiKey(): boolean {
-        return !!localStorage.getItem(API_KEY_STORAGE_KEY) || !!DEFAULT_API_KEY;
     }
 
     static async sendMessage(
         userMessage: string,
         context: { products: Product[], branchId?: string, userRole?: string }
     ): Promise<string> {
-        if (!this.model) {
-            this.initialize();
-            if (!this.model) throw new Error("API Key no configurada");
-        }
+        this.initialize();
 
         // 1. Build System Context based on Role
         let roleInstruction = "";
@@ -58,8 +44,7 @@ export class AiService {
                 roleInstruction = "Eres el asesor técnico de ventas de Pintamax. Tu objetivo es ayudar al cliente a elegir el producto correcto, explicar beneficios técnicos y verificar disponibilidad inmediata.";
         }
 
-        // OPTIMIZATION: Limit context to avoid hitting Token Limits (TPM)
-        // Only send name, price and total stock. Skip description and images.
+        // OPTIMIZATION: Limit context
         const productSummary = context.products.slice(0, 50).map(p =>
             `- ${p.name} ($${p.price}) Stock:${Object.values(p.inventory || {}).reduce((a: any, b: any) => a + b, 0)}`
         ).join('\n');
@@ -72,7 +57,7 @@ export class AiService {
       CONTEXTO OPERATIVO:
       - Sucursal Activa: ${context.branchId || 'General'}
       - Catálogo/Stock Actual:
-      ${productSummary.slice(0, 50000)}
+      ${productSummary.slice(0, 30000)}
 
       REGLAS CRÍTICAS:
       1. Solo responde basado en los datos proporcionados. Si un producto no está en la lista, di que no lo tenemos.
@@ -82,28 +67,32 @@ export class AiService {
       5. Sé conciso pero informativo.
     `;
 
-        // 2. Generate Content
+        // 2. Generate Content using Groq
         try {
-            const chat = this.model.startChat({
-                history: [
+            if (!this.groq) throw new Error("Groq client not initialized");
+
+            const completion = await this.groq.chat.completions.create({
+                messages: [
+                    {
+                        role: "system",
+                        content: systemPrompt
+                    },
                     {
                         role: "user",
-                        parts: [{ text: systemPrompt }],
-                    },
-                    {
-                        role: "model",
-                        parts: [{ text: "Entendido, soy el experto de Pintamax. ¿En qué puedo ayudar hoy?" }],
-                    },
+                        content: userMessage
+                    }
                 ],
+                model: this.modelName,
+                temperature: 0.5,
+                max_tokens: 1024,
             });
 
-            const result = await chat.sendMessage(userMessage);
-            const response = await result.response;
-            return response.text();
+            return completion.choices[0]?.message?.content || "No pude generar una respuesta.";
+
         } catch (error: any) {
-            console.error("DEBUG - Gemini Error Full Object:", error);
+            console.error("DEBUG - Groq Error:", error);
             const errorMessage = error?.message || "Error desconocido";
-            return `Lo siento, tuve un problema: ${errorMessage}. Verifica tu conexión o la API Key.`;
+            return `Lo siento, tuve un problema conectando con Groq: ${errorMessage}.`;
         }
     }
 }

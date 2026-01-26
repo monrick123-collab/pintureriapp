@@ -44,6 +44,11 @@ export const FinanceService = {
         if (error) throw error;
     },
 
+    async deleteSupplier(id: string) {
+        const { error } = await supabase.from('suppliers').delete().eq('id', id);
+        if (error) throw error;
+    },
+
     // --- FACTURAS ---
     async getInvoices(statusFilter?: string): Promise<SupplierInvoice[]> {
         let query = supabase.from('supplier_invoices').select('*, suppliers(name)');

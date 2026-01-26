@@ -49,6 +49,18 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
         }
     };
 
+    const handleDelete = async (id: string, name: string) => {
+        if (window.confirm(`¿Estás seguro de eliminar al proveedor "${name}"?`)) {
+            try {
+                await FinanceService.deleteSupplier(id);
+                loadSuppliers();
+            } catch (e) {
+                console.error(e);
+                alert("Error al eliminar proveedor");
+            }
+        }
+    };
+
     return (
         <div className="h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-900">
             <Sidebar user={user} onLogout={onLogout} />
@@ -73,8 +85,18 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {suppliers.map(supplier => (
-                                <div key={supplier.id} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors">
-                                    <div className="flex justify-between items-start mb-4">
+                                <div key={supplier.id} className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(supplier.id, supplier.name);
+                                        }}
+                                        className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-2"
+                                        title="Eliminar Proveedor"
+                                    >
+                                        <span className="material-symbols-outlined">delete</span>
+                                    </button>
+                                    <div className="flex justify-between items-start mb-4 pr-8">
                                         <div className="bg-slate-100 dark:bg-slate-700 p-3 rounded-xl">
                                             <span className="material-symbols-outlined text-slate-500">store</span>
                                         </div>

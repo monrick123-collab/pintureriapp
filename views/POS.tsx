@@ -134,7 +134,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const calculateSubtotal = () => {
     return cart.reduce((acc, item) => {
       const isWholesale = item.wholesalePrice && item.wholesaleMinQty && item.quantity >= item.wholesaleMinQty;
-      const priceToUse = isWholesale ? item.wholesalePrice : item.price;
+      const priceToUse = (isWholesale ? item.wholesalePrice : item.price) || 0;
       return acc + (priceToUse * item.quantity);
     }, 0);
   };
@@ -154,7 +154,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
 
       const saleItems: SaleItem[] = cart.map(item => {
         const isWholesale = item.wholesalePrice && item.wholesaleMinQty && item.quantity >= item.wholesaleMinQty;
-        const priceToUse = isWholesale ? item.wholesalePrice : item.price;
+        const priceToUse = (isWholesale ? item.wholesalePrice : item.price) || 0;
         return {
           productId: item.id,
           productName: item.name,

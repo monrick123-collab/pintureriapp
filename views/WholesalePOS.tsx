@@ -38,7 +38,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
             const [prodData, clientData, adminData] = await Promise.all([
                 InventoryService.getProductsByBranch(currentBranchId),
                 ClientService.getClients(),
-                SalesService.getAdmins() // I'll need to implement this or a generic user fetch
+                SalesService.getAdmins()
             ]);
             setProducts(prodData);
             setClients(clientData);

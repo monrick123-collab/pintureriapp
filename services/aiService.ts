@@ -35,18 +35,37 @@ export class AiService {
 
     static async sendMessage(
         userMessage: string,
-        context: { products: Product[], branchId?: string, userRole?: string }
+        context: {
+            products: Product[],
+            branchId?: string,
+            userRole?: string,
+            financeContext?: {
+                accountsPayable: number,
+                monthlyExpenses: number,
+                netIncome: number
+            }
+        }
     ): Promise<string> {
         this.initialize();
 
         // 1. Build System Context based on Role
         let roleInstruction = "";
+        let financeDataSnippet = "";
+
         switch (context.userRole) {
             case 'ADMIN':
                 roleInstruction = "Eres el consultor estratégico de Pintamax. Enfócate en análisis de ventas, eficiencia de sucursales y sugerencias proactivas para el negocio.";
                 break;
             case 'FINANCE':
-                roleInstruction = "Eres el auditor financiero de Pintamax. Enfócate en la precisión de precios, costos, gastos y salud financiera de las cuentas.";
+                roleInstruction = "Eres 'ContadorAI', el asistente financiero experto de Pintamax. Tu labor es analizar flujos de caja, detectar gastos inusuales y asegurar el pago puntual a proveedores.";
+                if (context.financeContext) {
+                    financeDataSnippet = `
+                    ESTADO FINANCIERO ACTUAL:
+                    - Cuentas por Pagar (Deuda): $${context.financeContext.accountsPayable.toLocaleString()}
+                    - Gastos Operativos Mes: $${context.financeContext.monthlyExpenses.toLocaleString()}
+                    - Utilidad Estimada: $${context.financeContext.netIncome.toLocaleString()}
+                    `;
+                }
                 break;
             case 'WAREHOUSE':
             case 'WAREHOUSE_SUB':
@@ -68,7 +87,8 @@ export class AiService {
       
       CONTEXTO OPERATIVO:
       - Sucursal Activa: ${context.branchId || 'General'}
-      - Catálogo/Stock Actual:
+      ${financeDataSnippet}
+      - Catálogo/Stock Actual (Muestra):
       ${productSummary.slice(0, 30000)}
 
       REGLAS CRÍTICAS:

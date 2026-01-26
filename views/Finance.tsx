@@ -365,8 +365,8 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
             </div>
           )
         }
-      </main >
-    </div >
+      </main>
+    </div>
   );
 };
 

@@ -86,10 +86,30 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
                                     <p className="text-sm text-slate-500 font-bold mb-4">{supplier.taxId || 'Sin RFC'}</p>
 
                                     <div className="space-y-2 border-t border-slate-100 dark:border-slate-700 pt-4">
-                                        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
-                                            <span className="material-symbols-outlined text-sm">contact_phone</span>
-                                            {supplier.contactInfo || 'Sin contacto'}
-                                        </div>
+                                        {supplier.contactName && (
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                                                <span className="material-symbols-outlined text-sm">person</span>
+                                                {supplier.contactName}
+                                            </div>
+                                        )}
+                                        {supplier.contactPhone && (
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                                                <span className="material-symbols-outlined text-sm">call</span>
+                                                {supplier.contactPhone}
+                                            </div>
+                                        )}
+                                        {supplier.contactEmail && (
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                                                <span className="material-symbols-outlined text-sm">email</span>
+                                                {supplier.contactEmail}
+                                            </div>
+                                        )}
+                                        {!supplier.contactName && !supplier.contactPhone && !supplier.contactEmail && (
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                                                <span className="material-symbols-outlined text-sm">contact_phone</span>
+                                                {supplier.contactInfo || 'Sin contacto'}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -135,13 +155,28 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
                                 </div>
                                 <div>
                                     <label className="text-xs font-black uppercase text-slate-400">Datos de Contacto</label>
-                                    <textarea
-                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium text-sm"
-                                        rows={3}
-                                        value={formData.contactInfo}
-                                        onChange={e => setFormData({ ...formData, contactInfo: e.target.value })}
-                                        placeholder="Nombre, teléfono, correo..."
-                                    />
+                                    <div className="grid grid-cols-1 gap-3 mt-1">
+                                        <input
+                                            className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium text-sm"
+                                            value={formData.contactName}
+                                            onChange={e => setFormData({ ...formData, contactName: e.target.value })}
+                                            placeholder="Nombre de contacto"
+                                        />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium text-sm"
+                                                value={formData.contactPhone}
+                                                onChange={e => setFormData({ ...formData, contactPhone: e.target.value })}
+                                                placeholder="Teléfono"
+                                            />
+                                            <input
+                                                className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium text-sm"
+                                                value={formData.contactEmail}
+                                                onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
+                                                placeholder="Correo electrónico"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-3 pt-4">
                                     <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 font-bold rounded-xl text-slate-500 hover:bg-slate-200">Cancelar</button>

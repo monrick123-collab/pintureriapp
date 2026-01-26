@@ -290,7 +290,10 @@ export interface Supplier {
   id: string;
   name: string;
   taxId?: string;
-  contactInfo?: string;
+  contactInfo?: string; // Legacy
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
   paymentTermsDays: number;
   commercialConditions?: Record<string, any>;
   createdAt: string;

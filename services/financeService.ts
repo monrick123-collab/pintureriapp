@@ -16,7 +16,10 @@ export const FinanceService = {
         const { data, error } = await supabase.from('suppliers').insert({
             name: supplier.name,
             tax_id: supplier.taxId,
-            contact_info: supplier.contactInfo,
+            contact_info: supplier.contactInfo, // Legacy
+            contact_name: supplier.contactName,
+            contact_phone: supplier.contactPhone,
+            contact_email: supplier.contactEmail,
             payment_terms_days: supplier.paymentTermsDays,
             commercial_conditions: supplier.commercialConditions || {}
         }).select().single();
@@ -28,7 +31,13 @@ export const FinanceService = {
         const dbUpdates: any = {};
         if (updates.name) dbUpdates.name = updates.name;
         if (updates.taxId) dbUpdates.tax_id = updates.taxId;
+
+        // Contact fields
         if (updates.contactInfo) dbUpdates.contact_info = updates.contactInfo;
+        if (updates.contactName) dbUpdates.contact_name = updates.contactName;
+        if (updates.contactPhone) dbUpdates.contact_phone = updates.contactPhone;
+        if (updates.contactEmail) dbUpdates.contact_email = updates.contactEmail;
+
         if (updates.paymentTermsDays !== undefined) dbUpdates.payment_terms_days = updates.paymentTermsDays;
 
         const { error } = await supabase.from('suppliers').update(dbUpdates).eq('id', id);

@@ -55,6 +55,14 @@ export class AiService {
         switch (context.userRole) {
             case 'ADMIN':
                 roleInstruction = "Eres el consultor estratégico de Pintamax. Enfócate en análisis de ventas, eficiencia de sucursales y sugerencias proactivas para el negocio.";
+                if (context.financeContext) {
+                    financeDataSnippet = `
+                    RESUMEN FINANCIERO (ADMIN):
+                    - Cuentas por Pagar: $${context.financeContext.accountsPayable.toLocaleString()}
+                    - Gastos Mes: $${context.financeContext.monthlyExpenses.toLocaleString()}
+                    - Utilidad Neta Est.: $${context.financeContext.netIncome.toLocaleString()}
+                    `;
+                }
                 break;
             case 'FINANCE':
                 roleInstruction = "Eres 'ContadorAI', el asistente financiero experto de Pintamax. Tu labor es analizar flujos de caja, detectar gastos inusuales y asegurar el pago puntual a proveedores.";

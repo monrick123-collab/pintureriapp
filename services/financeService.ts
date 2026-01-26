@@ -13,13 +13,25 @@ export const FinanceService = {
     },
 
     async createSupplier(supplier: Omit<Supplier, 'id' | 'createdAt'>) {
-        const { data, error } = await supabase.from('suppliers').insert(supplier).select().single();
+        const { data, error } = await supabase.from('suppliers').insert({
+            name: supplier.name,
+            tax_id: supplier.taxId,
+            contact_info: supplier.contactInfo,
+            payment_terms_days: supplier.paymentTermsDays,
+            commercial_conditions: supplier.commercialConditions || {}
+        }).select().single();
         if (error) throw error;
         return data;
     },
 
     async updateSupplier(id: string, updates: Partial<Supplier>) {
-        const { error } = await supabase.from('suppliers').update(updates).eq('id', id);
+        const dbUpdates: any = {};
+        if (updates.name) dbUpdates.name = updates.name;
+        if (updates.taxId) dbUpdates.tax_id = updates.taxId;
+        if (updates.contactInfo) dbUpdates.contact_info = updates.contactInfo;
+        if (updates.paymentTermsDays !== undefined) dbUpdates.payment_terms_days = updates.paymentTermsDays;
+
+        const { error } = await supabase.from('suppliers').update(dbUpdates).eq('id', id);
         if (error) throw error;
     },
 
@@ -35,15 +47,28 @@ export const FinanceService = {
 
         if (error) throw error;
         return data?.map(d => ({
-            ...d,
-            supplierName: d.suppliers?.name
+            id: d.id,
+            supplierId: d.supplier_id,
+            supplierName: d.suppliers?.name,
+            invoiceFolio: d.invoice_folio,
+            amount: d.amount,
+            status: d.status,
+            issueDate: d.issue_date,
+            dueDate: d.due_date,
+            pdfUrl: d.pdf_url,
+            xmlUrl: d.xml_url,
+            notes: d.notes,
+            createdAt: d.created_at
         })) || [];
     },
 
     async createInvoice(invoice: Omit<SupplierInvoice, 'id' | 'createdAt' | 'status' | 'amount'> & { amount: number }) {
-        // Calcular due_date si no viene (requiere buscar terms del supplier) - simplificado por ahora se asume input manual o logic en front
         const { data, error } = await supabase.from('supplier_invoices').insert({
-            ...invoice,
+            supplier_id: invoice.supplierId,
+            invoice_folio: invoice.invoiceFolio,
+            amount: invoice.amount,
+            issue_date: invoice.issueDate,
+            due_date: invoice.dueDate,
             status: 'received'
         }).select().single();
 
@@ -60,7 +85,18 @@ export const FinanceService = {
     async getLeases(): Promise<Lease[]> {
         const { data, error } = await supabase.from('leases').select('*').eq('active', true);
         if (error) throw error;
-        return data || [];
+        // Map snake_case to camelCase
+        return (data || []).map(l => ({
+            id: l.id,
+            propertyName: l.property_name,
+            landlordName: l.landlord_name,
+            monthlyAmount: l.monthly_amount,
+            paymentDay: l.payment_day,
+            contractStart: l.contract_start,
+            contractEnd: l.contract_end,
+            active: l.active,
+            branchId: l.branch_id
+        }));
     },
 
     async registerLeasePayment(payment: { leaseId: string, amount: number, paymentDate: string, notes?: string }) {

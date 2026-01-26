@@ -23,9 +23,17 @@ export const translateStatus = (status: string): string => {
         'processing': 'Procesando',
         'received': 'Recibido',
 
+        // Gastos
+        'renta': 'Renta',
+        'servicios': 'Servicios',
+        'salarios': 'Salarios',
+        'suministros': 'Suministros',
+        'otros': 'Otros',
+
         // Solicitudes de Precio y Descuento
         'resolved': 'Resuelto',
         'approved': 'Aprobado',
+        'pending_authorization': 'Pendiente',
         // 'pending', 'rejected' shared
 
         // Sucursales

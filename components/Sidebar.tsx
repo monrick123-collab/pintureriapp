@@ -44,6 +44,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
       { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
     ] : []),
+    ...(isAdmin || isFinance ? [
+      { label: 'Finanzas', path: '/finance-dashboard', icon: 'account_balance' },
+      { label: 'Proveedores', path: '/suppliers', icon: 'local_shipping' },
+      { label: 'Cuentas por Pagar', path: '/accounts-payable', icon: 'request_quote' },
+      { label: 'Arrendamientos', path: '/leases', icon: 'apartment' },
+    ] : []),
   ];
 
   return (

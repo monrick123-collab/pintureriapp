@@ -111,7 +111,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
   const subtotal = items.reduce((acc, i) => {
     const isWholesale = i.wholesalePrice && i.wholesaleMinQty && i.quantity >= i.wholesaleMinQty;
-    const priceToUse = isWholesale ? i.wholesalePrice : i.price;
+    const priceToUse = (isWholesale ? i.wholesalePrice : i.price) || 0;
     return acc + (priceToUse * i.quantity);
   }, 0);
 

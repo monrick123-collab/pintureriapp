@@ -112,7 +112,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ user, onLogout }) => {
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
                             >
-                                {{ today: 'Hoy', week: 'Semana', fortnight: 'Quincena', month: 'Mes' }[p]}
+                                {{ today: 'Hoy', week: 'Semana', fortnight: 'Quincena', month: 'Mes', custom: 'Personalizado' }[p]}
                             </button>
                         ))}
                     </div>

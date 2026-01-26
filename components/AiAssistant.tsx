@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AiService } from '../services/aiService';
 import { InventoryService } from '../services/inventoryService';
-import { Product } from '../types';
+import { FinanceService } from '../services/financeService';
+import { Product, UserRole } from '../types';
 
 interface Message {
     id: string;
@@ -65,10 +66,18 @@ const AiAssistant: React.FC = () => {
             const savedUser = localStorage.getItem('pintamax_user');
             const currentUser = savedUser ? JSON.parse(savedUser) : null;
 
+            let financeContext = undefined;
+            if (currentUser?.role === UserRole.FINANCE || currentUser?.role === UserRole.ADMIN) {
+                try {
+                    financeContext = await FinanceService.getFinanceMetrics();
+                } catch (e) { console.error("Error fetching finance context", e); }
+            }
+
             const responseText = await AiService.sendMessage(userMsg.text, {
                 products,
                 branchId: 'BR-MAIN', // TODO: Get dynamic branch ID
-                userRole: currentUser?.role || 'POS'
+                userRole: currentUser?.role || 'POS',
+                financeContext
             });
 
             const aiMsg: Message = {

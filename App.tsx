@@ -20,6 +20,10 @@ import ShippingNote from './views/ShippingNote';
 import WholesalePOS from './views/WholesalePOS';
 import WholesaleHistory from './views/WholesaleHistory';
 import WholesaleNote from './views/WholesaleNote';
+import FinanceDashboard from './views/FinanceDashboard';
+import SupplierManagement from './views/SupplierManagement';
+import AccountsPayable from './views/AccountsPayable';
+import Leasing from './views/Leasing';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
@@ -80,6 +84,12 @@ const App: React.FC = () => {
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/wholesale-history" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <WholesaleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
+
+          {/* Finance Routes */}
+          <Route path="/finance-dashboard" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <FinanceDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/suppliers" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <SupplierManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/accounts-payable" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <AccountsPayable user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/leases" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <Leasing user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

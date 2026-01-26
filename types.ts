@@ -283,3 +283,62 @@ export interface InternalConsumption {
   costAtTime?: number;
   createdAt: string;
 }
+
+// --- Finance Modules Types ---
+
+export interface Supplier {
+  id: string;
+  name: string;
+  taxId?: string;
+  contactInfo?: string;
+  paymentTermsDays: number;
+  commercialConditions?: Record<string, any>;
+  createdAt: string;
+}
+
+export type InvoiceStatus = 'received' | 'verified' | 'authorized' | 'paid' | 'rejected';
+
+export interface SupplierInvoice {
+  id: string;
+  supplierId: string;
+  supplierName?: string; // Joined
+  invoiceFolio: string;
+  amount: number;
+  status: InvoiceStatus;
+  issueDate: string;
+  dueDate: string;
+  pdfUrl?: string;
+  xmlUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface SupplierPayment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMethod: 'transfer' | 'check' | 'cash';
+  reference?: string;
+  paymentDate: string;
+}
+
+export interface Lease {
+  id: string;
+  propertyName: string;
+  landlordName: string;
+  monthlyAmount: number;
+  paymentDay: number;
+  contractStart?: string;
+  contractEnd?: string;
+  active: boolean;
+  branchId?: string;
+}
+
+export interface LeasePayment {
+  id: string;
+  leaseId: string;
+  amount: number;
+  paymentDate: string; // The month covered
+  paidAt: string;
+  notes?: string;
+}

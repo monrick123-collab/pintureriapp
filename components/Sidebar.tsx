@@ -9,6 +9,24 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
+  const [isDark, setIsDark] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' ||
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
   const isAdmin = user.role === UserRole.ADMIN;
@@ -111,21 +129,30 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         </nav>
 
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div
-              className="size-10 rounded-xl bg-slate-200 dark:bg-slate-700 bg-center bg-cover border-2 border-white dark:border-slate-800 shadow-sm"
+              className="size-10 rounded-xl bg-slate-200 dark:bg-slate-700 bg-center bg-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0"
               style={{ backgroundImage: `url(${user.avatar})` }}
             />
-            <div className="flex flex-col overflow-hidden">
-              <p className="text-sm font-black text-slate-900 dark:text-white truncate pr-2 leading-none">{user.name}</p>
+            <div className="flex flex-col overflow-hidden mr-auto">
+              <p className="text-sm font-black text-slate-900 dark:text-white truncate leading-none">{user.name}</p>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{user.role}</p>
             </div>
+
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className="text-slate-400 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              title={isDark ? "Modo Claro" : "Modo Oscuro"}
+            >
+              <span className="material-symbols-outlined text-xl">{isDark ? 'light_mode' : 'dark_mode'}</span>
+            </button>
+
             <button
               onClick={onLogout}
-              className="ml-auto text-slate-300 hover:text-red-500 transition-colors p-2"
+              className="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
               title="Cerrar Sesión"
             >
-              <span className="material-symbols-outlined">logout</span>
+              <span className="material-symbols-outlined text-xl">logout</span>
             </button>
           </div>
         </div>

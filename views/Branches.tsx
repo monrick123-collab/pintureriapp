@@ -21,7 +21,12 @@ const Branches: React.FC<BranchesProps> = ({ user, onLogout }) => {
     address: '',
     manager: '',
     phone: '',
-    type: 'store' as 'store' | 'warehouse'
+    type: 'store' as 'store' | 'warehouse',
+    config: {
+      enable_manual_tinting: false,
+      enable_ai_dynamic_pricing: false,
+      enable_pro_portal: false
+    }
   });
 
   useEffect(() => {
@@ -49,11 +54,27 @@ const Branches: React.FC<BranchesProps> = ({ user, onLogout }) => {
         address: branch.address,
         manager: branch.manager,
         phone: branch.phone,
-        type: branch.type
+        type: branch.type,
+        config: branch.config || {
+          enable_manual_tinting: false,
+          enable_ai_dynamic_pricing: false,
+          enable_pro_portal: false
+        }
       });
     } else {
       setEditingBranch(null);
-      setFormData({ name: '', address: '', manager: '', phone: '', type: 'store' });
+      setFormData({
+        name: '',
+        address: '',
+        manager: '',
+        phone: '',
+        type: 'store',
+        config: {
+          enable_manual_tinting: false,
+          enable_ai_dynamic_pricing: false,
+          enable_pro_portal: false
+        }
+      });
     }
     setIsModalOpen(true);
   };
@@ -228,6 +249,31 @@ const Branches: React.FC<BranchesProps> = ({ user, onLogout }) => {
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider ml-1">Teléfono</label>
                     <input required className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-bold text-sm" placeholder="10 dígitos" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* New Configuration Section */}
+                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Configuración Premium</h4>
+
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Colorimetría Manual</p>
+                      <p className="text-[10px] text-slate-400">Permitir fórmulas manuales</p>
+                    </div>
+                    <button type="button" onClick={() => setFormData({ ...formData, config: { ...formData.config, enable_manual_tinting: !formData.config.enable_manual_tinting } })} className={`w-10 h-5 rounded-full transition-colors relative ${formData.config.enable_manual_tinting ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                      <div className={`absolute top-1 left-1 size-3 bg-white rounded-full transition-transform ${formData.config.enable_manual_tinting ? 'translate-x-5' : ''}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Precios Dinámicos IA</p>
+                      <p className="text-[10px] text-slate-400">Sugerencias de precio en POS</p>
+                    </div>
+                    <button type="button" onClick={() => setFormData({ ...formData, config: { ...formData.config, enable_ai_dynamic_pricing: !formData.config.enable_ai_dynamic_pricing } })} className={`w-10 h-5 rounded-full transition-colors relative ${formData.config.enable_ai_dynamic_pricing ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                      <div className={`absolute top-1 left-1 size-3 bg-white rounded-full transition-transform ${formData.config.enable_ai_dynamic_pricing ? 'translate-x-5' : ''}`} />
+                    </button>
                   </div>
                 </div>
 

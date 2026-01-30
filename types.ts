@@ -16,6 +16,12 @@ export interface User {
   branchId?: string; // Links user to a specific branch (e.g. for POS)
 }
 
+export interface BranchConfig {
+  enable_manual_tinting: boolean;
+  enable_ai_dynamic_pricing: boolean;
+  enable_pro_portal: boolean;
+}
+
 export interface Branch {
   id: string;
   name: string;
@@ -24,6 +30,7 @@ export interface Branch {
   phone: string;
   status: 'active' | 'inactive';
   type: 'warehouse' | 'store';
+  config?: BranchConfig; // New configuration field
 }
 
 export interface Product {

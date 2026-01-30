@@ -209,4 +209,52 @@ export class AiService {
             return '{"tips": []}';
         }
     }
+    static async getDynamicPricingSuggestion(
+        client: any, // Client type
+        cartItems: any[] // CartItem type
+    ): Promise<{ discount: number, reasoning: string }> {
+        this.initialize();
+
+        const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const itemSummary = cartItems.map(i => `${i.name} (x${i.quantity})`).join(', ');
+
+        const systemPrompt = `
+            ACTÚA COMO UN GERENTE DE VENTAS EXPERTO.
+            
+            CLIENTE: ${client.name} (${client.type})
+            HISTORIAL: Límite crédito $${client.creditLimit || 0}, Días crédito: ${client.creditDays || 0}
+            COMPRA ACTUAL: $${cartTotal.toLocaleString()} - Items: ${itemSummary}
+
+            TU TAREA:
+            Sugiere un porcentaje de descuento (0-15%) para cerrar esta venta, considerando el volumen y perfil del cliente.
+            
+            FORMATO RESPUESTA JSON:
+            {
+                "discount": 5,
+                "reasoning": "Volumen alto de cubetas y cliente frecuente."
+            }
+        `;
+
+        try {
+            if (!this.groq) throw new Error("Groq client not initialized");
+
+            const completion = await this.groq.chat.completions.create({
+                messages: [{ role: "user", content: systemPrompt }],
+                model: this.modelName,
+                temperature: 0.3,
+                response_format: { type: "json_object" },
+                max_tokens: 150,
+            });
+
+            const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
+            return {
+                discount: result.discount || 0,
+                reasoning: result.reasoning || "No se pudo generar descuento."
+            };
+
+        } catch (error) {
+            console.error("DEBUG - AI Pricing Error:", error);
+            return { discount: 0, reasoning: "Error de conexión con IA." };
+        }
+    }
 }

@@ -1,9 +1,0 @@
-views/POS.tsx(138,21): error TS18048: 'priceToUse' is possibly 'undefined'.
-views/POS.tsx(155,13): error TS2322: Type '{ productId: string; productName: string; quantity: number; price: number | undefined; total: number; }[]' is not assignable to type 'SaleItem[]'.
-  Type '{ productId: string; productName: string; quantity: number; price: number | undefined; total: number; }' is not assignable to type 'SaleItem'.
-    Types of property 'price' are incompatible.
-      Type 'number | undefined' is not assignable to type 'number'.
-        Type 'undefined' is not assignable to type 'number'.
-views/POS.tsx(163,18): error TS18048: 'priceToUse' is possibly 'undefined'.
-views/Quotations.tsx(115,19): error TS18048: 'priceToUse' is possibly 'undefined'.
-views/SalesHistory.tsx(115,34): error TS2339: Property 'custom' does not exist on type '{ today: string; week: string; fortnight: string; month: string; }'.

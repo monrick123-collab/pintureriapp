@@ -5,6 +5,8 @@ import { User, Product, CartItem, SaleItem, Client } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { ClientService } from '../services/clientService';
+import { AiService } from '../services/aiService';
+import { Branch } from '../types';
 
 interface WholesalePOSProps {
     user: User;
@@ -27,6 +29,10 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [creditDays, setCreditDays] = useState(0);
+    const [branchConfig, setBranchConfig] = useState<Branch['config']>();
+    const [aiSuggestion, setAiSuggestion] = useState<{ discount: number, reasoning: string } | null>(null);
+    const [loadingAi, setLoadingAi] = useState(false);
+    const [appliedDiscount, setAppliedDiscount] = useState(0); // Extra discount percentage
 
     useEffect(() => {
         loadInitialData();
@@ -43,6 +49,12 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
             setProducts(prodData);
             setClients(clientData);
             setAdmins(adminData);
+
+            // Load Branch Config
+            const branches = await InventoryService.getBranches();
+            const myBranch = branches.find(b => b.id === currentBranchId);
+            if (myBranch) setBranchConfig(myBranch.config);
+
         } catch (e) {
             console.error(e);
         } finally {
@@ -74,8 +86,31 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     });
 
     const subtotal = cart.reduce((acc, item) => acc + ((item.wholesalePrice || item.price) * item.quantity), 0);
-    const iva = subtotal * 0.16;
-    const total = subtotal + iva;
+    const discountAmount = subtotal * (appliedDiscount / 100);
+    const subtotalAfterDiscount = subtotal - discountAmount;
+    const iva = subtotalAfterDiscount * 0.16;
+    const total = subtotalAfterDiscount + iva;
+
+    const handleConsultAI = async () => {
+        if (!selectedClient || cart.length === 0) return;
+        setLoadingAi(true);
+        try {
+            const suggestion = await AiService.getDynamicPricingSuggestion(selectedClient, cart);
+            setAiSuggestion(suggestion);
+        } catch (e) {
+            console.error(e);
+            alert("No se pudo conectar con la IA");
+        } finally {
+            setLoadingAi(false);
+        }
+    };
+
+    const applyAiDiscount = () => {
+        if (aiSuggestion) {
+            setAppliedDiscount(aiSuggestion.discount);
+            setAiSuggestion(null); // Close suggestion
+        }
+    };
 
     const handleFinalizeSale = async () => {
         if (!selectedClient || !selectedAdminId) {
@@ -103,7 +138,9 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                     isWholesale: true,
                     paymentType,
                     departureAdminId: selectedAdminId,
-                    subtotal,
+                    departureAdminId: selectedAdminId,
+                    subtotal: subtotalAfterDiscount,
+                    discountAmount,
                     iva,
                     creditDays
                 }
@@ -282,23 +319,64 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                                 )}
                             </div>
 
-                            <div className="pt-6 border-t dark:border-slate-800 space-y-2">
-                                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>Subtotal</span><span>${subtotal.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>IVA (16%)</span><span>${iva.toLocaleString()}</span></div>
-                                <div className="flex justify-between items-end pt-2">
-                                    <span className="text-xs font-black uppercase text-slate-400">Total</span>
-                                    <span className="text-3xl font-black text-primary">${total.toLocaleString()}</span>
-                                </div>
+                        </div>
+
+                        {/* AI & Discount Section */}
+                        <div className="py-2 border-t dark:border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
+                                <input
+                                    type="number"
+                                    min="0" max="100"
+                                    className="w-16 text-right text-xs font-bold bg-transparent border-b border-slate-200 focus:border-primary outline-none"
+                                    value={appliedDiscount}
+                                    onChange={e => setAppliedDiscount(parseFloat(e.target.value) || 0)}
+                                />
                             </div>
 
-                            <button
-                                disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading}
-                                onClick={handleFinalizeSale}
-                                className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
-                            >
-                                {loading ? 'Procesando...' : 'Finalizar Venta'}
-                            </button>
+                            {branchConfig?.enable_ai_dynamic_pricing && cart.length > 0 && selectedClient && (
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    {!aiSuggestion ? (
+                                        <button
+                                            onClick={handleConsultAI}
+                                            disabled={loadingAi}
+                                            className="w-full py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            {loadingAi ? <span className="animate-spin material-symbols-outlined text-sm">sync</span> : <span className="material-symbols-outlined text-sm">smart_toy</span>}
+                                            {loadingAi ? 'Analizando...' : 'Consultar descuento IA'}
+                                        </button>
+                                    ) : (
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Sugerencia: {aiSuggestion.discount}%</p>
+                                                    <p className="text-[10px] text-indigo-600/80 leading-tight mt-1">{aiSuggestion.reasoning}</p>
+                                                </div>
+                                                <button onClick={() => setAiSuggestion(null)} className="text-indigo-400 hover:text-indigo-600"><span className="material-symbols-outlined text-sm">close</span></button>
+                                            </div>
+                                            <button onClick={applyAiDiscount} className="w-full py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700">Aplicar Descuento</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
+                        <div className="pt-2 border-t dark:border-slate-800 space-y-2">
+                            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>Subtotal</span><span>${subtotalAfterDiscount.toLocaleString()}</span></div>
+                            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>IVA (16%)</span><span>${iva.toLocaleString()}</span></div>
+                            <div className="flex justify-between items-end pt-2">
+                                <span className="text-xs font-black uppercase text-slate-400">Total</span>
+                                <span className="text-3xl font-black text-primary">${total.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading}
+                            onClick={handleFinalizeSale}
+                            className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
+                        >
+                            {loading ? 'Procesando...' : 'Finalizar Venta'}
+                        </button>
                     </div>
                 </div>
 

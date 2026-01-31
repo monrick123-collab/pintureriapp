@@ -326,7 +326,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[9px] font-bold uppercase text-slate-600 dark:text-slate-300 w-fit">
                                     {p.brand || 'Genérico'}
                                   </span>
-                                  {p.location && <span className="text-[9px] font-mono text-slate-400 pl-1">📍 {p.location}</span>}
+                                  {p.location && <span className="text-xs font-bold text-slate-500 pl-1">📍 {p.location}</span>}
                                 </div>
                               </td>
                               {(!isWarehouse) && (

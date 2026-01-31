@@ -49,6 +49,12 @@ export interface Product {
   wholesaleMinQty?: number;
   costPrice?: number;
   packageType?: 'cubeta' | 'galon' | 'litro' | 'medio' | 'cuarto' | 'aerosol' | 'complemento';
+  // New Inventory Fields
+  min_stock?: number;
+  max_stock?: number;
+  location?: string;
+  supplier_id?: string;
+  unit_measure?: string;
 }
 
 export type ExpenseCategory = 'renta' | 'servicios' | 'salarios' | 'suministros' | 'otros';

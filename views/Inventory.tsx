@@ -89,7 +89,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const allBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean)));
 
   const resetForm = () => {
-    setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro' });
+    setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro', min_stock: 10, max_stock: 100, costPrice: 0, location: '', unit_measure: 'pza' });
     setSelectedProduct(null);
   };
 
@@ -132,7 +132,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       brand: p.brand || '',
       wholesalePrice: p.wholesalePrice || 0,
       wholesaleMinQty: p.wholesaleMinQty || 12,
-      packageType: p.packageType || 'litro'
+      packageType: p.packageType || 'litro',
+      min_stock: p.min_stock || 10,
+      max_stock: p.max_stock || 100,
+      costPrice: p.costPrice || 0,
+      location: p.location || '',
+      unit_measure: p.unit_measure || 'pza'
     });
     setIsEditModalOpen(true);
   };
@@ -299,9 +304,9 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                       <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                         <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
-                          <th className="px-6 py-5">Marca</th>
+                          <th className="px-6 py-5">Marca/Ubic.</th>
                           {!isWarehouse && <th className="px-6 py-5">Precio</th>}
-                          <th className="px-6 py-5 text-center">Stock</th>
+                          <th className="px-6 py-5 text-center">Stock (Min/Max)</th>
                           <th className="px-8 py-5 text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -317,14 +322,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                 </div>
                               </td>
                               <td className="px-6 py-5">
-                                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[9px] font-bold uppercase text-slate-600 dark:text-slate-300">
-                                  {p.brand || 'Genérico'}
-                                </span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[9px] font-bold uppercase text-slate-600 dark:text-slate-300 w-fit">
+                                    {p.brand || 'Genérico'}
+                                  </span>
+                                  {p.location && <span className="text-[9px] font-mono text-slate-400 pl-1">📍 {p.location}</span>}
+                                </div>
                               </td>
                               {(!isWarehouse) && (
                                 <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
                               )}
-                              <td className="px-6 py-5 text-center"><span className={`text-lg font-black ${stock < 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span></td>
+                              <td className="px-6 py-5 text-center">
+                                <div className="flex flex-col items-center">
+                                  <span className={`text-lg font-black ${stock < (p.min_stock || 10) ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'}`}>{stock}</span>
+                                  {p.min_stock && <span className="text-[9px] text-slate-400 font-bold">Min: {p.min_stock}</span>}
+                                </div>
+                              </td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
                                   <button
@@ -482,6 +495,17 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                     <option value="aerosol">Aerosol</option>
                     <option value="complemento">Complemento</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">
+                  <div className="col-span-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Logística y Costos</div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Costo Compra</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })} /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Ubicación</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Pasillo A-4" value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Min Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.min_stock || ''} onChange={e => setFormData({ ...formData, min_stock: parseInt(e.target.value) })} /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
+
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
                 </div>
                 <div className="flex gap-4 pt-4">
                   <button type="button" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); resetForm(); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>

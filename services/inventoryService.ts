@@ -18,6 +18,12 @@ const mapDbProduct = (item: Record<string, any>): Product => ({
     wholesaleMinQty: parseInt(item.wholesale_min_qty || item.products?.wholesale_min_qty || '12'),
     costPrice: parseFloat(item.cost_price || item.products?.cost_price || '0'),
     packageType: item.package_type || item.products?.package_type,
+    // New Fields Mapping
+    min_stock: item.min_stock || item.products?.min_stock || 10,
+    max_stock: item.max_stock || item.products?.max_stock || 100,
+    location: item.location || item.products?.location || '',
+    unit_measure: item.unit_measure || item.products?.unit_measure || 'pza',
+    supplier_id: item.supplier_id || item.products?.supplier_id,
     inventory: {}
 });
 

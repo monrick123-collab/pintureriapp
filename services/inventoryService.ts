@@ -90,7 +90,14 @@ export const InventoryService = {
                 status: product.status,
                 wholesale_price: product.wholesalePrice || 0,
                 wholesale_min_qty: product.wholesaleMinQty || 12,
-                package_type: product.packageType
+                package_type: product.packageType,
+                // New Fields
+                min_stock: product.min_stock,
+                max_stock: product.max_stock,
+                location: product.location,
+                cost_price: product.costPrice,
+                unit_measure: product.unit_measure,
+                supplier_id: product.supplier_id
             }])
             .select()
             .single();
@@ -125,7 +132,14 @@ export const InventoryService = {
                 status: updates.status,
                 wholesale_price: updates.wholesalePrice,
                 wholesale_min_qty: updates.wholesaleMinQty,
-                package_type: updates.packageType
+                package_type: updates.packageType,
+                // New Fields
+                min_stock: updates.min_stock,
+                max_stock: updates.max_stock,
+                location: updates.location,
+                cost_price: updates.costPrice,
+                unit_measure: updates.unit_measure,
+                supplier_id: updates.supplier_id
             })
             .eq('id', id);
 

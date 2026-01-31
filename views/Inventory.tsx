@@ -465,55 +465,56 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
         {/* MODALS */}
         {(isAddModalOpen || isEditModalOpen) && (
           <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-800 w-full h-[90vh] md:h-auto md:max-w-xl rounded-t-[32px] md:rounded-[40px] shadow-2xl p-6 md:p-10 overflow-y-auto custom-scrollbar flex flex-col">
-              <div className="flex justify-between items-center mb-6 md:mb-8 shrink-0">
+            <div className="bg-white dark:bg-slate-800 w-full h-[90vh] md:h-auto md:max-h-[85vh] md:max-w-xl rounded-t-[32px] md:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
+              <div className="flex justify-between items-center p-6 md:p-8 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-800 z-10">
                 <h3 className="text-xl md:text-2xl font-black">{isAddModalOpen ? 'Nuevo Producto' : 'Editar Producto'}</h3>
                 <button onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); resetForm(); }} className="md:hidden p-2 text-slate-400"><span className="material-symbols-outlined">close</span></button>
               </div>
 
-              <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="space-y-4 md:space-y-6 flex-1 overflow-y-auto p-1">
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Nombre</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">SKU</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Marca</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Categoría</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Interiores</option><option>Exteriores</option><option>Esmaltes</option><option>Accesorios</option></select></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
-                  <select
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
-                    value={formData.packageType}
-                    onChange={e => setFormData({ ...formData, packageType: e.target.value as any })}
-                  >
-                    <option value="cubeta">Cubeta (19 lts)</option>
-                    <option value="galon">Galón (4 lts)</option>
-                    <option value="litro">Litro (1 lto)</option>
-                    <option value="medio">Medio (1/2 lto)</option>
-                    <option value="cuarto">Cuarto (1/4 lto)</option>
-                    <option value="aerosol">Aerosol</option>
-                    <option value="complemento">Complemento</option>
-                  </select>
+              <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6 custom-scrollbar">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Nombre</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">SKU</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Marca</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Categoría</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Interiores</option><option>Exteriores</option><option>Esmaltes</option><option>Accesorios</option></select></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
+                    <select
+                      className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
+                      value={formData.packageType}
+                      onChange={e => setFormData({ ...formData, packageType: e.target.value as any })}
+                    >
+                      <option value="cubeta">Cubeta (19 lts)</option>
+                      <option value="galon">Galón (4 lts)</option>
+                      <option value="litro">Litro (1 lto)</option>
+                      <option value="medio">Medio (1/2 lto)</option>
+                      <option value="cuarto">Cuarto (1/4 lto)</option>
+                      <option value="aerosol">Aerosol</option>
+                      <option value="complemento">Complemento</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">
+                    <div className="col-span-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Logística y Costos</div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Costo Compra</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Ubicación</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Pasillo A-4" value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Min Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.min_stock || ''} onChange={e => setFormData({ ...formData, min_stock: parseInt(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">
-                  <div className="col-span-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Logística y Costos</div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Costo Compra</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Ubicación</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Pasillo A-4" value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
-
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Min Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.min_stock || ''} onChange={e => setFormData({ ...formData, min_stock: parseInt(e.target.value) })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
-
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
-                </div>
-                <div className="flex gap-4 pt-4 shrink-0">
+                <div className="p-6 md:p-8 pt-4 shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex gap-4">
                   <button type="button" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); resetForm(); }} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest hidden md:block">Cancelar</button>
-                  <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-xs tracking-widest">Guardar</button>
+                  <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all">Guardar</button>
                 </div>
               </form>
             </div>

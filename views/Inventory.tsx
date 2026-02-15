@@ -32,7 +32,9 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const isSub = user.role === UserRole.WAREHOUSE_SUB;
 
   const [showAuth, setShowAuth] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [authDescription, setAuthDescription] = useState('Esta acción requiere autorización.');
+
+
   const isFinance = user.role === UserRole.FINANCE;
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -254,7 +256,6 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-100 disabled:cursor-default"
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                disabled={isWarehouse}
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
@@ -263,7 +264,16 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           <div className="flex gap-2 print:hidden">
             <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleCSVUpload} />
             <div className="hidden sm:flex gap-2">
-              <button onClick={handlePrintInventory} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm hover:bg-slate-100"><span className="material-symbols-outlined">print</span><span className="text-xs uppercase">Imprimir</span></button>
+              <button onClick={() => {
+                const action = handlePrintInventory;
+                if (isWarehouse) {
+                  setPendingAction(() => action);
+                  setAuthDescription("Se requiere autorización para imprimir el inventario.");
+                  setShowAuth(true);
+                } else {
+                  action();
+                }
+              }} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm hover:bg-slate-100"><span className="material-symbols-outlined">print</span><span className="text-xs uppercase">Imprimir</span></button>
               {isAdmin && (
                 <>
                   <button onClick={() => fileInputRef.current?.click()} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">upload_file</span><span className="text-xs uppercase">Subir</span></button>
@@ -301,10 +311,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                   <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest leading-none mb-1">Total de Productos</p>
                   <h4 className="text-2xl font-black text-primary">{totalQty.toLocaleString()} <span className="text-xs font-bold">piezas</span></h4>
                 </div>
-                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Valor Total Inventario</p>
-                  <h4 className="text-2xl font-black text-slate-700 dark:text-slate-200">${totalValue.toLocaleString()}</h4>
-                </div>
+                {!isWarehouse && (
+                  <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Valor Total Inventario</p>
+                    <h4 className="text-2xl font-black text-slate-700 dark:text-slate-200">${totalValue.toLocaleString()}</h4>
+                  </div>
+                )}
               </div>
             )}
 
@@ -373,6 +385,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                       const action = () => { setSelectedProduct(p); setIsConsumptionModalOpen(true) };
                                       if (isSub) {
                                         setPendingAction(() => action);
+                                        setAuthDescription("El subencargado requiere autorización para registrar uso local.");
                                         setShowAuth(true);
                                       } else {
                                         action();
@@ -487,7 +500,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           isOpen={showAuth}
           onClose={() => { setShowAuth(false); setPendingAction(null); }}
           onAuthorized={() => { if (pendingAction) pendingAction(); }}
-          description="El subencargado requiere autorización para registrar uso local."
+          description={authDescription}
         />
 
         {/* MODALS */}

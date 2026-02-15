@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, RestockSheet, UserRole, CartItem } from '../types';
+import { User, Product, RestockSheet, UserRole, CartItem, Branch } from '../types';
 import { InventoryService } from '../services/inventoryService';
 
 interface RestocksProps {
@@ -12,25 +12,32 @@ interface RestocksProps {
 const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const [sheets, setSheets] = useState<RestockSheet[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [search, setSearch] = useState('');
 
     const isAdmin = user.role === UserRole.ADMIN;
-    const branchId = user.branchId || 'BR-MAIN';
+    const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+    const myBranchId = user.branchId || 'BR-MAIN';
+    const [selectedBranchId, setSelectedBranchId] = useState<string>(myBranchId);
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [selectedBranchId]);
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const s = await InventoryService.getRestockSheets(isAdmin ? undefined : branchId);
-            const p = await InventoryService.getProductsByBranch('BR-MAIN'); // Resurtimos desde matriz
+            const [s, p, b] = await Promise.all([
+                InventoryService.getRestockSheets((isAdmin || isWarehouse) ? (selectedBranchId === 'all' ? undefined : selectedBranchId) : myBranchId),
+                InventoryService.getProductsByBranch('BR-MAIN'),
+                InventoryService.getBranches()
+            ]);
             setSheets(s);
             setProducts(p);
+            setBranches(b);
         } catch (e) {
             console.error(e);
         } finally {
@@ -58,14 +65,16 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
 
     const handleSubmit = async () => {
         if (cart.length === 0) return;
+        const targetBranch = (isAdmin || isWarehouse) ? (selectedBranchId === 'all' ? myBranchId : selectedBranchId) : myBranchId;
+
         try {
             setLoading(true);
             const items = cart.map(c => ({
                 productId: c.id,
                 quantity: c.quantity,
-                unitPrice: c.costPrice || c.price // Usamos costo si está disponible
+                unitPrice: c.costPrice || c.price
             }));
-            await InventoryService.createRestockSheet(branchId, items);
+            await InventoryService.createRestockSheet(targetBranch, items);
             setIsModalOpen(false);
             setCart([]);
             loadData();
@@ -88,10 +97,22 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
                 <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-primary text-3xl">reorder</span>
-                        Resurtidos
-                    </h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                            <span className="material-symbols-outlined text-primary text-3xl">reorder</span>
+                            Resurtidos
+                        </h1>
+                        {(isAdmin || isWarehouse) && (
+                            <select
+                                className="bg-transparent border-none text-lg font-black focus:ring-0 p-0 cursor-pointer text-slate-500 outline-none"
+                                value={selectedBranchId}
+                                onChange={(e) => setSelectedBranchId(e.target.value)}
+                            >
+                                <option value="all">Todas las Sucursales</option>
+                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                        )}
+                    </div>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="h-12 px-6 bg-primary text-white rounded-2xl font-black flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
@@ -124,8 +145,8 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                             <td className="px-8 py-5 text-right font-black text-slate-900 dark:text-white">${s.totalAmount.toLocaleString()}</td>
                                             <td className="px-8 py-5 text-center">
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${s.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                                                        s.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                            'bg-amber-500/10 text-amber-500'
+                                                    s.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                        'bg-amber-500/10 text-amber-500'
                                                     }`}>
                                                     {s.status === 'pending' ? 'Pendiente' : s.status === 'completed' ? 'Recibido' : 'Cancelado'}
                                                 </span>

@@ -1,0 +1,26 @@
+USUARIOS DE BODEGAS
+Subencargados:
+    • Rosa Garcia
+    • Alexis Gomez
+    • Lucia Garcia
+Este perfil será para los ayudantes de la encargada de bodega, tendrá funciones parecidas, pero tendrá algunas limitaciones.
+    1. Generar las notas de ventas y un historial de estas.
+    • Lo mismo que el usuario de bodega
+    2. Inventario
+    • Lo mismo que el usuario de bodega
+    3. Cotizaciones
+    • Lo mismo que el usuario de bodega
+    4. Devoluciones y usos de tiendas
+    • Lo mismo que el usuario de bodega.
+    • Función autorizada por un administrador
+    • Opción única, en caso de que la encargada de bodega no venga un día por equis razones.
+    5. Solicitud de productos de limpieza y papelería
+    • Lo mismo que el usuario de bodega
+    6. Solicitud de envasado
+    • Lo mismo que el usuario de bodega
+    • Función autorizada por un administrador
+    • Opción única, en caso de que la encargada de bodega no venga un día por equis razones.
+    7. Clientes
+    • Lo mismo que el usuario de bodega
+    • Función autorizada por un administrador
+    • Opción única, en caso de que la encargada de bodega no venga un día por equis razones.

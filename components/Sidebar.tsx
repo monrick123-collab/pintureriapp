@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const location = useLocation();
   const isAdmin = user.role === UserRole.ADMIN;
   const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+  const isStoreManager = user.role === UserRole.STORE_MANAGER;
   const isFinance = user.role === UserRole.FINANCE;
 
   const navItems = [
@@ -39,12 +40,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       path: '/',
       icon: isAdmin ? 'dashboard' : isWarehouse ? 'warehouse' : isFinance ? 'payments' : 'point_of_sale'
     },
-    ...(user.role !== UserRole.SELLER && !isFinance ? [
-      { label: isWarehouse ? 'Ventas / TPV' : 'Punto de Venta', path: '/pos', icon: 'point_of_sale' }
+    ...(user.role !== UserRole.SELLER && !isFinance && !isWarehouse ? [
+      { label: 'Punto de Venta', path: '/pos', icon: 'point_of_sale' }
     ] : []),
-    { label: 'Cotizador', path: '/quotations', icon: 'request_quote' },
+    ...(isAdmin || isStoreManager ? [
+      { label: 'Cotizador', path: '/quotations', icon: 'request_quote' },
+    ] : []),
     { label: 'Inventario', path: '/inventory', icon: 'inventory_2' },
-    { label: 'Devoluciones', path: '/returns', icon: 'keyboard_return' },
+    ...(isAdmin || isStoreManager ? [
+      { label: 'Devoluciones', path: '/returns', icon: 'keyboard_return' },
+    ] : []),
     ...(isAdmin || isWarehouse ? [
       { label: 'Suministros', path: '/supplies', icon: 'dry_cleaning' },
       { label: 'Envasado', path: '/packaging', icon: 'colors' },
@@ -58,11 +63,19 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       { label: 'Sucursales', path: '/branches', icon: 'location_on' },
       { label: 'Usuarios y Roles', path: '/users', icon: 'manage_accounts' },
     ] : []),
-    ...(isAdmin || isWarehouse ? [
+    ...(isAdmin || isWarehouse || isStoreManager ? [
       { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
+    ] : []),
+    ...(isAdmin || isWarehouse ? [
       { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
+    ] : []),
+    ...(isAdmin || isWarehouse || isStoreManager ? [
       { label: 'Resurtidos', path: '/restocks', icon: 'reorder' },
+    ] : []),
+    ...(isAdmin || isWarehouse || isStoreManager ? [
       { label: 'Traspasos', path: '/transfers', icon: 'local_shipping' },
+    ] : []),
+    ...(isAdmin || isStoreManager ? [
       { label: 'Cambio Moneda', path: '/coin-change', icon: 'payments' },
       { label: 'Corte de Caja', path: '/cash-cut', icon: 'point_of_sale' },
     ] : []),
@@ -106,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <div className="flex flex-col">
             <h1 className="text-xl font-black tracking-tighter">Pintamax</h1>
             <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mt-1">
-              {isAdmin ? 'ADMINISTRADOR' : isWarehouse ? 'LOGÍSTICA / BODEGA' : isFinance ? 'CONTABILIDAD' : 'COMERCIAL'}
+              {isAdmin ? 'ADMINISTRADOR' : isWarehouse ? 'LOGÍSTICA / BODEGA' : isFinance ? 'CONTABILIDAD' : isStoreManager ? 'ENCARGADO' : 'COMERCIAL'}
             </p>
           </div>
         </div>

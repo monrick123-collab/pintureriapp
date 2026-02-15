@@ -1,0 +1,54 @@
+USUARIO DE BODEGA.
+-encargada Rosa Santiz.
+Necesidades por partes:
+Se tiene pensado que el usuario de bodega tenga 9 apartados o puntos los cuales son los siguientes:
+    1. Resurtiros desde la sucursal
+    • Bodega puede tener la opción de solicitar resurtidos para cada tienda, es decir. Puede observar el inventario de todas las sucursales, para ver que material no tiene en stock. Y tener la posibilidad de solicitar resurtir para cada sucursal.
+    • Bodega puede imprimir la nota que contendría todo el material que se resurtió a las tiendas, esta impresión tiene que ser:
+    • foliadas iniciando desde el 0, cada sucursal debe de tener sus notas independientes.
+    • productos agregados de forma manual ya sea por descripción del mismo o por código de producto
+    • una vez registrado el producto, que el mismo sistema agregue de forma automático el precio unitario
+    • y multiplique de forma automática la cantidad de productos por su precio
+    • y el total de los productos resurtidos.
+    • El orden de resurtido debe ser por:
+    • Cubetas (19 lts)
+    • Galones (4 lts)
+    • Litros (1 lto)
+    • Medios (1/2 lto)
+    • cuartos
+    • Aerosoles
+    • Complementos
+    • La hoja de resurtido debe de contener un espacio para que firme la persona queda salida, el chofer o repartidor que lo lleva y el nombre de quienes surtieron el material, esta información debe de verse en el sistema de cada sucursal.
+    2. Pedidos
+    • Bodega puede solicitar pedidos y mandarlos con folio a los administradores, teniendo la posibilidad de que cuando un administrador acepte el pedido, el usuario de bodega puede ver el estatus y quien se encarga del pedido.  Esto para saber el tiempo aproximado de espera.
+    •
+    3. Generar las notas de ventas y un historial de estas
+    • Bodega tiene la posibilidad de generar notas de venta de los clientes mayoristas, definiendo si es a crédito o es de contado.
+    • Al mismo modo, al momento de generar la nota de venta, tenga la opción de imprimir la nota, y en la hoja tenga un espacio en la parte inferior donde se mencione quien recibió el material (esto de parte del cliente), quien dio salida (de parte de algún administrador) y si fue pagado o fue a crédito.
+    • Se registrará en un historial las notas de venta.  Donde se puede observar, a que cliente se le vendió, el monto total, el método de pago, quien dio salida y si forma parte de un crédito.
+    4. Inventario
+    • La forma que se surgiere el inventario es tanto para bodega y todas las sucursales. El inventario se dividirá por marcas y categorías, y por descripción del producto y código del mismo. Teniendo la cantidad en stock y el precio dado de alta.
+    • Bodega podrá ver el inventario de cada sucursal y el inventario de bodega, pero el inventario solo será de cantidad de productos no del valor del total de la mercancía.
+    • No podrá descargarlo, imprimirlo y/o editar o eliminar un producto. Y tampoco el inventario completo. Para ello debe de tener autorización de algún administrador
+    • Se surgiere un apartado o una solicitud en dado caso que un producto o algo general, no cuenta con su precio, esto de parte del usuario de bodega al usuario del contador.
+
+    5. Cotizaciones
+    • Las cotizaciones serán con la plantilla dada en un pdf aparte
+    • Las cotizaciones deben ser foliadas empezando desde el 0
+    • Con la opción de agregar descuento y a que cliente se le hizo la cotización.
+
+    6. Apartado de devoluciones, uso de tienda
+    • Este apartado es, el material que las sucursales devuelven a bodega, por uso de tienda, demostraciones o defecto del material, en este caso, bodega recibe, pero siempre debe de contar con la verificación y autorización de algún administrador.
+
+    7. Solicitud de productos de limpieza y papelería
+    • bodega puede solicitar productos de limpieza o papelería para surtir a cada sucursal o a sí misma, estos productos van con precio sin cargo a la sucursal para llevar un orden de gastos de cada tienda.
+
+    8. Solicitud de envasado
+    • Este apartado se especializa más en que bodega solicita que algunas sucursales envasan productos a granel, es decir, lo que conocemos como litriados. bodega manda el tambo de 200 lts y ya regresa en envase de litros y de galones de 3.8 lts, bodega envié el producto y el envase. Las tiendas regresan al mismo precio del tamo y bodega ya lo carga a precio de litro o galón.
+
+    9. Clientes:
+    • Los clientes mayoristas, pueden tener un apartado, y en este queremos que se vea, como un registro de cada uno, de cuanto compro, cuento debe, cada cuanta paga, si paga en efectivo o transferencia, pero sobre todo que cada cliente tenga un historial para saber cuánto es de publicidad.
+    • Si el pago del cliente es en efectivo un apartado que diga quien recibió (de los administradores) el dinero.
+    • Si es por transferencia, a nombre de quien y que administrador autorizo.
+    • Si el cliente pide y se le autoriza el crédito, a cuantos días debe pagar y la confirmación de que si pago en el tiempo establecido.
+    • Un apartado para conocer la localidad y municipio de cada cliente para saber que zonas abarcamos.

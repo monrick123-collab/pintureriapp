@@ -4,7 +4,8 @@ export enum UserRole {
   SELLER = 'SELLER',
   WAREHOUSE = 'WAREHOUSE',
   WAREHOUSE_SUB = 'WAREHOUSE_SUB',
-  FINANCE = 'FINANCE'
+  FINANCE = 'FINANCE',
+  STORE_MANAGER = 'STORE_MANAGER'
 }
 
 export interface User {

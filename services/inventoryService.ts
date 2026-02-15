@@ -414,7 +414,7 @@ export const InventoryService = {
 
         // 2. Obtener items
         const { data: items, error: iError } = await supabase
-            .from('restock_requests')
+            .from('restock_items')
             .select(`
                 *,
                 products (*)
@@ -427,15 +427,23 @@ export const InventoryService = {
             ...sheet,
             branchName: sheet.branches?.name,
             items: (items || []).map(i => ({
-                ...i,
+                id: i.id,
+                sheetId: i.sheet_id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                unitPrice: i.unit_price,
+                totalPrice: i.total_price,
                 product: mapDbProduct(i.products)
             }))
         };
     },
 
     async createRestockSheet(branchId: string, items: { productId: string, quantity: number, unitPrice: number }[]): Promise<string> {
-        // 1. Obtener siguiente folio
-        const { data: folio, error: fError } = await supabase.rpc('get_next_restock_folio', { p_branch_id: branchId });
+        // 1. Obtener siguiente folio usando la función genérica
+        const { data: folio, error: fError } = await supabase.rpc('get_next_folio', {
+            p_branch_id: branchId,
+            p_folio_type: 'restock'
+        });
         if (fError) throw fError;
 
         const totalAmount = items.reduce((acc, curr) => acc + (curr.quantity * curr.unitPrice), 0);
@@ -454,18 +462,16 @@ export const InventoryService = {
 
         if (sError) throw sError;
 
-        // 3. Crear items (requests vinculados)
-        const requests = items.map(i => ({
-            branch_id: branchId,
+        // 3. Crear items
+        const sheetItems = items.map(i => ({
+            sheet_id: sheet.id,
             product_id: i.productId,
             quantity: i.quantity,
-            sheet_id: sheet.id,
             unit_price: i.unitPrice,
-            total_price: i.quantity * i.unitPrice,
-            status: 'approved_warehouse' // Por defecto para bodega
+            total_price: i.quantity * i.unitPrice
         }));
 
-        const { error: rError } = await supabase.from('restock_requests').insert(requests);
+        const { error: rError } = await supabase.from('restock_items').insert(sheetItems);
         if (rError) throw rError;
 
         return sheet.id;
@@ -477,14 +483,6 @@ export const InventoryService = {
             .update({ status })
             .eq('id', sheetId);
         if (error) throw error;
-
-        // Si se marca como completada, podríamos querer actualizar todos los items
-        if (status === 'completed') {
-            await supabase
-                .from('restock_requests')
-                .update({ status: 'shipped' }) // O flujo similar
-                .eq('sheet_id', sheetId);
-        }
     },
 
     // --- SUPPLY ORDERS (Punto 2) ---
@@ -681,14 +679,22 @@ export const InventoryService = {
 
     // --- RETURNS FLOW (Punto 6) ---
 
-    async createReturnRequest(branchId: string, productId: string, quantity: number, reason: string): Promise<void> {
+    async createReturnRequest(branchId: string, productId: string, quantity: number, reason: string, transportedBy: string, receivedBy: string): Promise<void> {
+        const { data: folio } = await supabase.rpc('get_next_folio', {
+            p_branch_id: branchId,
+            p_folio_type: 'return'
+        });
+
         const { error } = await supabase
             .from('returns')
             .insert({
                 branch_id: branchId,
+                folio: folio || 0,
                 product_id: productId,
                 quantity: quantity,
                 reason: reason,
+                transported_by: transportedBy,
+                received_by: receivedBy,
                 status: 'pending_authorization'
             });
         if (error) throw error;
@@ -800,11 +806,100 @@ export const InventoryService = {
     async updatePackagingStatus(requestId: string, status: string): Promise<void> {
         const { error } = await supabase
             .from('packaging_requests')
-            .update({
-                status: status,
-                updated_at: new Date().toISOString()
-            })
+            .update({ status, updated_at: new Date().toISOString() })
             .eq('id', requestId);
         if (error) throw error;
+    },
+
+    // --- COIN CHANGE ---
+
+    async getCoinChangeRequests(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('coin_change_requests')
+            .select(`
+                *,
+                branches (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) query = query.eq('branch_id', branchId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
+    async createCoinChangeRequest(branchId: string, userId: string, amount: number): Promise<void> {
+        const { data: folio } = await supabase.rpc('get_next_folio', {
+            p_branch_id: branchId,
+            p_folio_type: 'coin_change'
+        });
+
+        const { error } = await supabase
+            .from('coin_change_requests')
+            .insert({
+                branch_id: branchId,
+                folio: folio || 0,
+                amount: amount,
+                requester_id: userId,
+                status: 'pending'
+            });
+        if (error) throw error;
+    },
+
+    // --- STOCK TRANSFERS ---
+
+    async getStockTransfers(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('stock_transfers')
+            .select(`
+                *,
+                from:branches!from_branch_id (name),
+                to:branches!to_branch_id (name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) {
+            query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return (data || []).map(t => ({
+            ...t,
+            fromBranchName: (t.from as any)?.name,
+            toBranchName: (t.to as any)?.name
+        }));
+    },
+
+    async createStockTransfer(fromId: string, toId: string, notes: string, items: { productId: string, quantity: number }[]): Promise<void> {
+        const { data: folio } = await supabase.rpc('get_next_folio', {
+            p_branch_id: fromId,
+            p_folio_type: 'transfer'
+        });
+
+        const { data: transfer, error: tError } = await supabase
+            .from('stock_transfers')
+            .insert({
+                from_branch_id: fromId,
+                to_branch_id: toId,
+                folio: folio || 0,
+                notes: notes,
+                status: 'pending'
+            })
+            .select()
+            .single();
+
+        if (tError) throw tError;
+
+        const transferItems = items.map(i => ({
+            transfer_id: transfer.id,
+            product_id: i.productId,
+            quantity: i.quantity
+        }));
+
+        const { error: iError } = await supabase.from('stock_transfer_items').insert(transferItems);
+        if (iError) throw iError;
     }
 };

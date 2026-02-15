@@ -1,0 +1,434 @@
+[
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.client_marketing_spend\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "client_marketing_spend",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_client_marketing_spend"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.client_payments\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "client_payments",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_client_payments"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.internal_consumption\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "internal_consumption",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_internal_consumption"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.internal_supplies\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "internal_supplies",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_internal_supplies"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.packaging_requests\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "packaging_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_packaging_requests"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.price_requests\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\",\"Public access price_requests\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "price_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_price_requests"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.quotations\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "quotations",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_quotations"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.restock_requests\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Acceso total público\",\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "restock_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_restock_requests"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.restock_sheets\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Acceso total a restock_sheets\",\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "restock_sheets",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_restock_sheets"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.returns\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "returns",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_returns"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.supply_order_items\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "supply_order_items",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_supply_order_items"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.supply_orders\\` has RLS policies but RLS is not enabled on the table. Policies include {\"Enable All for Auth\",\"Public access supply_orders\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "supply_orders",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_supply_orders"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.restock_sheets\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "restock_sheets",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_restock_sheets"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.restock_requests\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "restock_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_restock_requests"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.price_requests\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "price_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_price_requests"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.supply_orders\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "supply_orders",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_supply_orders"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.supply_order_items\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "supply_order_items",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_supply_order_items"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.internal_supplies\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "internal_supplies",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_internal_supplies"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.returns\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "returns",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_returns"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.quotations\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "quotations",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_quotations"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.packaging_requests\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "packaging_requests",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_packaging_requests"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.client_payments\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "client_payments",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_client_payments"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.client_marketing_spend\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "client_marketing_spend",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_client_marketing_spend"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.internal_consumption\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "internal_consumption",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_internal_consumption"
+  }
+]

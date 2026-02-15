@@ -61,6 +61,10 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
     ...(isAdmin || isWarehouse ? [
       { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
       { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
+      { label: 'Resurtidos', path: '/restocks', icon: 'reorder' },
+      { label: 'Traspasos', path: '/transfers', icon: 'local_shipping' },
+      { label: 'Cambio Moneda', path: '/coin-change', icon: 'payments' },
+      { label: 'Corte de Caja', path: '/cash-cut', icon: 'point_of_sale' },
     ] : []),
     ...(isAdmin || isFinance ? [
       { label: 'Finanzas', path: '/finance-dashboard', icon: 'account_balance' },
@@ -102,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <div className="flex flex-col">
             <h1 className="text-xl font-black tracking-tighter">Pintamax</h1>
             <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mt-1">
-              {isAdmin ? 'ADMINISTRADOR' : 'COMERCIAL'}
+              {isAdmin ? 'ADMINISTRADOR' : isWarehouse ? 'LOGÍSTICA / BODEGA' : isFinance ? 'CONTABILIDAD' : 'COMERCIAL'}
             </p>
           </div>
         </div>

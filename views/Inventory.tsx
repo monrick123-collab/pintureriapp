@@ -17,7 +17,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [requests, setRequests] = useState<RestockRequest[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>('BR-MAIN');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(
+    (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB)
+      ? (user.branchId || 'BR-MAIN')
+      : 'BR-MAIN'
+  );
   const [viewMode, setViewMode] = useState<'products' | 'requests' | 'consumption'>('products');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -87,6 +91,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   });
 
   const allBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean)));
+
+  const totalQty = filtered.reduce((acc, p) => acc + (p.inventory[selectedBranchId] || 0), 0);
+  const totalValue = filtered.reduce((acc, p) => acc + ((p.inventory[selectedBranchId] || 0) * (p.price || 0)), 0);
+
+  const handlePrintInventory = () => {
+    window.print();
+  };
 
   const resetForm = () => {
     setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro', min_stock: 10, max_stock: 100, costPrice: 0, location: '', unit_measure: 'pza' });
@@ -240,22 +251,26 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="flex flex-col">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
               <select
-                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8"
+                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-100 disabled:cursor-default"
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
+                disabled={isWarehouse}
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 print:hidden">
             <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleCSVUpload} />
-            {isAdmin && (
-              <div className="hidden sm:flex gap-2">
-                <button onClick={() => fileInputRef.current?.click()} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">upload_file</span><span className="text-xs uppercase">Subir</span></button>
-                <button onClick={handleDownloadTemplate} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">download</span><span className="text-xs uppercase">Plantilla</span></button>
-              </div>
-            )}
+            <div className="hidden sm:flex gap-2">
+              <button onClick={handlePrintInventory} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm hover:bg-slate-100"><span className="material-symbols-outlined">print</span><span className="text-xs uppercase">Imprimir</span></button>
+              {isAdmin && (
+                <>
+                  <button onClick={() => fileInputRef.current?.click()} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">upload_file</span><span className="text-xs uppercase">Subir</span></button>
+                  <button onClick={handleDownloadTemplate} className="h-10 px-4 bg-slate-50 dark:bg-slate-800 text-slate-600 rounded-xl font-bold flex items-center gap-2 border shadow-sm"><span className="material-symbols-outlined">download</span><span className="text-xs uppercase">Plantilla</span></button>
+                </>
+              )}
+            </div>
             {isAdmin && (
               <button onClick={() => setIsAddModalOpen(true)} className="h-10 px-4 bg-primary text-white rounded-xl font-black flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"><span className="material-symbols-outlined">add</span><span className="text-xs uppercase">Nuevo</span></button>
             )}
@@ -264,7 +279,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-end border-b border-slate-200 dark:border-slate-800 pb-1">
+            <div className="flex justify-between items-end border-b border-slate-200 dark:border-slate-800 pb-1 print:hidden">
               <div className="flex gap-4">
                 <button onClick={() => setViewMode('products')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'products' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Existencias</button>
                 <button onClick={() => setViewMode('requests')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'requests' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Peticiones</button>
@@ -279,6 +294,19 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </select>
               )}
             </div>
+
+            {viewMode === 'products' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                  <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest leading-none mb-1">Total de Productos</p>
+                  <h4 className="text-2xl font-black text-primary">{totalQty.toLocaleString()} <span className="text-xs font-bold">piezas</span></h4>
+                </div>
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Valor Total Inventario</p>
+                  <h4 className="text-2xl font-black text-slate-700 dark:text-slate-200">${totalValue.toLocaleString()}</h4>
+                </div>
+              </div>
+            )}
 
             {viewMode === 'products' ? (
               <div className="space-y-4">
@@ -397,7 +425,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                       {requests.map(req => (
                         <tr key={req.id}>
                           <td className="px-8 py-5 flex items-center gap-3">
-                            <div className="size-8 bg-slate-100 rounded p-1"><img src={req.product?.image} className="w-full h-full object-contain" /></div>
+                            <div className="size-8 bg-slate-100 rounded p-1"><img src={req.productImage || ''} className="w-full h-full object-contain" /></div>
                             <span className="font-bold text-sm dark:text-white">{req.productName}</span>
                           </td>
                           <td className="px-6 py-5 text-center font-black">{req.quantity}</td>

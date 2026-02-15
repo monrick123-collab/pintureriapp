@@ -18,6 +18,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const [selectedProductId, setSelectedProductId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState('uso_tienda');
+    const [transportedBy, setTransportedBy] = useState('');
+    const [receivedBy, setReceivedBy] = useState('');
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
@@ -47,8 +49,17 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         e.preventDefault();
         if (!selectedProductId || quantity <= 0) return;
         try {
-            await InventoryService.createReturnRequest(user.branchId || 'BR-MAIN', selectedProductId, quantity, reason);
+            await InventoryService.createReturnRequest(
+                user.branchId || 'BR-MAIN',
+                selectedProductId,
+                quantity,
+                reason,
+                transportedBy,
+                receivedBy
+            );
             setIsModalOpen(false);
+            setTransportedBy('');
+            setReceivedBy('');
             loadData();
             alert("Solicitud de devolución enviada.");
         } catch (e: any) {
@@ -89,10 +100,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
                                     <tr>
+                                        <th className="px-8 py-5">Folio</th>
                                         <th className="px-8 py-5">Producto</th>
                                         <th className="px-6 py-5">Cantidad</th>
                                         <th className="px-6 py-5">Sucursal</th>
-                                        <th className="px-6 py-5">Motivo</th>
+                                        <th className="px-6 py-5">Logística</th>
                                         <th className="px-6 py-5">Estado</th>
                                         <th className="px-8 py-5 text-right">Acciones</th>
                                     </tr>
@@ -100,10 +112,23 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 <tbody className="divide-y dark:divide-slate-700">
                                     {returns.map((r: any) => (
                                         <tr key={r.id}>
-                                            <td className="px-8 py-5 font-bold">{r.products?.name}</td>
+                                            <td className="px-8 py-5 font-black text-primary">
+                                                #{(user.branchId || 'SC').substring(0, 3)}-{(r.folio || 0).toString().padStart(4, '0')}
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold">{r.products?.name}</span>
+                                                    <span className="text-[10px] text-slate-400 capitalize">{r.reason.replace('_', ' ')}</span>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-5 font-black">{r.quantity}</td>
-                                            <td className="px-6 py-5">{r.branches?.name}</td>
-                                            <td className="px-6 py-5 capitalize">{r.reason.replace('_', ' ')}</td>
+                                            <td className="px-6 py-5 font-medium">{r.branches?.name}</td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex flex-col text-[10px] font-bold text-slate-500">
+                                                    <span>🚚 {r.transported_by || 'N/A'}</span>
+                                                    <span>👤 {r.received_by || 'N/A'}</span>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-5">
                                                 <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
                                                     {translateStatus(r.status)}
@@ -142,12 +167,23 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
                                         <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
+                                            <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe</label>
+                                            <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
+                                        </div>
+                                    </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
                                         <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={reason} onChange={e => setReason(e.target.value)}>
                                             <option value="uso_tienda">Uso de Tienda</option>
                                             <option value="demostracion">Demostraciones</option>
                                             <option value="defecto">Defecto de Material</option>
+                                            <option value="traspaso_matriz">Retorno a Matriz</option>
                                         </select>
                                     </div>
                                     <div className="flex gap-4 pt-4">

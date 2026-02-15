@@ -28,13 +28,28 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Generate random data for the quotation header
-  const quoteNumber = `COT-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+  const [paymentType, setPaymentType] = useState<'contado' | 'credito'>('contado');
+  const [folio, setFolio] = useState<number>(0);
+
+  // Use branch-specific prefix
+  const branchPrefix = user.branchId === 'BR-MAIN' ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
+  const quoteNumber = `${branchPrefix}-${(folio || 0).toString().padStart(4, '0')}`;
   const date = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   useEffect(() => {
     loadData();
+    fetchNextFolio();
   }, []);
+
+  const fetchNextFolio = async () => {
+    try {
+      // En una implementación real, esto vendría de la DB. 
+      // Usaremos un valor aleatorio o simulado si no hay servicio.
+      setFolio(Math.floor(Math.random() * 9000) + 1000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -58,7 +73,25 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   };
 
   const updateQty = (id: string, delta: number) => {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i).filter(i => i.quantity > 0));
+    setItems(prev => {
+      const next = prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i).filter(i => i.quantity > 0);
+      if (next.length === 0) {
+        setAppliedDiscount(null);
+        setActiveDiscountRequest(null);
+      }
+      return next;
+    });
+  };
+
+  const clearItemsOnly = () => {
+    setItems([]);
+    // Mantiene el descuento aplicado si existe
+  };
+
+  const clearAll = () => {
+    setItems([]);
+    setAppliedDiscount(null);
+    setActiveDiscountRequest(null);
   };
 
   const handlePrint = () => {
@@ -111,7 +144,13 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
   const subtotal = items.reduce((acc, i) => {
     const isWholesale = i.wholesalePrice && i.wholesaleMinQty && i.quantity >= i.wholesaleMinQty;
-    const priceToUse = (isWholesale ? i.wholesalePrice : i.price) || 0;
+    let priceToUse = (isWholesale ? i.wholesalePrice : i.price) || 0;
+
+    // Apply credit surcharge if applicable (e.g. 5%)
+    if (paymentType === 'credito') {
+      priceToUse = priceToUse * 1.05;
+    }
+
     return acc + (priceToUse * i.quantity);
   }, 0);
 
@@ -248,7 +287,9 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
               Condiciones Comerciales
             </h5>
             <ul className="space-y-2 text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-tighter">
+              <li className="flex gap-2"><span>•</span> Tipo de Pago: <span className="text-primary font-black uppercase">{paymentType}</span></li>
               <li className="flex gap-2"><span>•</span> Precios incluyen IVA (16.0%).</li>
+              {paymentType === 'credito' && <li className="flex gap-2"><span>•</span> Precio con cargo por financiamiento incluido.</li>}
               <li className="flex gap-2"><span>•</span> Validez de la oferta: 15 días naturales.</li>
               <li className="flex gap-2"><span>•</span> Entrega inmediata sujeta a stock.</li>
             </ul>
@@ -376,6 +417,17 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+              <div className="w-full md:w-48 relative flex items-center bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-1.5 shadow-sm transition-all focus-within:border-primary">
+                <span className="material-symbols-outlined text-slate-400 mr-2">credit_card</span>
+                <select
+                  className="flex-1 bg-transparent border-none text-xs font-black uppercase p-2 focus:ring-0 outline-none cursor-pointer"
+                  value={paymentType}
+                  onChange={e => setPaymentType(e.target.value as any)}
+                >
+                  <option value="contado">Contado</option>
+                  <option value="credito">Crédito (+5%)</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -414,9 +466,14 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                 </button>
                 <h3 className="font-black text-lg leading-tight">Presupuesto</h3>
               </div>
-              <button onClick={() => setItems([])} className="size-10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
-                <span className="material-symbols-outlined">delete_sweep</span>
-              </button>
+              <div className="flex gap-2">
+                <button onClick={clearItemsOnly} className="h-10 px-3 flex items-center justify-center text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase" title="Limpiar Items, Mantener Descuento">
+                  Solo Items
+                </button>
+                <button onClick={clearAll} className="size-10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors" title="Limpiar Todo">
+                  <span className="material-symbols-outlined">delete_sweep</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">

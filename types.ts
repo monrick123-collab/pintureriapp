@@ -76,9 +76,19 @@ export interface RestockSheet {
   folio: number;
   totalAmount: number;
   createdAt: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'shipped' | 'completed' | 'cancelled' | 'rejected';
   branchName?: string;
-  items?: RestockRequest[]; // Joined items
+  items?: RestockItem[]; // Joined items
+}
+
+export interface RestockItem {
+  id: string;
+  sheetId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  product?: Product; // Joined product
 }
 
 export interface RestockRequest {
@@ -87,18 +97,13 @@ export interface RestockRequest {
   branchName?: string; // Optional (joined)
   productId: string;
   productName?: string; // Optional (joined)
+  productImage?: string; // Optional (joined)
   quantity: number;
   status: RestockStatus;
   createdAt: string;
   approvedAt?: string;
   shippedAt?: string;
   receivedAt?: string;
-
-  // New fields for Sheets
-  sheetId?: string;
-  unitPrice?: number;
-  totalPrice?: number;
-  product?: Product; // Joined product
 }
 
 // New interfaces for Supply Orders (Point 2)
@@ -211,11 +216,15 @@ export interface Quotation {
 export interface Return {
   id: string;
   branchId: string;
+  folio?: number;
   productId: string;
   quantity: number;
   reason: string;
   status: 'pending_authorization' | 'approved' | 'rejected';
   authorizedBy?: string;
+  authorizedByName?: string;
+  transportedBy?: string;
+  receivedBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -357,4 +366,41 @@ export interface LeasePayment {
   paymentDate: string; // The month covered
   paidAt: string;
   notes?: string;
+}
+
+export interface CoinChangeRequest {
+  id: string;
+  branchId: string;
+  folio: number;
+  amount: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  requesterId: string;
+  requesterName?: string;
+  receiverId?: string;
+  receiverName?: string;
+  collectedById?: string;
+  collectedByName?: string;
+  createdAt: string;
+}
+
+export interface StockTransfer {
+  id: string;
+  fromBranchId: string;
+  fromBranchName?: string;
+  toBranchId: string;
+  toBranchName?: string;
+  folio: number;
+  status: 'pending' | 'in_transit' | 'completed' | 'cancelled';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  items?: StockTransferItem[];
+}
+
+export interface StockTransferItem {
+  id: string;
+  transferId: string;
+  productId: string;
+  productName?: string;
+  quantity: number;
 }

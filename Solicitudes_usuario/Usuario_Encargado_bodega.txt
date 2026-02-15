@@ -1,0 +1,64 @@
+USUARIO DE ENCARGADO:
+Este perfil, se establecerá para todas las sucursales. Lo único que cambiaría sería los usuarios y contraseña para cada encargado.
+Las funciones que tendrá este perfil serían las siguientes:
+    1. Inventario
+    • El inventario se dividirá por marcas y categorías, y por descripción del producto y código del mismo. Teniendo la cantidad en stock y el precio dado de alta.
+    • Se mostrará el total de inventario, esto con la cantidad de productos y la cantidad total.
+    • Podrá imprimir el inventario del mes, siempre y cuando se haya autorizado por parte de un administrador.
+    • No podrá descargarlo.
+    •  Cada tienda solo podrá ver el inventario de su sucursal.
+    2. Resurtidos Falta desarrollar este apartado
+    • El perfil de encargado podrá mandar la solicitud del resurtido junto con el perfil de vendedor, teniendo en cuenta que tanto el encargado como vendedor pueden enviar el resurtido.
+    • Al igual que el resurtidos de bodega, esta tendrá las mismas indicaciones
+    • foliadas iniciando desde el 0, cada sucursal debe de tener sus notas independientes.
+    • productos agregados de forma manual ya sea por descripción del mismo o por código de producto
+    • una vez registrado el producto, que el mismo sistema agregue de forma automático el precio unitario
+    • y multiplique de forma automática la cantidad de productos por su precio
+    • y el total de los productos resurtidos.
+    • El orden sería lo mismo:
+    • Cubetas (19 lts)
+    • Galones (4 lts)
+    • Litros (1 lto)
+    • Medios (1/2 lto)
+    • cuartos
+    • Aerosoles
+    • Complementos
+
+    • La notificación del resurtido va para bodega y administrador, para que darle salida si se necesita la autorización del administrador.
+    • Considerar que el resurtido podría ser como un cotizador ya que son varios artículos los que normalmente solicitan, consideramos que asi seria mas facil.
+    3. Cotizaciones
+    • La opción de generar cotizaciones será con las mismas funciones que el perfil de bodega:
+    • Las cotizaciones deben ser foliadas empezando desde el 0
+    • Con la opción de agregar descuento y a que cliente se le hizo la cotización.
+    • El administrador podrá aceptar, rechazar o modificar el porcentaje o monto del descuento, las cotizaciones y de las ventas.
+    • Existen casos en donde se aumenta el precio del pedido ya sea por que el material va a crédito, entonces cuando este pase se hará con autorización del administrador, sube el precio de venta y del inventario.
+    • Cuando se solicita el descuento y se acepta, borramos todos los productos y el descuento permanece, mejor que si se borra los productos el descuento tambien. pasa en cotizaciones y punto de venta.
+    4. Corte de caja
+    • Sería como un tipo historial de ventas, solo que en esta se identificaría el total de ventas general, tanto ventas en efectivo, venta con tarjeta y/o transferencias, al mismo modo se dirá si en el trascurso del día hubo algún gasto o vale.
+    • Esto será el diario y tendrá la opción de imprimirse y únicamente podrá guardar la cantidad total de venta del día en el historial de venta.
+    •  Aquí se juntará todas las ventas del día y los gastos.
+    • Se podrá imprimir y guardar
+    • Se guardara un mes
+    5. Ventas individuales
+    • Las ventas individuales, es la cantidad que vendió tanto el encargado como los vendedores que apoyan en la sucursal.
+    • Sera un historial mensual que se puede guardar hasta 4 meses antes.
+    • Únicamente se mostrará el nombre del vendedor y el encargado.
+    6. Historial de ventas.
+    • Este apartado será donde se resguarden y se registren las ventas de la tienda, en este apartado seré general y por día, se guardará la venta en efectivo, en transferencia y/o venta con tarjeta. Del mismo modo, si hubo un gasto del día o vales. Se tendrá un registro de 4 meses anteriores.
+    •
+    7. Devoluciones y uso de tienda.
+    • Las devoluciones son el material que devuelven a bodega, y como se mencionó, esta primero debe llegar como una solicitud en un administrador, este autorizar y mencionar quien lo acepto.
+    • Este perfil podrá imprimir la devolución, esta será foliada iniciando con el 0 y para cada sucursal será única e individual.
+    • En la hoja tendrá un apartado de quien transportó y quien recibió de bodega.
+    •  No da la opción de imprimir.
+    8. Solicitud de cambio de monedas.
+    • Este apartado será una solicitud donde llegará a un administrador y a bodega como un recordatorio.
+    • Sera una nota sencilla donde ingresa la cantidad de cambio en monedas que requiera y en esta se pondrá quien recibió y quien recogió.
+    9. Vales de compra o gastos del día falta apartado
+    • Este apartado será una aparte, pero se registrará de forma automática en el corte de caja. Por lo general será con en efectivo y con comprobante del total, esto de parte del vendedor o encargado.
+    •
+    10. Solicitudes de productos de limpieza y papelería falta apartado
+    • Aquí el encargado mandará una solicitud donde requiera estos productos.
+    • Estos no tendrán precio alguno y no se contará en el inventario.
+    11.  Cambio de productos o traspaso entre sucursales y bodega falta apartado
+Se da cuento entre sucursal se prestan o cambia personal, también foliadas, y agregar nota de que ya fue devuelto o pagado el préstamo.

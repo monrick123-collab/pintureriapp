@@ -68,8 +68,6 @@ export const AccountingService = {
         const totalExpenses = expensesData.reduce((acc, e) => acc + Number(e.amount), 0);
 
         // 3. Tax (IVA 16%)
-        // Assuming 'total' in sales includes IVA. 
-        // Total = Subtotal * 1.16 -> IVA = Total / 1.16 * 0.16
         const totalIva = totalSales / 1.16 * 0.16;
 
         return {
@@ -79,6 +77,63 @@ export const AccountingService = {
             totalIva,
             grossProfit: totalSales - totalCogs,
             netProfit: totalSales - totalCogs - totalExpenses
+        };
+    },
+
+    async getDailyCashCut(branchId: string, date: string) {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+
+        // 1. Sales by payment method
+        const { data: sales, error: sError } = await supabase.from('sales')
+            .select('*')
+            .eq('branch_id', branchId)
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
+
+        if (sError) throw sError;
+
+        const summary = {
+            cash: 0,
+            card: 0,
+            transfer: 0,
+            total: 0
+        };
+
+        (sales || []).forEach(s => {
+            const method = s.payment_method?.toLowerCase() || 'cash';
+            if (method.includes('efectivo') || method === 'cash') summary.cash += Number(s.total);
+            else if (method.includes('tarjeta') || method === 'card') summary.card += Number(s.total);
+            else if (method.includes('transfer') || method === 'transferencia') summary.transfer += Number(s.total);
+            summary.total += Number(s.total);
+        });
+
+        // 2. Expenses
+        const { data: expenses, error: eError } = await supabase.from('expenses')
+            .select('*')
+            .eq('branch_id', branchId)
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
+
+        if (eError) throw eError;
+
+        // 3. Coupons (Redeemed)
+        const { data: coupons, error: cError } = await supabase.from('coupons')
+            .select('*')
+            .eq('branch_id', branchId)
+            .eq('status', 'redeemed')
+            .gte('redeemed_at', start.toISOString())
+            .lte('redeemed_at', end.toISOString());
+
+        if (cError) throw cError;
+
+        return {
+            summary,
+            expenses: expenses || [],
+            coupons: coupons || [],
+            salesCount: (sales || []).length
         };
     }
 };

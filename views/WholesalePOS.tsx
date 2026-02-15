@@ -85,7 +85,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
         return matchesSearch && matchesCategory;
     });
 
-    const subtotal = cart.reduce((acc, item) => acc + ((item.wholesalePrice || item.price) * item.quantity), 0);
+    const subtotal = cart.reduce((acc, item) => {
+        let price = (item.wholesalePrice || item.price);
+        if (paymentType === 'credito') price = price * 1.05;
+        return acc + (price * item.quantity);
+    }, 0);
     const discountAmount = subtotal * (appliedDiscount / 100);
     const subtotalAfterDiscount = subtotal - discountAmount;
     const iva = subtotalAfterDiscount * 0.16;
@@ -137,7 +141,6 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                 {
                     isWholesale: true,
                     paymentType,
-                    departureAdminId: selectedAdminId,
                     departureAdminId: selectedAdminId,
                     subtotal: subtotalAfterDiscount,
                     discountAmount,

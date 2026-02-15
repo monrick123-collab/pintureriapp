@@ -122,14 +122,29 @@ const AiAssistant: React.FC = () => {
                 style={{ height: '600px', maxHeight: '70vh' }}
             >
                 {/* Header */}
-                <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center gap-3 shrink-0">
-                    <div className="bg-white/20 p-2 rounded-xl">
-                        <span className="material-symbols-outlined text-white">smart_toy</span>
+                <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-xl">
+                            <span className="material-symbols-outlined text-white">smart_toy</span>
+                        </div>
+                        <div>
+                            <h3 className="font-black text-white text-sm">Asistente Pintamax</h3>
+                            <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Powered by Llama 3</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-black text-white text-sm">Asistente Pintamax</h3>
-                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Powered by Llama 3 (Groq)</p>
-                    </div>
+                    <button
+                        onClick={() => {
+                            if (confirm("¿Quieres cambiar la API Key? Se borrará la actual.")) {
+                                localStorage.removeItem('pintamax_groq_api_key');
+                                setApiKeyMissing(true);
+                                setMessages([]); // Clear chat
+                            }
+                        }}
+                        className="text-white/50 hover:text-white p-1"
+                        title="Cambiar API Key"
+                    >
+                        <span className="material-symbols-outlined text-sm">key</span>
+                    </button>
                 </div>
 
                 {/* Configuration Overlay if no API Key */}

@@ -38,6 +38,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE_SUB, name: 'Subencargado Prueba', branchId: 'BR-MAIN', id: 'SUB-001' });
     } else if (email.includes('contador')) {
       onLogin({ ...MOCK_USER, role: UserRole.FINANCE, name: 'Contador de Pruebas', branchId: 'BR-MAIN', id: 'ACC-001' });
+    } else if (email.includes('encargado')) {
+      onLogin({ ...MOCK_USER, role: UserRole.STORE_MANAGER, name: 'Encargado de Tienda', branchId: 'BR-CENTRO', id: 'MGR-001' });
     } else {
       onLogin(MOCK_USER);
     }

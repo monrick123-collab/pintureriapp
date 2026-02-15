@@ -28,6 +28,7 @@ import Restocks from './views/Restocks';
 import Transfers from './views/Transfers';
 import CoinChange from './views/CoinChange';
 import CashCut from './views/CashCut';
+import AdminCashCuts from './views/AdminCashCuts';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
@@ -99,7 +100,8 @@ const App: React.FC = () => {
           <Route path="/restocks" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <Restocks user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/transfers" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <Transfers user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/coin-change" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <CoinChange user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
-          <Route path="/cash-cut" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.FINANCE) ? <CashCut user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/cash-cut" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.FINANCE || user?.role === UserRole.STORE_MANAGER) ? <CashCut user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/admin-cash-cuts" element={(user?.role === UserRole.ADMIN) ? <AdminCashCuts user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

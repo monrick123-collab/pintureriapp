@@ -135,5 +135,41 @@ export const AccountingService = {
             coupons: coupons || [],
             salesCount: (sales || []).length
         };
+    },
+
+    async submitCashCut(data: {
+        branchId: string;
+        date: string;
+        totalCash: number;
+        totalCard: number;
+        totalTransfer: number;
+        expensesAmount: number;
+        calculatedTotal: number;
+        notes?: string;
+    }) {
+        const { error } = await supabase.from('cash_cuts').upsert({
+            branch_id: data.branchId,
+            date: data.date,
+            total_cash: data.totalCash,
+            total_card: data.totalCard,
+            total_transfer: data.totalTransfer,
+            expenses_amount: data.expensesAmount,
+            calculated_total: data.calculatedTotal,
+            status: 'pending',
+            notes: data.notes
+        }, { onConflict: 'branch_id, date' });
+
+        if (error) throw error;
+    },
+
+    async getCashCutStatus(branchId: string, date: string) {
+        const { data, error } = await supabase.from('cash_cuts')
+            .select('*')
+            .eq('branch_id', branchId)
+            .eq('date', date)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows found"
+        return data;
     }
 };

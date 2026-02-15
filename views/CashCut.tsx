@@ -36,7 +36,8 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
         try {
             setLoading(true);
             const res = await AccountingService.getDailyCashCut(selectedBranch, selectedDate);
-            setData(res);
+            const statusRes = await AccountingService.getCashCutStatus(selectedBranch, selectedDate);
+            setData({ ...res, status: statusRes?.status });
         } catch (e) {
             console.error(e);
         } finally {
@@ -200,6 +201,68 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                     </div>
                 </div>
             </main>
+
+            {/* Approval Footer / Action Bar */}
+            {data && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 print:hidden z-40">
+                    <div className="max-w-5xl mx-auto flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${data.status === 'approved' ? 'bg-green-100 text-green-600' :
+                                    data.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                                        data.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                            'bg-slate-100 text-slate-500'
+                                }`}>
+                                <span className="material-symbols-outlined">
+                                    {data.status === 'approved' ? 'check_circle' :
+                                        data.status === 'rejected' ? 'cancel' :
+                                            data.status === 'pending' ? 'hourglass_top' : 'radio_button_unchecked'}
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase text-slate-500">Estado del Corte</p>
+                                <p className="font-bold capitalize">{
+                                    data.status === 'approved' ? 'Aprobado' :
+                                        data.status === 'rejected' ? 'Rechazado' :
+                                            data.status === 'pending' ? 'Pendiente de Aprobación' : 'No Enviado'
+                                }</p>
+                            </div>
+                        </div>
+
+                        {!data.status && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        if (!confirm('¿Estás seguro de enviar el corte? Una vez enviado no podrás modificar gastos.')) return;
+                                        setLoading(true);
+                                        await AccountingService.submitCashCut({
+                                            branchId: selectedBranch,
+                                            date: selectedDate,
+                                            totalCash: data.summary.cash,
+                                            totalCard: data.summary.card,
+                                            totalTransfer: data.summary.transfer,
+                                            expensesAmount: data.expenses.reduce((acc: number, e: any) => acc + Number(e.amount), 0),
+                                            calculatedTotal: (data.summary.cash - data.expenses.reduce((acc: number, e: any) => acc + Number(e.amount), 0)),
+                                            notes: 'Cierre de turno automático'
+                                        });
+                                        // Reload to get status
+                                        loadData();
+                                        alert('Corte enviado a revisión correctamente.');
+                                    } catch (e) {
+                                        console.error(e);
+                                        alert('Error al enviar corte.');
+                                        setLoading(false);
+                                    }
+                                }}
+                                disabled={loading}
+                                className="bg-primary text-white px-8 py-3 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">send</span>
+                                ENVIAR A REVISIÓN
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

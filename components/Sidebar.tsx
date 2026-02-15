@@ -79,6 +79,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       { label: 'Cambio Moneda', path: '/coin-change', icon: 'payments' },
       { label: 'Corte de Caja', path: '/cash-cut', icon: 'point_of_sale' },
     ] : []),
+    ...(isAdmin ? [
+      { label: 'Aprobación Cortes', path: '/admin-cash-cuts', icon: 'price_check' },
+    ] : []),
     ...(isAdmin || isFinance ? [
       { label: 'Finanzas', path: '/finance-dashboard', icon: 'account_balance' },
       { label: 'Proveedores', path: '/suppliers', icon: 'local_shipping' },

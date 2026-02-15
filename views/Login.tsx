@@ -14,31 +14,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.includes('admin')) {
+    const emailLower = email.toLowerCase();
+
+    if (emailLower.includes('admin')) {
       onLogin({ ...MOCK_USER, role: UserRole.ADMIN, name: 'Administrador' });
-    } else if (email.includes('bodega')) {
-      // Import this dynamically or assume it's available via previous tool update, 
-      // but simpler to just inline the mock or import if possible. 
-      // To avoid import errors if the previous tool didn't export it yet or imports are strict, 
-      // I will import it in the notification or assume usage.
-      // Actually best practice is to import it. I'll need to update imports first or inline it.
-      // Let's rely on the updated constants file.
-      // Wait, I need to update the import in Login.tsx first or uses require? No, typescript.
-      // I should update the import line in Login.tsx as well.
-      // I'll do this in a separate step or try to add it here if I can view the file imports.
-      // Actually, I can just use a hardcoded object here for safety if imports are tricky in one go.
-      // But I replaced constants.tsx, so I can import it.
-      // I will update Login.tsx imports in the next step.
-      // For now, let's just make the change relying on the Variable name, 
-      // and I will update the import in the next tool call to be safe.
-      // OR better: I can construct the user here like the Admin case.
+    } else if (emailLower.includes('bodega')) {
       onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE, name: 'Encargado Bodega', branchId: 'BR-MAIN', id: 'WH-001' });
-    } else if (email.includes('subencargado')) {
-      // Mock login for sub-manager test
+    } else if (emailLower.includes('subencargado')) {
       onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE_SUB, name: 'Subencargado Prueba', branchId: 'BR-MAIN', id: 'SUB-001' });
-    } else if (email.includes('contador')) {
+    } else if (emailLower.includes('contador')) {
       onLogin({ ...MOCK_USER, role: UserRole.FINANCE, name: 'Contador de Pruebas', branchId: 'BR-MAIN', id: 'ACC-001' });
-    } else if (email.includes('encargado')) {
+    } else if (emailLower.includes('encargado')) {
       onLogin({ ...MOCK_USER, role: UserRole.STORE_MANAGER, name: 'Encargado de Tienda', branchId: 'BR-CENTRO', id: 'MGR-001' });
     } else {
       onLogin(MOCK_USER);

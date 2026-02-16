@@ -24,8 +24,6 @@ const AiAssistant: React.FC = () => {
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [apiKeyMissing, setApiKeyMissing] = useState(!AiService.hasApiKey());
-    const [tempKey, setTempKey] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -38,12 +36,7 @@ const AiAssistant: React.FC = () => {
         scrollToBottom();
     }, [messages, isOpen]);
 
-    const handleSaveKey = () => {
-        if (tempKey.trim().length > 10) {
-            AiService.setApiKey(tempKey);
-            setApiKeyMissing(false);
-        }
-    };
+
 
     const handleSend = async () => {
         if (!inputValue.trim() || isLoading) return;
@@ -132,92 +125,58 @@ const AiAssistant: React.FC = () => {
                             <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Powered by Llama 3</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => {
-                            if (confirm("¿Quieres cambiar la API Key? Se borrará la actual.")) {
-                                localStorage.removeItem('pintamax_groq_api_key');
-                                setApiKeyMissing(true);
-                                setMessages([]); // Clear chat
-                            }
-                        }}
-                        className="text-white/50 hover:text-white p-1"
-                        title="Cambiar API Key"
-                    >
-                        <span className="material-symbols-outlined text-sm">key</span>
-                    </button>
+
                 </div>
 
-                {/* Configuration Overlay if no API Key */}
-                {apiKeyMissing ? (
-                    <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-4">
-                        <span className="material-symbols-outlined text-6xl text-slate-300">key_off</span>
-                        <h4 className="font-black text-slate-700 dark:text-white">Falta API Key</h4>
-                        <p className="text-xs text-slate-500">Para usar el asistente, necesitas una API Key de Gemini (Google AI Studio).</p>
-                        <input
-                            type="password"
-                            placeholder="Pegar API Key aquí..."
-                            className="w-full p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-mono border dark:border-slate-700"
-                            value={tempKey}
-                            onChange={e => setTempKey(e.target.value)}
-                        />
-                        <button
-                            onClick={handleSaveKey}
-                            className="w-full py-3 bg-indigo-500 text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors"
-                        >
-                            Guardar y Activar
-                        </button>
-                        <p className="text-[10px] text-slate-400">La clave se guarda localmente en tu navegador.</p>
+                {/* Messages */}
+                <>
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50 custom-scrollbar">
+                        {messages.map((msg) => (
+                            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] p-3 rounded-2xl text-xs font-medium leading-relaxed ${msg.role === 'user'
+                                    ? 'bg-indigo-500 text-white rounded-br-none'
+                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none shadow-sm'
+                                    }`}>
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+                        {isLoading && (
+                            <div className="flex justify-start">
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-bl-none border border-slate-200 dark:border-slate-700 shadow-sm flex gap-1">
+                                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
+                                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
                     </div>
-                ) : (
-                    <>
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50 custom-scrollbar">
-                            {messages.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] p-3 rounded-2xl text-xs font-medium leading-relaxed ${msg.role === 'user'
-                                        ? 'bg-indigo-500 text-white rounded-br-none'
-                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none shadow-sm'
-                                        }`}>
-                                        {msg.text}
-                                    </div>
-                                </div>
-                            ))}
-                            {isLoading && (
-                                <div className="flex justify-start">
-                                    <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-bl-none border border-slate-200 dark:border-slate-700 shadow-sm flex gap-1">
-                                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
-                                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
 
-                        {/* Input Area */}
-                        <div className="p-3 bg-white dark:bg-slate-900 border-t dark:border-slate-800 shrink-0">
-                            <form
-                                onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                                className="flex gap-2"
+                    {/* Input Area */}
+                    <div className="p-3 bg-white dark:bg-slate-900 border-t dark:border-slate-800 shrink-0">
+                        <form
+                            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                            className="flex gap-2"
+                        >
+                            <input
+                                className="flex-1 bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-indigo-500"
+                                placeholder="Escribe tu consulta..."
+                                value={inputValue}
+                                onChange={e => setInputValue(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!inputValue.trim() || isLoading}
+                                className="bg-indigo-500 text-white p-3 rounded-xl disabled:opacity-50 hover:bg-indigo-600 transition-colors"
                             >
-                                <input
-                                    className="flex-1 bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="Escribe tu consulta..."
-                                    value={inputValue}
-                                    onChange={e => setInputValue(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!inputValue.trim() || isLoading}
-                                    className="bg-indigo-500 text-white p-3 rounded-xl disabled:opacity-50 hover:bg-indigo-600 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-lg">send</span>
-                                </button>
-                            </form>
-                        </div>
-                    </>
-                )}
+                                <span className="material-symbols-outlined text-lg">send</span>
+                            </button>
+                        </form>
+                    </div>
+                </>
             </div>
         </>
     );

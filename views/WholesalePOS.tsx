@@ -481,6 +481,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                             <p className="text-slate-500 font-bold">La nota de venta mayorista ha sido procesada correctamente.</p>
                         </div>
                     )}
+                </div>
             </main>
         </div>
     );

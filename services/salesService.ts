@@ -102,6 +102,10 @@ export const SalesService = {
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
+            billingBank: s.billing_bank,
+            billingSocialReason: s.billing_social_reason,
+            billingInvoiceNumber: s.billing_invoice_number,
+            deliveryReceiverName: s.delivery_receiver_name,
             items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -150,6 +154,10 @@ export const SalesService = {
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
             departureAdminName: s.departure_admin_id, // Fallback to ID
+            billingBank: s.billing_bank,
+            billingSocialReason: s.billing_social_reason,
+            billingInvoiceNumber: s.billing_invoice_number,
+            deliveryReceiverName: s.delivery_receiver_name,
             items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -203,6 +211,10 @@ export const SalesService = {
             paymentType: data.payment_type,
             departureAdminId: data.departure_admin_id,
             departureAdminName: data.departure_admin_id,
+            billingBank: data.billing_bank,
+            billingSocialReason: data.billing_social_reason,
+            billingInvoiceNumber: data.billing_invoice_number,
+            deliveryReceiverName: data.delivery_receiver_name,
             items: (data.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,

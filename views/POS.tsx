@@ -66,6 +66,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
+    setAppliedDiscount(null);
+    setActiveDiscountRequest(null);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -76,6 +78,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return item;
     }).filter(item => item.quantity > 0));
+    setAppliedDiscount(null);
+    setActiveDiscountRequest(null);
   };
 
   const filteredProducts = products.filter(p => {
@@ -369,19 +373,13 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         </div>
 
         {isPaymentModalOpen && (
-          // ... existing payment modal ...
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            {/* Payment Modal Content */}
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-8">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-8 max-h-[90vh] overflow-y-auto">
               <h2 className="text-2xl font-black mb-6">Confirmar Pago</h2>
               <div className="space-y-4">
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl">
                   <p className="text-xs font-bold text-slate-400">Monto a Cobrar</p>
                   <p className="text-3xl font-black text-primary">${total.toLocaleString()}</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500">Recibido</label>
-                  <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black text-xl" value={cashReceived} onChange={e => setCashReceived(e.target.value)} />
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -401,13 +399,52 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                     ))}
                   </div>
                 </div>
+
+                {(paymentMethod === 'card' || paymentMethod === 'transfer') && (
+                  <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="material-symbols-outlined text-blue-500 text-sm">receipt_long</span>
+                      <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase">Datos de Facturación Obligatorios</span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold uppercase text-slate-400">Banco</label>
+                      <input id="billing-bank" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Ej: BBVA, Santander" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold uppercase text-slate-400">Razón Social</label>
+                      <input id="billing-social" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Nombre o Razón Social" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold uppercase text-slate-400">No. Factura / Referencia</label>
+                      <input id="billing-invoice" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Folio de Factura" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Monto Recibido</label>
+                  <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black text-xl" value={cashReceived} onChange={e => setCashReceived(e.target.value)} />
+                </div>
+
                 <div className="flex justify-between text-sm font-bold pt-2">
                   <span className="text-slate-500">Cambio:</span>
                   <span className="text-green-600">${change.toLocaleString()}</span>
                 </div>
                 <div className="flex gap-4 pt-4">
                   <button onClick={() => setIsPaymentModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
-                  <button onClick={handleFinalizeSale} disabled={loading} className="flex-1 py-3 bg-primary text-white font-bold rounded-xl">
+                  <button onClick={() => {
+                    if (paymentMethod === 'card' || paymentMethod === 'transfer') {
+                      const bank = (document.getElementById('billing-bank') as HTMLInputElement).value;
+                      const social = (document.getElementById('billing-social') as HTMLInputElement).value;
+                      const invoice = (document.getElementById('billing-invoice') as HTMLInputElement).value;
+
+                      if (!bank || !social || !invoice) {
+                        alert("Escriba Banco, Razón Social y No. Factura para continuar.");
+                        return;
+                      }
+                    }
+                    handleFinalizeSale();
+                  }} disabled={loading} className="flex-1 py-3 bg-primary text-white font-bold rounded-xl">
                     {loading ? 'Procesando...' : 'Finalizar'}
                   </button>
                 </div>

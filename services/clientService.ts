@@ -162,5 +162,52 @@ export const ClientService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async getClientFinancials(clientId: string): Promise<{ balance: number, oldestPendingDate: string | null }> {
+        // 1. Get total credit sales (completed)
+        const { data: sales, error: salesError } = await supabase
+            .from('sales')
+            .select('total, created_at')
+            .eq('client_id', clientId)
+            .eq('payment_type', 'credito')
+            .eq('status', 'completed');
+
+        if (salesError) throw salesError;
+
+        // 2. Get total payments
+        const { data: payments, error: paymentsError } = await supabase
+            .from('client_payments')
+            .select('amount, created_at')
+            .eq('client_id', clientId);
+
+        if (paymentsError) throw paymentsError;
+
+        const totalDebt = sales?.reduce((acc, s) => acc + (s.total || 0), 0) || 0;
+        const totalPaid = payments?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
+        const currentBalance = totalDebt - totalPaid;
+
+        // FIFO calculation for oldest pending date
+        let oldestDate: string | null = null;
+        if (currentBalance > 0 && sales && sales.length > 0) {
+            // Sort sales by date ascending (oldest first)
+            const sortedSales = sales.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            let paidAccumulator = totalPaid;
+
+            for (const sale of sortedSales) {
+                if (paidAccumulator >= sale.total) {
+                    paidAccumulator -= sale.total;
+                } else {
+                    // This sale is partially or fully unpaid
+                    oldestDate = sale.created_at;
+                    break;
+                }
+            }
+        }
+
+        return {
+            balance: Math.max(0, currentBalance),
+            oldestPendingDate: oldestDate
+        };
     }
 };

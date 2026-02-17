@@ -10,14 +10,26 @@ interface ReturnsProps {
     onLogout: () => void;
 }
 
+interface ReturnItem {
+    productId: string;
+    productName: string;
+    quantity: number;
+    reason: string;
+}
+
 const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [returns, setReturns] = useState<Return[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Form States
+    const [cart, setCart] = useState<ReturnItem[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState('uso_tienda');
+
+    // Global Request States
     const [transportedBy, setTransportedBy] = useState('');
     const [receivedBy, setReceivedBy] = useState('');
 
@@ -45,19 +57,45 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const addToCart = () => {
         if (!selectedProductId || quantity <= 0) return;
+        const product = products.find(p => p.id === selectedProductId);
+        if (!product) return;
+
+        setCart([...cart, {
+            productId: selectedProductId,
+            productName: product.name,
+            quantity: quantity,
+            reason: reason
+        }]);
+
+        // Reset Item Form
+        setSelectedProductId('');
+        setQuantity(1);
+        setReason('uso_tienda');
+    };
+
+    const removeFromCart = (index: number) => {
+        setCart(cart.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = async () => {
+        if (cart.length === 0 || !transportedBy || !receivedBy) return;
         try {
+            const items = cart.map(item => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                reason: item.reason
+            }));
+
             await InventoryService.createReturnRequest(
                 user.branchId || 'BR-MAIN',
-                selectedProductId,
-                quantity,
-                reason,
+                items,
                 transportedBy,
                 receivedBy
             );
             setIsModalOpen(false);
+            setCart([]);
             setTransportedBy('');
             setReceivedBy('');
             loadData();
@@ -95,7 +133,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 />
 
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                    <div className="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
@@ -144,6 +182,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                             </td>
                                         </tr>
                                     ))}
+                                    {returns.length === 0 && (
+                                        <tr><td colSpan={7} className="text-center py-10 text-slate-400 italic">No hay devoluciones registradas.</td></tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -152,45 +193,88 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
 
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                        <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                            <div className="p-10 overflow-y-auto">
-                                <h3 className="text-2xl font-black mb-8">Solicitar Devolución</h3>
-                                <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col md:flex-row">
+                            {/* Form Section */}
+                            <div className="flex-1 p-8 overflow-y-auto border-r border-slate-100 dark:border-slate-800">
+                                <h3 className="text-2xl font-black mb-6">Nueva Devolución</h3>
+                                <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Producto</label>
-                                        <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
+                                        <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
                                             <option value="">Selecciona...</option>
                                             {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock} dispon.)</option>)}
                                         </select>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
-                                        <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
-                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
-                                            <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
+                                            <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe</label>
-                                            <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
+                                            <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={reason} onChange={e => setReason(e.target.value)}>
+                                                <option value="uso_tienda">Uso de Tienda</option>
+                                                <option value="demostracion">Demostraciones</option>
+                                                <option value="defecto">Defecto de Material</option>
+                                                <option value="traspaso_matriz">Retorno a Matriz</option>
+                                            </select>
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
-                                        <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={reason} onChange={e => setReason(e.target.value)}>
-                                            <option value="uso_tienda">Uso de Tienda</option>
-                                            <option value="demostracion">Demostraciones</option>
-                                            <option value="defecto">Defecto de Material</option>
-                                            <option value="traspaso_matriz">Retorno a Matriz</option>
-                                        </select>
+                                    <button
+                                        type="button"
+                                        onClick={addToCart}
+                                        disabled={!selectedProductId || quantity <= 0}
+                                        className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-xl uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                                    >
+                                        Agregar a Lista
+                                    </button>
+
+                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Datos Logísticos</h4>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
+                                            <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe (Almacén)</label>
+                                            <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
+                                        </div>
                                     </div>
-                                    <div className="flex gap-4 pt-4">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
-                                        <button type="submit" className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl">Enviar</button>
-                                    </div>
-                                </form>
+                                </div>
+                            </div>
+
+                            {/* Cart Section */}
+                            <div className="flex-1 bg-slate-50 dark:bg-slate-900/50 p-8 flex flex-col">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Resumen de Devolución</h4>
+                                    <span className="bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg">{cart.length} items</span>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar mb-6">
+                                    {cart.map((item, idx) => (
+                                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center group">
+                                            <div>
+                                                <p className="font-bold text-sm">{item.productName}</p>
+                                                <p className="text-[10px] text-slate-400 uppercase font-black">{item.reason.replace('_', ' ')} • Cant: {item.quantity}</p>
+                                            </div>
+                                            <button onClick={() => removeFromCart(idx)} className="text-slate-300 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
+                                        </div>
+                                    ))}
+                                    {cart.length === 0 && (
+                                        <div className="h-40 flex items-center justify-center text-slate-400 italic text-sm">Lista vacía</div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={cart.length === 0 || !transportedBy || !receivedBy}
+                                        className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl disabled:opacity-50 disabled:shadow-none transition-all"
+                                    >
+                                        Confirmar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

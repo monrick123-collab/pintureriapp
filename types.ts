@@ -80,6 +80,8 @@ export interface RestockSheet {
   status: 'pending' | 'approved' | 'shipped' | 'completed' | 'cancelled' | 'rejected';
   branchName?: string;
   items?: RestockItem[]; // Joined items
+  departureTime?: string;
+  arrivalTime?: string;
 }
 
 export interface RestockItem {
@@ -196,6 +198,10 @@ export interface Sale {
   departureAdminId?: string;
   departureAdminName?: string;
   creditDays?: number;
+  billingBank?: string;
+  billingSocialReason?: string;
+  billingInvoiceNumber?: string;
+  deliveryReceiverName?: string;
 }
 
 export interface Quotation {
@@ -244,7 +250,8 @@ export interface PackagingRequest {
   bulkProductId: string;
   targetPackageType: 'litro' | 'galon';
   quantityDrum: number;
-  status: 'sent_to_branch' | 'processing' | 'completed' | 'cancelled';
+  status: 'sent_to_branch' | 'received_at_branch' | 'processing' | 'completed' | 'cancelled';
+  stockReleased?: boolean;
   branchId: string;
   createdAt: string;
   updatedAt: string;
@@ -374,6 +381,7 @@ export interface CoinChangeRequest {
   branchId: string;
   folio: number;
   amount: number;
+  breakdown?: Record<string, number>; // e.g. { "500": 2, "200": 5 }
   status: 'pending' | 'completed' | 'cancelled';
   requesterId: string;
   requesterName?: string;

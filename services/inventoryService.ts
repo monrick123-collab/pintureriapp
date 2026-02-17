@@ -398,7 +398,9 @@ export const InventoryService = {
             folio: s.folio,
             totalAmount: s.total_amount,
             status: s.status,
-            createdAt: s.created_at
+            createdAt: s.created_at,
+            departureTime: s.departure_time,
+            arrivalTime: s.arrival_time
         }));
     },
 
@@ -434,7 +436,9 @@ export const InventoryService = {
                 unitPrice: i.unit_price,
                 totalPrice: i.total_price,
                 product: mapDbProduct(i.products)
-            }))
+            })),
+            departureTime: sheet.departure_time,
+            arrivalTime: sheet.arrival_time
         };
     },
 
@@ -481,6 +485,16 @@ export const InventoryService = {
         const { error } = await supabase
             .from('restock_sheets')
             .update({ status })
+            .eq('id', sheetId);
+        if (error) throw error;
+    },
+
+    async updateRestockSheetTime(sheetId: string, type: 'departure' | 'arrival', time: string): Promise<void> {
+        const update = type === 'departure' ? { departure_time: time, status: 'shipped' } : { arrival_time: time, status: 'completed' };
+
+        const { error } = await supabase
+            .from('restock_sheets')
+            .update(update)
             .eq('id', sheetId);
         if (error) throw error;
     },
@@ -679,24 +693,26 @@ export const InventoryService = {
 
     // --- RETURNS FLOW (Punto 6) ---
 
-    async createReturnRequest(branchId: string, productId: string, quantity: number, reason: string, transportedBy: string, receivedBy: string): Promise<void> {
+    async createReturnRequest(branchId: string, items: { productId: string, quantity: number, reason: string }[], transportedBy: string, receivedBy: string): Promise<void> {
         const { data: folio } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'return'
         });
 
+        const returnRows = items.map(item => ({
+            branch_id: branchId,
+            folio: folio || 0,
+            product_id: item.productId,
+            quantity: item.quantity,
+            reason: item.reason,
+            transported_by: transportedBy,
+            received_by: receivedBy,
+            status: 'pending_authorization'
+        }));
+
         const { error } = await supabase
             .from('returns')
-            .insert({
-                branch_id: branchId,
-                folio: folio || 0,
-                product_id: productId,
-                quantity: quantity,
-                reason: reason,
-                transported_by: transportedBy,
-                received_by: receivedBy,
-                status: 'pending_authorization'
-            });
+            .insert(returnRows);
         if (error) throw error;
     },
 
@@ -800,13 +816,32 @@ export const InventoryService = {
 
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        return (data || []).map((r: any) => ({
+            ...r,
+            stockReleased: r.stock_released
+        }));
     },
 
     async updatePackagingStatus(requestId: string, status: string): Promise<void> {
         const { error } = await supabase
             .from('packaging_requests')
             .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', requestId);
+        if (error) throw error;
+    },
+
+    async authorizePackaging(requestId: string): Promise<void> {
+        const { error } = await supabase
+            .from('packaging_requests')
+            .update({ stock_released: true })
+            .eq('id', requestId);
+        if (error) throw error;
+    },
+
+    async confirmPackagingReceipt(requestId: string): Promise<void> {
+        const { error } = await supabase
+            .from('packaging_requests')
+            .update({ status: 'received_at_branch', updated_at: new Date().toISOString() })
             .eq('id', requestId);
         if (error) throw error;
     },
@@ -826,10 +861,15 @@ export const InventoryService = {
 
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        return (data || []).map((r: any) => ({
+            ...r,
+            branchName: r.branches?.name,
+            breakdown: r.breakdown_details,
+            createdAt: r.created_at
+        }));
     },
 
-    async createCoinChangeRequest(branchId: string, userId: string, amount: number): Promise<void> {
+    async createCoinChangeRequest(branchId: string, userId: string, amount: number, breakdown?: Record<string, number>): Promise<void> {
         const { data: folio } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'coin_change'
@@ -842,7 +882,8 @@ export const InventoryService = {
                 folio: folio || 0,
                 amount: amount,
                 requester_id: userId,
-                status: 'pending'
+                status: 'pending',
+                breakdown_details: breakdown
             });
         if (error) throw error;
     },

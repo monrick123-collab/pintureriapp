@@ -63,6 +63,19 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
         setCart(cart.map(item => item.id === id ? { ...item, quantity: qty } : item));
     };
 
+    const handleUpdateRestockTime = async (sheetId: string, type: 'departure' | 'arrival') => {
+        const action = type === 'departure' ? 'registrar salida de bodega' : 'confirmar llegada a sucursal';
+        if (!confirm(`¿Estás seguro de ${action}? Esto actualizará el estado.`)) return;
+
+        try {
+            await InventoryService.updateRestockSheetTime(sheetId, type, new Date().toISOString());
+            loadData();
+            alert(`Tiempo de ${type === 'departure' ? 'salida' : 'llegada'} registrado.`);
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        }
+    };
+
     const handleSubmit = async () => {
         if (cart.length === 0) return;
         const targetBranch = (isAdmin || isWarehouse) ? (selectedBranchId === 'all' ? myBranchId : selectedBranchId) : myBranchId;
@@ -131,6 +144,8 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                         <th className="px-8 py-5">Folio</th>
                                         <th className="px-8 py-5">Sucursal</th>
                                         <th className="px-8 py-5">Fecha</th>
+                                        <th className="px-6 py-5 text-center">Salida</th>
+                                        <th className="px-6 py-5 text-center">Llegada</th>
                                         <th className="px-8 py-5 text-right">Monto Estimado</th>
                                         <th className="px-8 py-5 text-center">Estado</th>
                                         <th className="px-8 py-5 text-right">Acciones</th>
@@ -142,6 +157,12 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                             <td className="px-8 py-5 font-black text-primary">#R-{s.folio.toString().padStart(4, '0')}</td>
                                             <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{s.branchName}</td>
                                             <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(s.createdAt).toLocaleDateString()}</td>
+                                            <td className="px-6 py-5 text-center text-xs font-bold text-slate-500">
+                                                {s.departureTime ? new Date(s.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                            </td>
+                                            <td className="px-6 py-5 text-center text-xs font-bold text-slate-500">
+                                                {s.arrivalTime ? new Date(s.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                            </td>
                                             <td className="px-8 py-5 text-right font-black text-slate-900 dark:text-white">${s.totalAmount.toLocaleString()}</td>
                                             <td className="px-8 py-5 text-center">
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${s.status === 'completed' ? 'bg-green-500/10 text-green-500' :
@@ -152,9 +173,27 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-primary transition-colors">
+                                                <button className="p-2 text-slate-400 hover:text-primary transition-colors" title="Ver Detalle">
                                                     <span className="material-symbols-outlined">visibility</span>
                                                 </button>
+                                                {(isAdmin || isWarehouse) && !s.departureTime && s.status !== 'cancelled' && (
+                                                    <button
+                                                        onClick={() => handleUpdateRestockTime(s.id, 'departure')}
+                                                        className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                                                        title="Registrar Salida"
+                                                    >
+                                                        <span className="material-symbols-outlined">local_shipping</span>
+                                                    </button>
+                                                )}
+                                                {((!isWarehouse && s.status === 'shipped') || (isAdmin && s.status === 'shipped')) && (
+                                                    <button
+                                                        onClick={() => handleUpdateRestockTime(s.id, 'arrival')}
+                                                        className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                                                        title="Confirmar Llegada"
+                                                    >
+                                                        <span className="material-symbols-outlined">check_circle</span>
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

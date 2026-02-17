@@ -74,6 +74,27 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleConfirmReceipt = async (id: string) => {
+        if (!confirm("¿Confirmar recepción del tambo?")) return;
+        try {
+            await InventoryService.confirmPackagingReceipt(id);
+            loadData();
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        }
+    };
+
+    const handleAuthorize = async (id: string) => {
+        if (!confirm("¿Autorizar venta de este lote envasado?")) return;
+        try {
+            await InventoryService.authorizePackaging(id);
+            loadData();
+            alert("Lote autorizado para venta.");
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        }
+    };
+
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
@@ -118,12 +139,31 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     {translateStatus(r.status)}
                                                 </span>
                                             </td>
-                                            <td className="px-8 py-5 text-right">
-                                                {isWarehouse && r.status === 'processing' && (
+                                            <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
+                                                {/* Warehouse/Branch actions */}
+                                                {(isWarehouse || user.branchId === r.branch_id) && r.status === 'processing' && (
                                                     <button onClick={() => handleUpdateStatus(r.id, 'completed')} className="text-xs font-black text-primary uppercase hover:underline">Finalizar</button>
                                                 )}
+
+                                                {/* Branch-specific flow */}
                                                 {user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
-                                                    <button onClick={() => handleUpdateStatus(r.id, 'processing')} className="text-xs font-black text-blue-500 uppercase hover:underline">Iniciar Envasado</button>
+                                                    <button onClick={() => handleConfirmReceipt(r.id)} className="text-xs font-black text-blue-500 uppercase hover:underline">Confirmar Recepción</button>
+                                                )}
+                                                {user.branchId === r.branch_id && r.status === 'received_at_branch' && (
+                                                    <button onClick={() => handleUpdateStatus(r.id, 'processing')} className="text-xs font-black text-amber-500 uppercase hover:underline">Iniciar Envasado</button>
+                                                )}
+
+                                                {/* Admin Authorization */}
+                                                {isAdmin && r.status === 'completed' && !r.stockReleased && (
+                                                    <button onClick={() => handleAuthorize(r.id)} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-black uppercase shadow-lg shadow-green-500/20 hover:scale-105 transition-all">
+                                                        Autorizar Venta
+                                                    </button>
+                                                )}
+                                                {r.status === 'completed' && r.stockReleased && (
+                                                    <span className="text-[10px] font-black text-green-600 uppercase flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-sm">verified</span>
+                                                        Autorizado
+                                                    </span>
                                                 )}
                                             </td>
                                         </tr>

@@ -18,6 +18,7 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE;
+    const isStoreManager = user.role === UserRole.STORE_MANAGER;
 
     useEffect(() => {
         loadData();
@@ -59,8 +60,8 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
                 <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
                     <h1 className="text-xl font-black">Suministros (Limpieza y Papelería)</h1>
-                    {isWarehouse && (
-                        <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Registrar Salida</button>
+                    {(isWarehouse || isStoreManager || isAdmin) && (
+                        <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Registrar Solicitud/Gasto</button>
                     )}
                 </header>
 

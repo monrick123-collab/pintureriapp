@@ -18,7 +18,11 @@ export const SalesService = {
             isWholesale?: boolean,
             paymentType?: 'contado' | 'credito',
             departureAdminId?: string,
-            creditDays?: number
+            creditDays?: number,
+            billingBank?: string,
+            billingSocialReason?: string,
+            billingInvoiceNumber?: string,
+            deliveryReceiverName?: string,
         }
     ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
@@ -52,6 +56,12 @@ export const SalesService = {
             if (extra?.paymentType) updates.payment_type = extra.paymentType;
             if (extra?.departureAdminId) updates.departure_admin_id = extra.departureAdminId;
             if (extra?.creditDays !== undefined) updates.credit_days = extra.creditDays;
+
+            // New fields updates
+            if (extra?.billingBank) updates.billing_bank = extra.billingBank;
+            if (extra?.billingSocialReason) updates.billing_social_reason = extra.billingSocialReason;
+            if (extra?.billingInvoiceNumber) updates.billing_invoice_number = extra.billingInvoiceNumber;
+            if (extra?.deliveryReceiverName) updates.delivery_receiver_name = extra.deliveryReceiverName;
 
             if (Object.keys(updates).length > 0) {
                 await supabase

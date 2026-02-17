@@ -1,64 +1,91 @@
-USUARIO DE ENCARGADO:
-Este perfil, se establecerá para todas las sucursales. Lo único que cambiaría sería los usuarios y contraseña para cada encargado.
-Las funciones que tendrá este perfil serían las siguientes:
-    1. Inventario
-    • El inventario se dividirá por marcas y categorías, y por descripción del producto y código del mismo. Teniendo la cantidad en stock y el precio dado de alta.
-    • Se mostrará el total de inventario, esto con la cantidad de productos y la cantidad total.
-    • Podrá imprimir el inventario del mes, siempre y cuando se haya autorizado por parte de un administrador.
-    • No podrá descargarlo.
-    •  Cada tienda solo podrá ver el inventario de su sucursal.
-    2. Resurtidos Falta desarrollar este apartado
-    • El perfil de encargado podrá mandar la solicitud del resurtido junto con el perfil de vendedor, teniendo en cuenta que tanto el encargado como vendedor pueden enviar el resurtido.
-    • Al igual que el resurtidos de bodega, esta tendrá las mismas indicaciones
-    • foliadas iniciando desde el 0, cada sucursal debe de tener sus notas independientes.
-    • productos agregados de forma manual ya sea por descripción del mismo o por código de producto
-    • una vez registrado el producto, que el mismo sistema agregue de forma automático el precio unitario
-    • y multiplique de forma automática la cantidad de productos por su precio
-    • y el total de los productos resurtidos.
-    • El orden sería lo mismo:
-    • Cubetas (19 lts)
-    • Galones (4 lts)
-    • Litros (1 lto)
-    • Medios (1/2 lto)
-    • cuartos
-    • Aerosoles
-    • Complementos
+👤 Perfil: Encargado de Sucursal (Panel Operativo)
+Este perfil está diseñado para operar la tienda, reportar incidencias y ejecutar ventas, pero siempre supeditado a la Autorización del Administrador.
+1. PUNTO DE VENTA Y COBRANZA
+    • Multimetodo de Pago: Puede cobrar en Efectivo, Tarjeta y Transferencia.
+    • Facturación Obligatoria: Si el pago es con Tarjeta o Transferencia, Debe capturar:
+        ◦ Banco
+        ◦ Razón social
+        ◦ Monto
+        ◦ Número de factura (obligatoria)
+        ◦ Factura obligatoria aunque el cliente no la solicite. Venta transferencia o tarjeta.
+    • Control de Transferencias: El estatus queda como "Pendiente" hasta que el Admin autorice.
+    • Gestión de Descuentos: Puede solicitar descuentos al Admin. Si el Admin acepta o modifica, el precio cambia; pero si el encargado altera la venta después, el descuento se elimina automáticamente.
+    • Crédito (Solo Sucursales Autorizadas): Solo habilitado para las 2 tiendas elegidas. Aplica el "Semáforo de Crédito" (Bloqueo por >$ monto o >15 días de adeudo).
+    • Registro de Entrega: Obligatorio capturar nombre y firma de quien recibe en ventas de Mayoreo/Municipio.
+2. GESTIÓN DE INVENTARIO
+    • Vista Local Estricta: Solo ve su stock. Puede consultar si hay existencia en otros lados, pero no cantidades ni costos.
+    • Prioridad de Faltantes: Los productos por debajo del Stock Mínimo aparecen al inicio de la lista en color rojo.
+        3. SUMINISTRO: mismas funciones que bodega.
 
-    • La notificación del resurtido va para bodega y administrador, para que darle salida si se necesita la autorización del administrador.
-    • Considerar que el resurtido podría ser como un cotizador ya que son varios artículos los que normalmente solicitan, consideramos que asi seria mas facil.
-    3. Cotizaciones
-    • La opción de generar cotizaciones será con las mismas funciones que el perfil de bodega:
-    • Las cotizaciones deben ser foliadas empezando desde el 0
-    • Con la opción de agregar descuento y a que cliente se le hizo la cotización.
-    • El administrador podrá aceptar, rechazar o modificar el porcentaje o monto del descuento, las cotizaciones y de las ventas.
-    • Existen casos en donde se aumenta el precio del pedido ya sea por que el material va a crédito, entonces cuando este pase se hará con autorización del administrador, sube el precio de venta y del inventario.
-    • Cuando se solicita el descuento y se acepta, borramos todos los productos y el descuento permanece, mejor que si se borra los productos el descuento tambien. pasa en cotizaciones y punto de venta.
-    4. Corte de caja
-    • Sería como un tipo historial de ventas, solo que en esta se identificaría el total de ventas general, tanto ventas en efectivo, venta con tarjeta y/o transferencias, al mismo modo se dirá si en el trascurso del día hubo algún gasto o vale.
-    • Esto será el diario y tendrá la opción de imprimirse y únicamente podrá guardar la cantidad total de venta del día en el historial de venta.
-    •  Aquí se juntará todas las ventas del día y los gastos.
-    • Se podrá imprimir y guardar
-    • Se guardara un mes
-    5. Ventas individuales
-    • Las ventas individuales, es la cantidad que vendió tanto el encargado como los vendedores que apoyan en la sucursal.
-    • Sera un historial mensual que se puede guardar hasta 4 meses antes.
-    • Únicamente se mostrará el nombre del vendedor y el encargado.
-    6. Historial de ventas.
-    • Este apartado será donde se resguarden y se registren las ventas de la tienda, en este apartado seré general y por día, se guardará la venta en efectivo, en transferencia y/o venta con tarjeta. Del mismo modo, si hubo un gasto del día o vales. Se tendrá un registro de 4 meses anteriores.
-    •
-    7. Devoluciones y uso de tienda.
-    • Las devoluciones son el material que devuelven a bodega, y como se mencionó, esta primero debe llegar como una solicitud en un administrador, este autorizar y mencionar quien lo acepto.
-    • Este perfil podrá imprimir la devolución, esta será foliada iniciando con el 0 y para cada sucursal será única e individual.
-    • En la hoja tendrá un apartado de quien transportó y quien recibió de bodega.
-    •  No da la opción de imprimir.
-    8. Solicitud de cambio de monedas.
-    • Este apartado será una solicitud donde llegará a un administrador y a bodega como un recordatorio.
-    • Sera una nota sencilla donde ingresa la cantidad de cambio en monedas que requiera y en esta se pondrá quien recibió y quien recogió.
-    9. Vales de compra o gastos del día falta apartado
-    • Este apartado será una aparte, pero se registrará de forma automática en el corte de caja. Por lo general será con en efectivo y con comprobante del total, esto de parte del vendedor o encargado.
-    •
-    10. Solicitudes de productos de limpieza y papelería falta apartado
-    • Aquí el encargado mandará una solicitud donde requiera estos productos.
-    • Estos no tendrán precio alguno y no se contará en el inventario.
-    11.  Cambio de productos o traspaso entre sucursales y bodega falta apartado
-Se da cuento entre sucursal se prestan o cambia personal, también foliadas, y agregar nota de que ya fue devuelto o pagado el préstamo.
+    • Suministro: Debe marcar cuando un producto se agota para cerrar el ciclo del folio de suministro.
+4. LOGÍSTICA DE RESURTIDOS (ENTRADAS)
+    • Solicitud Multiproducto: Crea un solo folio con todo lo que necesita.
+    • Flujo de Aprobación: Envía a Almacén/Admin, quienes pueden aceptar, rechazar o modificar cantidades. Almacen solo acepta o midifica.
+    • Confirmación de Recibido: El encargado debe confirmar la recepción física.
+    • Control de Tiempos: El sistema registra la hora exacta de salida de Bodega y la hora de llegada a tienda para medir eficiencia.
+    • Que la sucursal pueda ver el estatus del resurtido.
+    • Filtros de consulta:
+        ◦ Día
+        ◦ Semana
+        ◦ Quincena
+        ◦ Mes
+
+5. MÓDULO DE DEVOLUCIONES (SALIDAS - FOLIO DEV)
+    • Multiproducto y Foleado: Registro de salidas por Defecto, Falta de Material (traslado), Uso de Tienda o Envasado.
+    • Trazabilidad de Traslado: Debe registrar quién lleva el material (Chofer) y quién lo recibe en destino.
+    • Estatus: Pendiente, Recibida (Bodega) y Aceptada/Rechazada (Admin).
+    • Filtros de consulta:
+        ◦ Día
+        ◦ Semana
+        ◦ Quincena
+        ◦ Mes
+
+6. SUMINISTROS
+    • Suministros: Solicita material de limpieza u oficina (sujeto a aprobación).
+    • Canje de Monedas: Solicita cambio especificando los billetes que entrega a cambio. No se cuadra hasta que el Admin confirma el intercambio físico.
+    • Estatus: Pendiente, Recibida (Bodega) y Aceptada/Rechazada (Admin).
+    • Funciones:
+        ◦ Solicitar
+        ◦ Registrar recibido
+        ◦ Registrar agotado
+        ◦ Generar reposición
+
+7. ENVASADO
+La sucursal recibe el material y realiza el trabajo físico.
+    • Confirmación de Recepción: El encargado de sucursal marca que recibió el tambo y los envases vacíos.
+    • Proceso de Maquila: El sistema le habilita un botón de "Iniciar Envasado".
+    • Finalización: Una vez que llena los botes, el encargado presiona "Terminar Envasado".
+    • El Candado: En este momento, el encargado VE los litros en su sistema, pero el botón de "Vender" está bloqueado. No puede vender ni un solo litro hasta que el Admin intervenga.
+
+8. HISTORIAL Y SEGUIMIENTO
+    • Visibilidad Total Local: Ve las ventas de todos sus colaboradores pero no puede editar ni borrar nada.
+    • Filtros Temporales: Consulta de Ventas, Resurtidos y Devoluciones por Día, Semana, Quincena o Mes.
+    • Cotizaciones: Historial de presupuestos entregados para ver si se convirtieron en venta o fueron modificados.
+
+9. CONTROL GENERAL DEL PERFIL
+El Encargado puede:
+    • ✔ Operar
+    • ✔ Registrar
+    • ✔ Solicitar
+    • ✔ Confirmar recepción
+    • ✔ Supervisar ventas de su equipo
+
+No puede:
+    • ❌ Autorizar descuentos
+    • ❌ Confirmar transferencias
+    • ❌ Autorizar crédito
+
+
+
+
+    • ❌ Modificar precios
+    • ❌ Ajustar inventario manual
+    • ❌ Eliminar registros
+    • ❌ Ver información de otras sucursales
+
+🔍 Puntos que podrían faltar (Sugerencias):
+Para que el perfil sea "blindado", te sugiero considerar estos tres detalles que no mencionamos explícitamente:
+    1. Reporte de Gastos Menores: Si el encargado necesita comprar algo urgente (ej. un foco para la tienda) con dinero de la caja de efectivo, ¿debería tener un botón para "Solicitar Gasto" que tú autorices antes de que tome el dinero? (Apartado de vales y gastos)
+    2. Cierre de Caja (Arqueo): Un formulario donde al final del día ingrese cuánto dinero físico tiene (monedas y billetes) para que el sistema le diga si hay faltantes contra el historial de ventas.
+    3. Inventario Físico (Auditoría): Una función para que una vez al mes el encargado cuente todo lo que hay en estantes y el sistema lo compare contra el "Inventario Lógico" para detectar robos o fugas.
+

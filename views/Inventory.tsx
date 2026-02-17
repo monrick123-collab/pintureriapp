@@ -14,11 +14,19 @@ interface InventoryProps {
 }
 
 const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
+  const isAdmin = user.role === UserRole.ADMIN;
+  const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+  const isSub = user.role === UserRole.WAREHOUSE_SUB;
+  const isFinance = user.role === UserRole.FINANCE;
+  const isStoreManager = user.role === UserRole.STORE_MANAGER;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [requests, setRequests] = useState<RestockRequest[]>([]);
+
+  // Initialize branch: Store Manager and Warehouse restricted to their branch
   const [selectedBranchId, setSelectedBranchId] = useState<string>(
-    (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB)
+    (isWarehouse || isStoreManager)
       ? (user.branchId || 'BR-MAIN')
       : 'BR-MAIN'
   );
@@ -27,15 +35,10 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [consumptionHistory, setConsumptionHistory] = useState<InternalConsumption[]>([]);
   const [loading, setLoading] = useState(false);
-  const isAdmin = user.role === UserRole.ADMIN;
-  const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
-  const isSub = user.role === UserRole.WAREHOUSE_SUB;
 
   const [showAuth, setShowAuth] = useState(false);
   const [authDescription, setAuthDescription] = useState('Esta acción requiere autorización.');
-
-
-  const isFinance = user.role === UserRole.FINANCE;
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,6 +66,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const loadedProducts = await InventoryService.getProductsByBranch(selectedBranchId);
+
+      // Sort by Low Stock Priority
+      loadedProducts.sort((a, b) => {
+        const stockA = a.inventory[selectedBranchId] || 0;
+        const minA = a.min_stock || 10;
+        const isLowA = stockA <= minA;
+
+        const stockB = b.inventory[selectedBranchId] || 0;
+        const minB = b.min_stock || 10;
+        const isLowB = stockB <= minB;
+
+        if (isLowA && !isLowB) return -1;
+        if (!isLowA && isLowB) return 1;
+        return 0;
+      });
+
       const loadedBranches = await InventoryService.getBranches();
       setProducts(loadedProducts);
       setBranches(loadedBranches);
@@ -253,9 +272,10 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="flex flex-col">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
               <select
-                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-100 disabled:cursor-default"
+                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
+                disabled={isWarehouse || isStoreManager}
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>

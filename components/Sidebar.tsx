@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       path: '/',
       icon: isAdmin ? 'dashboard' : isWarehouse ? 'warehouse' : isFinance ? 'payments' : 'point_of_sale'
     },
-    ...(user.role !== UserRole.SELLER && !isFinance && !isWarehouse ? [
+    ...(user.role !== UserRole.SELLER && !isFinance && !isWarehouse && !isStoreManager ? [
       { label: 'Punto de Venta', path: '/pos', icon: 'point_of_sale' }
     ] : []),
     ...(isAdmin || isStoreManager ? [

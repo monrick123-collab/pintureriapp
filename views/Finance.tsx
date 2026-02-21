@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { User, Expense, ExpenseCategory, PriceRequest } from '../types';
 import { AccountingService } from '../services/accountingService';
@@ -179,6 +180,42 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
                   <p className="text-xs font-bold text-primary/60 uppercase tracking-widest">Rendimiento sobre venta total</p>
                 </div>
               </div>
+
+              {/* QUICK ACCESS MODULES */}
+              <div className="pt-8 mt-8 border-t border-slate-200 dark:border-slate-700">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6">Módulos de Finanzas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                  <Link to="/accounts-payable" className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary hover:shadow-lg transition-all relative overflow-hidden flex flex-col items-center text-center h-full">
+                    <div className="size-16 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center mb-4 group-hover:bg-primary/10 transition-colors">
+                      <span className="material-symbols-outlined text-3xl text-slate-600 dark:text-slate-400 group-hover:text-primary transition-colors">request_quote</span>
+                    </div>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">Cuentas por Pagar</h4>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-6">Administra facturas pendientes, luz, agua y servicios.</p>
+                    <div className="mt-auto px-6 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:bg-primary group-hover:text-white transition-colors w-full">Abrir Módulo</div>
+                  </Link>
+
+                  <Link to="/leases" className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary hover:shadow-lg transition-all relative overflow-hidden flex flex-col items-center text-center h-full">
+                    <div className="size-16 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-4 group-hover:bg-amber-100 transition-colors">
+                      <span className="material-symbols-outlined text-3xl text-amber-600 dark:text-amber-500">apartment</span>
+                    </div>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">Arrendamientos</h4>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-6">Controla el pago periódico de rentas de locales y bodegas.</p>
+                    <div className="mt-auto px-6 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:bg-amber-500 group-hover:text-white transition-colors w-full">Abrir Módulo</div>
+                  </Link>
+
+                  <Link to="/suppliers" className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary hover:shadow-lg transition-all relative overflow-hidden flex flex-col items-center text-center h-full">
+                    <div className="size-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors">
+                      <span className="material-symbols-outlined text-3xl text-emerald-600 dark:text-emerald-500">local_shipping</span>
+                    </div>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">Proveedores</h4>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-6">Directorio de contactos comerciales para compras corporativas.</p>
+                    <div className="mt-auto px-6 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors w-full">Abrir Módulo</div>
+                  </Link>
+
+                </div>
+              </div>
+
             </div>
           )}
 

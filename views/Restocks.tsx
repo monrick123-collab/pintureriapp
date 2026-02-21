@@ -17,6 +17,8 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const [selectedSheet, setSelectedSheet] = useState<RestockSheet | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
@@ -173,7 +175,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-primary transition-colors" title="Ver Detalle">
+                                                <button onClick={() => { setSelectedSheet(s); setIsDetailModalOpen(true); }} className="p-2 text-slate-400 hover:text-primary transition-colors" title="Ver Detalle">
                                                     <span className="material-symbols-outlined">visibility</span>
                                                 </button>
                                                 {(isAdmin || isWarehouse) && !s.departureTime && s.status !== 'cancelled' && (
@@ -311,6 +313,74 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Detalles de Hoja de Resurtido */}
+                {isDetailModalOpen && selectedSheet && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-3xl max-h-[90vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col scale-in-95 animate-in">
+                            <div className="flex justify-between items-center p-8 border-b border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <h3 className="text-2xl font-black">Detalles de la Solicitud</h3>
+                                    <div className="flex items-center gap-3 mt-2">
+                                        <p className="text-primary font-black uppercase tracking-widest text-sm">Folio: #R-{selectedSheet.folio.toString().padStart(4, '0')}</p>
+                                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${selectedSheet.status === 'completed' ? 'bg-green-500/10 text-green-500' : selectedSheet.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                            {translateStatus(selectedSheet.status)}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button onClick={() => { setIsDetailModalOpen(false); setSelectedSheet(null); }} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Sucursal Destino</p>
+                                        <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{selectedSheet.branchName}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Fecha Emisión</p>
+                                        <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{new Date(selectedSheet.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Hora Salida</p>
+                                        <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{selectedSheet.departureTime ? new Date(selectedSheet.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Hora Llegada</p>
+                                        <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{selectedSheet.arrivalTime ? new Date(selectedSheet.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}</p>
+                                    </div>
+                                </div>
+
+                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-4">Productos Solicitados ({selectedSheet.items?.length || 0})</h4>
+                                <div className="space-y-3">
+                                    {selectedSheet.items?.map((item: any, idx: number) => (
+                                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-10 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center font-black text-slate-400">
+                                                    {item.quantity}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-slate-900 dark:text-white">{item.products?.name || 'Producto Desconocido'}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 mt-0.5 uppercase tracking-widest">{item.products?.sku || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-slate-400 mb-0.5 uppercase tracking-widest">Costo Unit</p>
+                                                <p className="font-black text-primary text-sm">${item.unitPrice?.toLocaleString() || '0'}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-800">
+                                <span className="text-slate-400 font-black uppercase text-xs tracking-widest">Total Estimado de la Orden</span>
+                                <span className="text-2xl font-black text-primary">${selectedSheet.totalAmount.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>

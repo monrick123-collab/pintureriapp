@@ -15,7 +15,11 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranch, setSelectedBranch] = useState(user.branchId || 'BR-MAIN');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Manejar Timezones locamente para evitar que pase de día antes de tiempo
+    const sysDate = new Date();
+    const localDateString = sysDate.getFullYear() + '-' + String(sysDate.getMonth() + 1).padStart(2, '0') + '-' + String(sysDate.getDate()).padStart(2, '0');
+    const [selectedDate, setSelectedDate] = useState(localDateString);
 
     const isAdmin = user.role === UserRole.ADMIN;
 
@@ -208,9 +212,9 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                     <div className="max-w-5xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-full ${data.status === 'approved' ? 'bg-green-100 text-green-600' :
-                                    data.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                                        data.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
-                                            'bg-slate-100 text-slate-500'
+                                data.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                                    data.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                        'bg-slate-100 text-slate-500'
                                 }`}>
                                 <span className="material-symbols-outlined">
                                     {data.status === 'approved' ? 'check_circle' :

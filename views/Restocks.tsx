@@ -101,6 +101,30 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleViewDetail = async (id: string) => {
+        try {
+            setLoading(true);
+            const detail = await InventoryService.getRestockSheetDetail(id);
+            setSelectedSheet(detail);
+            setIsDetailModalOpen(true);
+        } catch (e) {
+            console.error(e);
+            alert("Error al cargar los detalles de la solicitud.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const translateStatus = (status: string) => {
+        const dict: Record<string, string> = {
+            'pending': 'Pendiente',
+            'in_transit': 'En Tránsito',
+            'completed': 'Completado',
+            'cancelled': 'Cancelado'
+        };
+        return dict[status] || status;
+    };
+
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
@@ -175,7 +199,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5 text-right">
-                                                <button onClick={() => { setSelectedSheet(s); setIsDetailModalOpen(true); }} className="p-2 text-slate-400 hover:text-primary transition-colors" title="Ver Detalle">
+                                                <button onClick={() => handleViewDetail(s.id)} className="p-2 text-slate-400 hover:text-primary transition-colors" title="Ver Detalle">
                                                     <span className="material-symbols-outlined">visibility</span>
                                                 </button>
                                                 {(isAdmin || isWarehouse) && !s.departureTime && s.status !== 'cancelled' && (

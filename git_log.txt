@@ -1,0 +1,5 @@
+commit a324bdf279b400a41c70b4d34bd8471cd10fb182
+Author: monrick123-collab <monrick123@gmail.com>
+Date:   Mon Feb 16 20:27:04 2026 -0600
+
+    fix: cierre de etiqueta div faltante en WholesalePOS.tsx

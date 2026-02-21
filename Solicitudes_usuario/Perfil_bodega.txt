@@ -1,0 +1,125 @@
+PERFIL BODEGA:
+1. MÓDULO DE INVENTARIO
+    • Jerarquía de Visualización: Los productos por debajo del stock mínimo aparecen siempre al principio de la lista (Zona Roja/Crítica).
+    • Búsqueda Global: Consulta totalizada de existencias en todas las sucursales y bodega central desde una sola pantalla.
+Ejemplo: Viniplax Blanco:
+    • Centro: 2
+    • Norte: 3
+    • Sur: 3
+    • Total: 8
+
+    • Inventario de Bodega: Clasificado por marcas y líneas, con sistema de alertas diarias al Admin sobre faltantes.
+    • Acceso de Bodega
+        ◦ Puede ver:
+        ◦ Productos bajo mínimo
+        ◦ Productos específicos buscados
+        ◦ Acceso total solo con autorización.
+
+📦 2. GESTIÓN DE PEDIDOS (BODEGA A ADMIN)
+    • Solicitud Foliada: Pedidos organizados por:
+    • Capturado por líneas y unidades (de mayor a menor).
+    • Código
+    • Producto
+    • Cantidad
+    • Precio costo solo ve admin
+    • Poder del Admin: Solo el Administrador puede autorizar, añadir o quitar productos del pedido original. Genera un PDF oficial.
+    • Recepción con Incidencias: Al llegar el material físico, Bodega marca:
+        ◦ Completo y OK.
+        ◦ Incompleto: (Faltantes).
+        ◦ Dañado/Derrame: (Requiere evidencia fotográfica).
+    • Seguimiento de Faltantes (Backorder): Si el proveedor entrega menos (ej. 15 de 20), el Admin decide si cancela el faltante o lo deja pendiente para la próxima entrega. Notifica a Bodega automáticamente.
+
+2.1 📦 MÓDULO DE RECEPCIÓN Y SEGUIMIENTO DE INCIDENCIAS
+Cuando el camión llega a Bodega, el encargado abre el pedido en el sistema (el que el Admin autorizó previamente). Al lado de cada producto, habrá un semáforo de estado.
+1. Opciones de Marcado al Recibir
+En lugar de solo dar "Aceptar", el encargado tendrá estas 3 opciones por cada producto:
+    • ✅ Completo y Buen Estado: El material entra directo al inventario.
+    • ⚠️ Incompleto (Faltante): Si sobre factura se establece que son 10 pero solo llegaron 8.
+    • ❌ Dañado / Derramado: Si el producto llegó, pero no se puede vender.
+
+2. Apartado de Seguimiento para el Administrador
+Cuando Bodega marca algo como "Incompleto" o "Dañado", el sistema genera automáticamente una Alerta de Incidencia en el panel del Administrador. El Admin verá una tabla de seguimiento como esta:
+Folio Pedido	Producto	Problema	Cantidad Afectada	Acción Requerida (Admin)
+#PED-001	Thinner 1L	Dañado/Derrame	2 unidades	[Cambio] [Descontar] [Reclamar]
+#PED-001	Cubeta Blanca	Incompleto	1 unidad	[Ajustar Saldo] [Reprogramar]
+
+2.3. ACCIONES DE RESOLUCIÓN (PODER DEL ADMIN)
+El Administrador debe elegir cómo cerrar esa incidencia para que el inventario sea exacto:
+    • Opción A: Descontar (Nota de Crédito): El Admin marca que ese material no se pagará al proveedor. El sistema ajusta el costo total del pedido y descuenta esas piezas del inventario esperado.
+    • Opción B: Cambio de Producto: Se genera una orden de "Reposición Pendiente". El sistema marca que el proveedor debe esas piezas y deben llegar en el próximo viaje.
+    • Opción C: Registro de Merma: Si el daño ocurrió en el traslado propio, se manda directamente al apartado de Devoluciones (por Defecto) que ya creamos, para que quede el registro del porqué de la pérdida.
+
+3. RESURTIDO A SUCURSALES
+Si solicitan más de lo disponible:
+    • Admin o Bodega pueden ajustar
+    • Se registra:
+        ◦ Solicitado
+        ◦ Ajustado
+        ◦ Motivo
+        ◦ Responsable
+    • Se notifica a sucursal
+
+4. SUMINISTROS: MATERIAL DE: LIMPIEZA, OFICINA Y MONEDAS.
+    • Foliado por sucursal
+    • Fecha recibida
+    • Fecha agotada
+    • Quien recibe
+Reposición automática
+Al marcar agotado → genera nueva solicitud.
+Solicitud de Monedas
+Proceso:
+    • Tienda solicita monedas
+    • Admin autoriza
+    • Se envían monedas
+    • Tienda entrega billetes,
+    • Se registra cambio por parte de admin
+    • Forma parte del corte de caja
+
+🧪 5. ENVASADO
+    • Proceso de Maquila Interna: El producto sale como granel (Tambo) y entra como producto terminado (Litros).
+    • Folio Consecutivo: Utiliza el mismo consecutivo de Devoluciones para trazabilidad total.
+    • Revalorización de Costo: El sistema suma automáticamente el costo del líquido ($50) + el envase ($10) para fijar el nuevo precio de venta ($60).
+    • Fechas de Control: Registra fecha de solicitud, fecha de recibido por tienda y fecha de finalización.
+🔄 6. DEVOLUCIONES
+    • Clasificación por Motivo:
+        ◦ Defecto
+        ◦ Demostración / Uso de Tienda: Gasto interno.
+        ◦ Falta de Material: Reubicación inmediata a otra sucursal o cliente.
+        ◦ Envasado: Para fraccionamiento.
+    • Destino Obligatorio: Si falta material, se debe indicar a qué sucursal o cliente de mayoreo va dirigido.
+    • Siempre foliadas.
+No se eliminan.
+Impactan inventario.
+💰 7. VENTAS (BODEGA)
+    • Métodos de Pago: Efectivo y Transferencia. Tarjetas Bloqueadas para proteger márgenes.
+    • Control de Efectivo: Si bodega recibe dinero, queda en estatus "Custodia" hasta que el Admin confirme la recepción física.
+    • Validación de Transferencias: El Admin debe autorizar cada transferencia, bodega o admin especifican:
+        ◦ Razón Social de destino (Constructora / Juan Eduardo).
+        ◦ Banco receptor.
+        ◦ Número de Factura (Obligatorio).
+Factura obligatoria cuando:
+        ◦ Transferencia, pago con tarjeta (perfiles encargados)
+        ◦ Cliente lo solicita
+7.1 BÚSQUEDAS EN HISTORIAL
+Filtros:
+    • Cliente
+    • Método de pago
+    • Crédito/Contado
+    • Fecha
+
+🏛️ 8. CLIENTES Y PRECIOS ESPECIALES
+    • Alta de Clientes: Solo el Administrador puede dar de alta o activar clientes nuevos. Bodega solo puede capturar datos para revisión.
+    • Sobreprecio a Municipios: Opción de vender más caro (ej. de $1260 a $1360). Requiere autorización en tiempo real del Admin para proceder con la venta.
+    • Control de Entrega: En ventas de Mayoreo/Municipio, es obligatorio registrar quién recibe físicamente (Nombre, identificación y firma).
+💳 9. POLÍTICA DE CRÉDITO Y COBRANZA
+Cada cliente deberá tener configurado:
+    1. Límite de crédito y plazos, ya sea una semana, 15 dias o mes autorizado POR ADMIN
+    2. Saldo actual
+    3. Crédito disponible
+    • Candado por Monto: Bloqueo automático si el nuevo pedido excede el límite de crédito definido.
+    • Candado por Plazo: Bloqueo automático si el cliente tiene facturas con más de 15 días de antigüedad, sin importar que tenga crédito disponible.
+    • Opciones de Desbloqueo: El sistema solo permite venderle "De Contado" o tras registrar un abono que lo ponga al corriente. Bodega registra pagos, pero quien confirma o recibe es un admin.
+📊 8. HISTORIAL Y AUDITORÍA
+    • Buscador Inteligente: Filtros por Cliente, Fecha (Día, Semana, Mes), Método de Pago y Estatus de Factura.
+    • Trazabilidad de Decisiones: Cada movimiento (cambio de precio, autorización de crédito, ajuste de resurtido) registra qué usuario lo hizo y a qué hora.
+    • Prorrateo de Resurtido: Si hay poco stock y varias sucursales piden, el Admin/Bodega ajustan las cantidades a enviar para repartir equitativamente

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { User, RestockSheet, Branch, Product } from '../types';
+import { User, RestockSheet, Branch, Product, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 
@@ -26,6 +26,11 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
     const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterBranch, setFilterBranch] = useState<string>('ALL');
+
+    // Incident Modal States
+    const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+    const [selectedSupplyOrder, setSelectedSupplyOrder] = useState<any>(null);
+    const [receiveItems, setReceiveItems] = useState<{ id: string, productId: string, status: 'received_full' | 'received_partial' | 'damaged', receivedQuantity: number, originalQuantity: number, name: string }[]>([]);
 
     const navigate = useNavigate();
 
@@ -123,12 +128,26 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
         }
     };
 
-    const handleConfirmArrival = async (orderId: string) => {
-        if (!confirm("¿Confirmas que has recibido todos los productos de este pedido? Esto actualizará tu inventario.")) return;
+    const handleOpenReceiveModal = (order: any) => {
+        setSelectedSupplyOrder(order);
+        setReceiveItems(order.items.map((i: any) => ({
+            id: i.id,
+            productId: i.productId,
+            name: i.productName || 'Producto',
+            status: 'received_full',
+            receivedQuantity: i.quantity,
+            originalQuantity: i.quantity
+        })));
+        setIsReceiveModalOpen(true);
+    };
+
+    const handleSaveReceive = async () => {
+        if (!selectedSupplyOrder) return;
         try {
             setLoading(true);
-            await InventoryService.confirmSupplyOrderArrival(orderId);
+            await InventoryService.confirmSupplyOrderArrival(selectedSupplyOrder.id, receiveItems);
             alert("Pedido recibido y stock actualizado correctamente.");
+            setIsReceiveModalOpen(false);
             loadInitialData();
         } catch (e) {
             console.error(e);
@@ -137,6 +156,8 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
             setLoading(false);
         }
     };
+
+    const isAdmin = user.role === UserRole.ADMIN;
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -322,10 +343,17 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                                     <td className="px-8 py-5 text-right">
                                                         {order.status === 'shipped' ? (
                                                             <button
-                                                                onClick={() => handleConfirmArrival(order.id)}
+                                                                onClick={() => handleOpenReceiveModal(order)}
                                                                 className="px-4 py-2 bg-green-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all animate-pulse"
                                                             >
-                                                                Confirmar Recepción
+                                                                Recibir Pedido
+                                                            </button>
+                                                        ) : order.status === 'received_with_incidents' && isAdmin ? (
+                                                            <button
+                                                                onClick={() => {/* Lógica futura de auditoría */ }}
+                                                                className="px-4 py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all"
+                                                            >
+                                                                Auditar Incidencias
                                                             </button>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase">
@@ -560,6 +588,100 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Supply Order */}
+            {isSupplyModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
+                        {/* El contenido existente del Modal de Supply Order iría aquí (lo conservamos intacto si ya estaba) */}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Recepción con Incidencias */}
+            {isReceiveModalOpen && selectedSupplyOrder && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                            <h3 className="text-2xl font-black mb-1">Recepción de Pedido</h3>
+                            <p className="text-primary font-black uppercase text-[10px] tracking-widest">Folio S-{selectedSupplyOrder.folio}</p>
+                            <p className="text-sm text-slate-500 mt-2">Verifica la cantidad recibida y el estado de cada producto.</p>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-4">
+                            {receiveItems.map((item, index) => (
+                                <div key={item.id} className={`p-4 rounded-2xl border transition-colors ${item.status === 'received_full' ? 'border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10' :
+                                    item.status === 'received_partial' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-900/10' :
+                                        'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10'
+                                    }`}>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-900 dark:text-white">{item.name}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Solicitado: <span className="text-slate-700 dark:text-slate-300">{item.originalQuantity}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4 items-center">
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Estado</label>
+                                            <select
+                                                className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl outline-none font-bold text-xs border border-slate-200 dark:border-slate-700"
+                                                value={item.status}
+                                                onChange={(e) => {
+                                                    const newStatus = e.target.value as any;
+                                                    const updated = [...receiveItems];
+                                                    updated[index].status = newStatus;
+                                                    if (newStatus === 'received_full') {
+                                                        updated[index].receivedQuantity = updated[index].originalQuantity;
+                                                    }
+                                                    setReceiveItems(updated);
+                                                }}
+                                            >
+                                                <option value="received_full">✅ Completo / Buen Estado</option>
+                                                <option value="received_partial">⚠️ Incompleto / Faltante</option>
+                                                <option value="damaged">❌ Dañado / Derramado</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="w-32">
+                                            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Recibido Real</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={item.originalQuantity}
+                                                className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl outline-none font-bold text-xs border border-slate-200 dark:border-slate-700 text-center"
+                                                value={item.receivedQuantity}
+                                                disabled={item.status === 'received_full'}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    const updated = [...receiveItems];
+                                                    updated[index].receivedQuantity = Math.min(val, updated[index].originalQuantity);
+                                                    setReceiveItems(updated);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
+                            <button
+                                onClick={() => setIsReceiveModalOpen(false)}
+                                className="flex-1 py-4 font-black text-slate-400 uppercase text-xs"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSaveReceive}
+                                disabled={loading}
+                                className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase"
+                            >
+                                {loading ? 'Enviando...' : 'Confirmar Recepción'}
+                            </button>
                         </div>
                     </div>
                 </div>

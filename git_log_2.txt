@@ -1,0 +1,7 @@
+commit d3ae2263f3799623bd6bfb97c3614a63bdd8196c
+Author: monrick123-collab <monrick123@gmail.com>
+Date:   Mon Feb 16 20:55:26 2026 -0600
+
+    fix(security): remove debug-gemini.ts and update gitignore
+    
+    fix(ui): remove duplicate pos link for store manager

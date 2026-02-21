@@ -512,6 +512,8 @@ export const InventoryService = {
                     quantity,
                     unit_price,
                     total_price,
+                    status,
+                    received_quantity,
                     products ( name, sku, image )
                 )
             `)
@@ -542,6 +544,8 @@ export const InventoryService = {
                 quantity: i.quantity,
                 unitPrice: i.unit_price,
                 totalPrice: i.total_price,
+                status: i.status || 'pending',
+                received_quantity: i.received_quantity || 0,
                 productName: i.products?.name,
                 productImage: i.products?.image
             }))
@@ -591,7 +595,7 @@ export const InventoryService = {
         if (error) throw error;
     },
 
-    async confirmSupplyOrderArrival(orderId: string): Promise<void> {
+    async confirmSupplyOrderArrival(orderId: string, receivedItems?: { id: string, productId: string, status: string, receivedQuantity: number }[]): Promise<void> {
         // 1. Get order items
         const { data: order, error: fetchError } = await supabase
             .from('supply_orders')
@@ -605,37 +609,70 @@ export const InventoryService = {
         if (fetchError) throw fetchError;
         if (order.status !== 'shipped') throw new Error("El pedido no está en estado 'Enviado'");
 
+        let hasIncidents = false;
+
+        if (receivedItems && receivedItems.length > 0) {
+            // Update each item
+            for (const rItem of receivedItems) {
+                if (rItem.status !== 'received_full') {
+                    hasIncidents = true;
+                }
+                const { error: itemUpdateError } = await supabase
+                    .from('supply_order_items')
+                    .update({ status: rItem.status, received_quantity: rItem.receivedQuantity })
+                    .eq('id', rItem.id);
+
+                if (itemUpdateError) throw itemUpdateError;
+            }
+        } else {
+            // Recibido completamente (flujo por defecto / retrocompatibilidad)
+            const { error: itemsUpdateError } = await supabase
+                .from('supply_order_items')
+                .update({ status: 'received_full' })
+                .eq('order_id', orderId);
+            if (itemsUpdateError) throw itemsUpdateError;
+        }
+
+        const finalStatus = hasIncidents ? 'received_with_incidents' : 'received';
+
         // 2. Update status
         const { error: updateError } = await supabase
             .from('supply_orders')
-            .update({ status: 'received', updated_at: new Date().toISOString() })
+            .update({ status: finalStatus, updated_at: new Date().toISOString() })
             .eq('id', orderId);
 
         if (updateError) throw updateError;
 
-        // 3. Update Inventory for each item
-        for (const item of order.supply_order_items) {
-            // Logic: Insert or Update inventory for this branch
-            const { data: currentInv } = await supabase
-                .from('inventory')
-                .select('*')
-                .eq('branch_id', order.branch_id)
-                .eq('product_id', item.product_id)
-                .single();
+        // 3. Update Inventory for each item, but only the received quantity
+        const itemsToProcess = receivedItems || order.supply_order_items.map((i: any) => ({
+            productId: i.product_id,
+            receivedQuantity: i.quantity // If no specific items passed, assume full reception
+        }));
 
-            if (currentInv) {
-                await supabase
+        for (const item of itemsToProcess) {
+            // Solo aumentamos stock si quantity > 0
+            if (item.receivedQuantity > 0) {
+                const { data: currentInv } = await supabase
                     .from('inventory')
-                    .update({ stock: currentInv.stock + item.quantity, updated_at: new Date().toISOString() })
-                    .eq('id', currentInv.id);
-            } else {
-                await supabase
-                    .from('inventory')
-                    .insert({
-                        branch_id: order.branch_id,
-                        product_id: item.product_id,
-                        stock: item.quantity
-                    });
+                    .select('*')
+                    .eq('branch_id', order.branch_id)
+                    .eq('product_id', item.productId)
+                    .single();
+
+                if (currentInv) {
+                    await supabase
+                        .from('inventory')
+                        .update({ stock: currentInv.stock + item.receivedQuantity, updated_at: new Date().toISOString() })
+                        .eq('id', currentInv.id);
+                } else {
+                    await supabase
+                        .from('inventory')
+                        .insert({
+                            branch_id: order.branch_id,
+                            product_id: item.productId,
+                            stock: item.receivedQuantity
+                        });
+                }
             }
         }
     },

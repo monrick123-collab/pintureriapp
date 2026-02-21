@@ -109,8 +109,49 @@ Para entrar, necesitas un correo electrónico y una contraseña que te dará el 
 
 ---
 
-## 💡 ¿Dudas? Pregúntale a tu Asistente Inteligente
+## 9. ⚙️ Otras Herramientas Diarias
+
+### 🧍‍♂️ Registro de Clientes
+*Para guardar los datos de quien compra seguido.*
+1. Ve al menú **"Clientes"**.
+2. Da clic en **"Nuevo Cliente"**.
+3. Escribe su nombre, teléfono y si le vas a dar un "Límite de Crédito". Guárdalo ¡Y listo, ya lo podrás elegir en el POS de Mayoreo!
+
+### � Historial de Ventas
+*Si ocupas ver qué vendiste ayer o reimprimir un ticket.*
+1. Ve a **"Historial Ventas"** (o "Historial Mayoreo").
+2. Verás una lista de cada ticket. Da clic en el icono del ojo 👁️ para ver el detalle de qué llevó.
+3. Si el Administrador te da permiso, desde aquí también se pueden Cancelar ventas si te equivocaste.
+
+### 🔄 Traspasos entre Tiendas
+*Si la Sucursal Centro le pide 2 galones prestados a la Sucursal Norte.*
+1. Ve al menú **"Traspasos"**.
+2. Crea un traspaso nuevo. Elige qué productos mandas y hacia qué sucursal van.
+3. La mercancía "desaparece" de tu tienda, y cuando la otra tienda le dé "Recibir", aparecerá allá.
+
+### 🔙 Devoluciones
+*Si un cliente regresa un bote perforado.*
+1. Ve a **"Devoluciones"**.
+2. Dale en **"Nueva Devolución"**, elige qué producto te están regresando, cuántos, y escribe MUY CLARO la razón (ej. "Vino seco de fábrica").
+3. El producto regresado regresará a tu almacén virtualmente para que no haya descuadres mágicos en tu inventario.
+
+### 🪙 Solicitud de Cambio (Monedas)
+*Si la caja ya no tiene monedas de $10 o billetes de $20 para dar cambio.*
+1. Ve a **"Cambio de Monedas"**.
+2. Dale en "Solicitar Cambio" y pide (ej. "Me urgen $500 pesos en morrallas").
+3. Tu Administrador lo verá y mandará las monedas físicamente a tu sucursal.
+
+---
+
+## 10. 👑 Opciones Exclusivas del Jefe (Administrador)
+- **Sucursales:** Permite crear una nueva tienda en el mapa.
+- **Gestión de Usuarios:** Permite crear correos y contraseñas para los empleados nuevos, y borrar a los que ya no trabajan.
+- **Proveedores:** Directorio con números de teléfono de quienes surten la pintura.
+
+---
+
+## �💡 ¿Dudas? Pregúntale a tu Asistente Inteligente
 Verás un botón flotante abajo en la pantalla (como un chat). Es un **Asistente Inteligente (IA)**. 
-Si se te olvida cómo hacer algo, ¡escríbele! Por ejemplo: *"¿Oye, cómo cobro a crédito?"* y el asistente te recordará los pasos exactos sin que tengas que buscar a tu jefe.
+Si se te olvida cómo hacer algo, ¡escríbele! Por ejemplo: *"¿Oye, cómo cobro a crédito?"* o *"¿Cómo registro un traspaso?"* y el asistente te recordará los pasos exactos sin que tengas que buscar a tu jefe.
 
 ¡Mucho éxito en tus ventas! 🚀

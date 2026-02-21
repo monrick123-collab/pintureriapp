@@ -771,14 +771,24 @@ export const InventoryService = {
     },
 
     async authorizeReturn(returnId: string, adminId: string, approved: boolean): Promise<void> {
+        // Simple regex to check if adminId is a valid UUID
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(adminId);
+
+        const updatePayload: any = {
+            status: approved ? 'approved' : 'rejected',
+            updated_at: new Date().toISOString()
+        };
+
+        // Only include authorize_by if it's a valid UUID to avoid Postgres type errors with mock users (e.g., '4829')
+        if (isValidUUID) {
+            updatePayload.authorized_by = adminId;
+        }
+
         const { error } = await supabase
             .from('returns')
-            .update({
-                status: approved ? 'approved' : 'rejected',
-                authorized_by: adminId,
-                updated_at: new Date().toISOString()
-            })
+            .update(updatePayload)
             .eq('id', returnId);
+
         if (error) throw error;
 
         // Nota: El ajuste de inventario real debería hacerse mediante una RPC 

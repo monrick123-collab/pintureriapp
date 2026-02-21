@@ -24,34 +24,33 @@ export class AiService {
     }
 
     private static MANUAL_CONTENT = `
-Manual de Usuario: "Pintamax Facilito" 🎨
+MANUAL DE OPERACIONES PINTAMAX (VERSIÓN DEFINITIVA)
 
-1. Accesos de Prueba (Demo)
-- Admin: admin@pintamax.com
-- Encargado: encargado@pintamax.com
-- Bodega: bodega@pintamax.com
-- Vendedor: vendedor@pintamax.com
-- Contador: contador@pintamax.com
+1. ROLES Y PERMISOS:
+- Admin: Acceso total a finanzas, catálogo, usuarios y ajustes. Aprueba cortes de caja y movimientos críticos.
+- Encargado: POS, solicitar resurtidos a bodega, generar cotizaciones y ejecutar el "Corte de Caja" al final del turno.
+- Vendedor: Solo Venta al Menudeo (POS) y Cotizaciones básicas.
+- Bodega: Ejecuta envasados (pasar barriles a cubetas), gestiona ventas de Mayoreo con clientes a crédito, y surte a sucursales. Asienta la recepción de mercancía validando mermas o daños ("Recepción Parcial").
+- Finanzas: Revisa reportes y administra el flujo de "Cuentas por Pagar".
 
-2. Permisos (¿Qué puedo hacer?)
-- Vendedor: POS (Vender), Ver Precios, Registrar Clientes.
-- Encargado: POS + Cotizaciones + Resurtidos (Pedir) + Corte de Caja + Devoluciones.
-- Bodega: Envasado (Tambos->Cubetas) + Surtir Pedidos + Mayoreo + Insumos.
-- Finanzas: Cuentas por Pagar + Arrendamientos + Proveedores.
-- Admin: Todo + Aprobar Cortes.
+2. FINANZAS Y ARRENDAMIENTO:
+- Cuentas por Pagar: Módulo clave en Finanzas para asentar el "Arrendamiento" (pago puntual de rentas de local, luz, pasivos a proveedores). Esto afecta el "Net Income" o utilidad mostrada en el dashboard general.
+- Cortes de Caja: Realizados por cajeros en el módulo de Corte. Contabilizan el efectivo físico y lo cruzan contra el sistema para enviar a revisión. Solo un Admin puede aprobarlos.
+- Ventas a Crédito: Exclusivo del módulo POS de Mayoreo. Se asignan plazos fijos.
 
-3. Guía Paso a Paso
-A. Vender (POS): POS > Buscar > Agregar > COBRAR > Método Pago.
-B. Mayoreo (Crédito): Venta Mayoreo > Cliente > Agregar > Cobrar > Crédito.
-C. Resurtido (Pedir): Inventario > Resurtidos > Solicitar > Enviar. Recibir: Confirmar Recepción.
-D. Envasado: Envasado > Nuevo > Origen (Tambo) > Destino (Cubeta) > Iniciar > Llenar > Finalizar.
-E. Corte de Caja (Encargado): Corte de Caja > Contar físico > Comparar > Revisar Gastos > ENVIAR A REVISIÓN.
-F. Aprobar Corte (Admin): Aprobación Cortes > Revisar > Aprobar/Rechazar.
+3. LOGÍSTICA E INVENTARIO:
+- Resurtidos: Las sucursales piden stock a Bodega -> Queda 'Pendiente' -> Bodega empaca y manda el estado a 'En Tránsito' (Shipped) -> Sucursal recibe físicamente y presiona 'Confirmar Recepción' para sumar el volumen local.
+- Recepción de Suministros (Incidencias): Las Órdenes admiten fallos en ruta. Si llegan faltantes o dañados se ingresa al modal interactivo de "Semáforo" para reportarlo y actualizar con exactitud sin desfasar el sistema.
+- Envasado: En bodega, toma productos madre 'a granel' y los convierte mermando barriles y sumando galones/litros mediante fórmulas.
 
-4. Trucos
-- ¿Perdido? Pregúntame a mí (IA).
-- ¿Falla IA? Clic en Llave 🗝️ > Poner nueva API Key.
-- ¿Sin cambio? Botón "Cambio de Moneda".
+4. VENTAS:
+- Menudeo: POS tradicional con métodos clásicos (Efectivo, Tarjeta, Transferencia).
+- Mayoreo: Requiere vincular explícitamente a un Cliente Frecuente/Empresa, define el crédito, e imperativamente exige una "Autorización de Salida" firmada en base de datos.
+- Cotizaciones: Eliges productos y generas un presupuesto (PDF adaptativo). No descuenta stock hasta convertirse en venta oficial.
+
+REGLA DE ASISTENCIA OBLIGATORIA:
+Si el usuario te pregunta "¿Cómo hago X proceso?" o "¿Dónde está Z módulo? (Ejemplo Arrendamiento)": 
+Debes guiarlo detalladamente basándote SÓLO en estas reglas operativas usando un tono de asistente de soporte amable y claro. Dile siempre en qué menú (e.g., "Para Arrendamiento, ve a la Pestaña Finanzas y abre Cuentas por Pagar").
     `;
 
     static setApiKey(key: string) {

@@ -592,14 +592,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                     </div>
                 </div>
             )}
-            {/* Modal de Supply Order */}
-            {isSupplyModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
-                        {/* El contenido existente del Modal de Supply Order iría aquí (lo conservamos intacto si ya estaba) */}
-                    </div>
-                </div>
-            )}
+
 
             {/* Modal de Recepción con Incidencias */}
             {isReceiveModalOpen && selectedSupplyOrder && (

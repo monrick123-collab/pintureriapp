@@ -12,6 +12,7 @@ interface ClientsProps {
 
 const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [balances, setBalances] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -43,6 +44,20 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
     try {
       const data = await ClientService.getClients();
       setClients(data);
+
+      // Fetch balances for active credit clients
+      const balancesMap: Record<string, number> = {};
+      await Promise.all(data.map(async (c) => {
+        if (c.isActiveCredit) {
+          try {
+            const fin = await ClientService.getClientFinancials(c.id);
+            balancesMap[c.id] = fin.balance;
+          } catch (e) {
+            console.error(`Error loading balance for ${c.id}:`, e);
+          }
+        }
+      }));
+      setBalances(balancesMap);
     } catch (e) {
       console.error("Error loading clients:", e);
     }
@@ -207,9 +222,14 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className={`text-xs font-black ${c.isActiveCredit ? 'text-green-600' : 'text-slate-400'}`}>
-                              {c.isActiveCredit ? `$${(c.creditLimit || 0).toLocaleString()}` : 'Sin Crédito'}
+                              {c.isActiveCredit ? `Límite: $${(c.creditLimit || 0).toLocaleString()}` : 'Sin Crédito'}
                             </span>
-                            {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días</span>}
+                            {c.isActiveCredit && (
+                              <span className={`text-[10px] font-bold mt-0.5 ${balances[c.id] > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                Adeudo: ${balances[c.id]?.toLocaleString() || '0'}
+                              </span>
+                            )}
+                            {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días de plazo</span>}
                           </div>
                         </td>
                         <td className="px-6 py-4">

@@ -78,8 +78,9 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setNotes('');
             loadData();
             alert("Traspaso iniciado correctamente.");
-        } catch (e) {
-            alert("Error al crear traspaso");
+        } catch (e: any) {
+            console.error("Error en createStockTransfer:", e);
+            alert("Error al crear traspaso: " + (e.message || e.toString()));
         } finally {
             setLoading(false);
         }
@@ -132,8 +133,8 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                             <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(t.createdAt).toLocaleDateString()}</td>
                                             <td className="px-8 py-5 text-center">
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                                                        t.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                            'bg-amber-500/10 text-amber-500'
+                                                    t.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                        'bg-amber-500/10 text-amber-500'
                                                     }`}>
                                                     {t.status === 'pending' ? 'Pendiente' : t.status === 'in_transit' ? 'En Tránsito' : t.status === 'completed' ? 'Completado' : 'Cancelado'}
                                                 </span>

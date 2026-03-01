@@ -962,17 +962,40 @@ export const InventoryService = {
     },
 
     async createStockTransfer(fromId: string, toId: string, notes: string, items: { productId: string, quantity: number }[]): Promise<void> {
-        const { data: folio } = await supabase.rpc('get_next_folio', {
-            p_branch_id: fromId,
-            p_folio_type: 'transfer'
-        });
+        let finalFolio = 0;
+        try {
+            const { data: rpcFolio } = await supabase.rpc('get_next_folio', {
+                p_branch_id: fromId,
+                p_folio_type: 'transfer'
+            });
+            if (rpcFolio && typeof rpcFolio === 'number') {
+                finalFolio = rpcFolio;
+            }
+        } catch (e) {
+            console.warn("RPC get_next_folio failed, using fallback:", e);
+        }
+
+        // Fallback: If RPC returned null (branch not initialized), get max from stock_transfers manually
+        if (!finalFolio) {
+            const { data: maxCheck } = await supabase
+                .from('stock_transfers')
+                .select('folio')
+                .eq('from_branch_id', fromId)
+                .order('folio', { ascending: false })
+                .limit(1);
+
+            finalFolio = (maxCheck && maxCheck.length > 0) ? (maxCheck[0].folio + 1) : 1;
+
+            // Defensively try to insert into branch_folios to fix it for next time
+            supabase.from('branch_folios').insert({ branch_id: fromId, last_transfer_folio: finalFolio }).catch(() => { });
+        }
 
         const { data: transfer, error: tError } = await supabase
             .from('stock_transfers')
             .insert({
                 from_branch_id: fromId,
                 to_branch_id: toId,
-                folio: folio || 0,
+                folio: finalFolio,
                 notes: notes,
                 status: 'pending'
             })

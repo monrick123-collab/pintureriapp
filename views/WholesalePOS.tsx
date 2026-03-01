@@ -33,6 +33,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [aiSuggestion, setAiSuggestion] = useState<{ discount: number, reasoning: string } | null>(null);
     const [loadingAi, setLoadingAi] = useState(false);
     const [appliedDiscount, setAppliedDiscount] = useState(0); // Extra discount percentage
+    const [isConfigExpanded, setIsConfigExpanded] = useState(true);
 
     // New States for Validations
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
@@ -330,147 +331,170 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                             )}
                         </div>
 
-                        <div className="p-8 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 space-y-6">
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Cliente</label>
-                                    <select
-                                        className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold"
-                                        value={selectedClient?.id || ''}
-                                        onChange={e => {
-                                            const client = clients.find(c => c.id === e.target.value) || null;
-                                            setSelectedClient(client);
-                                            if (client) setCreditDays(client.creditDays || 0);
-                                        }}
-                                    >
-                                        <option value="">Seleccionar Cliente...</option>
-                                        {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
+                        <div className="p-6 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 flex flex-col shrink-0">
+                            <button
+                                onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                                className="flex justify-between items-center w-full mb-4 group"
+                            >
+                                <div className="flex flex-col items-start text-left">
+                                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Configuración de Venta</span>
+                                    {!isConfigExpanded && selectedClient && (
+                                        <span className="text-[10px] font-bold text-slate-400 mt-1 line-clamp-1">{selectedClient.name} • {paymentType === 'contado' ? 'Contado' : `Crédito (${creditDays}d)`}</span>
+                                    )}
+                                    {!isConfigExpanded && !selectedClient && (
+                                        <span className="text-[10px] font-bold text-red-500 mt-1">Falta seleccionar cliente</span>
+                                    )}
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Salida Autorizada por</label>
-                                    <select className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold" value={selectedAdminId} onChange={e => setSelectedAdminId(e.target.value)}>
-                                        <option value="">Seleccionar Admin...</option>
-                                        {admins.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tipo de Pago</label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
-                                        <button onClick={() => setPaymentType('contado')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentType === 'contado' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>Contado</button>
-                                        <button onClick={() => setPaymentType('credito')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentType === 'credito' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>Crédito</button>
-                                    </div>
-                                </div>
+                                <span className={`material-symbols-outlined text-slate-400 group-hover:text-primary transition-transform duration-300 ${isConfigExpanded ? 'rotate-180' : ''}`}>
+                                    expand_more
+                                </span>
+                            </button>
 
-                                {paymentType === 'credito' && (
-                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plazo de Crédito (Días)</label>
+                            <div className={`overflow-y-auto custom-scrollbar transition-all duration-300 ${isConfigExpanded ? 'max-h-[50vh] opacity-100 mb-4' : 'max-h-0 opacity-0 overflow-hidden m-0'}`}>
+                                <div className="space-y-4 pr-2 pb-2">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Cliente</label>
+                                        <select
+                                            className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold"
+                                            value={selectedClient?.id || ''}
+                                            onChange={e => {
+                                                const client = clients.find(c => c.id === e.target.value) || null;
+                                                setSelectedClient(client);
+                                                if (client) setCreditDays(client.creditDays || 0);
+                                            }}
+                                        >
+                                            <option value="">Seleccionar Cliente...</option>
+                                            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Salida Autorizada por</label>
+                                        <select className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-bold" value={selectedAdminId} onChange={e => setSelectedAdminId(e.target.value)}>
+                                            <option value="">Seleccionar Admin...</option>
+                                            {admins.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tipo de Pago</label>
+                                        <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                                            <button onClick={() => setPaymentType('contado')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentType === 'contado' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>Contado</button>
+                                            <button onClick={() => setPaymentType('credito')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentType === 'credito' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>Crédito</button>
+                                        </div>
+                                    </div>
+
+                                    {paymentType === 'credito' && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plazo de Crédito (Días)</label>
+                                            <input
+                                                type="number"
+                                                className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-black"
+                                                value={creditDays}
+                                                onChange={e => setCreditDays(parseInt(e.target.value) || 0)}
+                                                placeholder="Días"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Payment Method Selector (Only for Contado) */}
+                                    {paymentType === 'contado' && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Método de Pago</label>
+                                            <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                                                {(['cash', 'card', 'transfer'] as const).map(m => (
+                                                    <button key={m} onClick={() => setPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentMethod === m ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>
+                                                        {{ cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transf.' }[m]}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Billing Data (Conditional) */}
+                                    {paymentType === 'contado' && (paymentMethod === 'card' || paymentMethod === 'transfer') && (
+                                        <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="material-symbols-outlined text-blue-500 text-sm">receipt_long</span>
+                                                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase">Datos Facturación Obligatorios</span>
+                                            </div>
+                                            <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Banco" value={billingData.bank} onChange={e => setBillingData({ ...billingData, bank: e.target.value })} />
+                                            <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Razón Social" value={billingData.socialReason} onChange={e => setBillingData({ ...billingData, socialReason: e.target.value })} />
+                                            <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="No. Factura / Referencia" value={billingData.invoiceNumber} onChange={e => setBillingData({ ...billingData, invoiceNumber: e.target.value })} />
+                                        </div>
+                                    )}
+
+                                    {/* Delivery Data (Always Required) */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Entrega (Recibido Por)</label>
                                         <input
-                                            type="number"
                                             className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-black"
-                                            value={creditDays}
-                                            onChange={e => setCreditDays(parseInt(e.target.value) || 0)}
-                                            placeholder="Días"
+                                            placeholder="Nombre y Firma"
+                                            value={deliveryReceiver}
+                                            onChange={e => setDeliveryReceiver(e.target.value)}
                                         />
                                     </div>
-                                )}
 
-                                {/* Payment Method Selector (Only for Contado) */}
-                                {paymentType === 'contado' && (
-                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Método de Pago</label>
-                                        <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
-                                            {(['cash', 'card', 'transfer'] as const).map(m => (
-                                                <button key={m} onClick={() => setPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${paymentMethod === m ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-400'}`}>
-                                                    {{ cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transf.' }[m]}
+                                </div>
+
+                                {/* AI & Discount Section */}
+                                <div className="py-2 border-t dark:border-slate-800 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
+                                        <input
+                                            type="number"
+                                            min="0" max="100"
+                                            className="w-16 text-right text-xs font-bold bg-transparent border-b border-slate-200 focus:border-primary outline-none"
+                                            value={appliedDiscount}
+                                            onChange={e => setAppliedDiscount(parseFloat(e.target.value) || 0)}
+                                        />
+                                    </div>
+
+                                    {branchConfig?.enable_ai_dynamic_pricing && cart.length > 0 && selectedClient && (
+                                        <div className="animate-in fade-in slide-in-from-top-2">
+                                            {!aiSuggestion ? (
+                                                <button
+                                                    onClick={handleConsultAI}
+                                                    disabled={loadingAi}
+                                                    className="w-full py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    {loadingAi ? <span className="animate-spin material-symbols-outlined text-sm">sync</span> : <span className="material-symbols-outlined text-sm">smart_toy</span>}
+                                                    {loadingAi ? 'Analizando...' : 'Consultar descuento IA'}
                                                 </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Billing Data (Conditional) */}
-                                {paymentType === 'contado' && (paymentMethod === 'card' || paymentMethod === 'transfer') && (
-                                    <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-top-2">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="material-symbols-outlined text-blue-500 text-sm">receipt_long</span>
-                                            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase">Datos Facturación Obligatorios</span>
-                                        </div>
-                                        <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Banco" value={billingData.bank} onChange={e => setBillingData({ ...billingData, bank: e.target.value })} />
-                                        <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Razón Social" value={billingData.socialReason} onChange={e => setBillingData({ ...billingData, socialReason: e.target.value })} />
-                                        <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="No. Factura / Referencia" value={billingData.invoiceNumber} onChange={e => setBillingData({ ...billingData, invoiceNumber: e.target.value })} />
-                                    </div>
-                                )}
-
-                                {/* Delivery Data (Always Required) */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Entrega (Recibido Por)</label>
-                                    <input
-                                        className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-black"
-                                        placeholder="Nombre y Firma"
-                                        value={deliveryReceiver}
-                                        onChange={e => setDeliveryReceiver(e.target.value)}
-                                    />
-                                </div>
-
-                            </div>
-
-                            {/* AI & Discount Section */}
-                            <div className="py-2 border-t dark:border-slate-800 space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
-                                    <input
-                                        type="number"
-                                        min="0" max="100"
-                                        className="w-16 text-right text-xs font-bold bg-transparent border-b border-slate-200 focus:border-primary outline-none"
-                                        value={appliedDiscount}
-                                        onChange={e => setAppliedDiscount(parseFloat(e.target.value) || 0)}
-                                    />
-                                </div>
-
-                                {branchConfig?.enable_ai_dynamic_pricing && cart.length > 0 && selectedClient && (
-                                    <div className="animate-in fade-in slide-in-from-top-2">
-                                        {!aiSuggestion ? (
-                                            <button
-                                                onClick={handleConsultAI}
-                                                disabled={loadingAi}
-                                                className="w-full py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                {loadingAi ? <span className="animate-spin material-symbols-outlined text-sm">sync</span> : <span className="material-symbols-outlined text-sm">smart_toy</span>}
-                                                {loadingAi ? 'Analizando...' : 'Consultar descuento IA'}
-                                            </button>
-                                        ) : (
-                                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Sugerencia: {aiSuggestion.discount}%</p>
-                                                        <p className="text-[10px] text-indigo-600/80 leading-tight mt-1">{aiSuggestion.reasoning}</p>
+                                            ) : (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Sugerencia: {aiSuggestion.discount}%</p>
+                                                            <p className="text-[10px] text-indigo-600/80 leading-tight mt-1">{aiSuggestion.reasoning}</p>
+                                                        </div>
+                                                        <button onClick={() => setAiSuggestion(null)} className="text-indigo-400 hover:text-indigo-600"><span className="material-symbols-outlined text-sm">close</span></button>
                                                     </div>
-                                                    <button onClick={() => setAiSuggestion(null)} className="text-indigo-400 hover:text-indigo-600"><span className="material-symbols-outlined text-sm">close</span></button>
+                                                    <button onClick={applyAiDiscount} className="w-full py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700">Aplicar Descuento</button>
                                                 </div>
-                                                <button onClick={applyAiDiscount} className="w-full py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700">Aplicar Descuento</button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="pt-2 border-t dark:border-slate-800 space-y-2">
-                                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>Subtotal</span><span>${subtotalAfterDiscount.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>IVA (16%)</span><span>${iva.toLocaleString()}</span></div>
-                                <div className="flex justify-between items-end pt-2">
-                                    <span className="text-xs font-black uppercase text-slate-400">Total</span>
-                                    <span className="text-3xl font-black text-primary">${total.toLocaleString()}</span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
+
                             </div>
 
-                            <button
-                                disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading}
-                                onClick={handleFinalizeSale}
-                                className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
-                            >
-                                {loading ? 'Procesando...' : 'Finalizar Venta'}
-                            </button>
+                            <div className="space-y-4 shrink-0">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>Subtotal</span><span>${subtotalAfterDiscount.toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>IVA (16%)</span><span>${iva.toLocaleString()}</span></div>
+                                    <div className="flex justify-between items-end pt-2 border-t dark:border-slate-200 dark:border-slate-800">
+                                        <span className="text-xs font-black uppercase text-slate-400">Total</span>
+                                        <span className="text-3xl font-black text-primary">${total.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading}
+                                    onClick={handleFinalizeSale}
+                                    className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
+                                >
+                                    {loading ? 'Procesando...' : 'Finalizar Venta'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -40,35 +40,23 @@ export const SalesService = {
             p_items: rpcItems,
             p_subtotal: extra?.subtotal || total,
             p_discount_amount: extra?.discountAmount || 0,
-            p_iva: extra?.iva || 0
+            p_iva: extra?.iva || 0,
+
+            // New optional fields sent directly to INSERT
+            p_client_id: clientId || null,
+            p_is_wholesale: extra?.isWholesale || false,
+            p_payment_type: extra?.paymentType || 'contado',
+            p_departure_admin_id: extra?.departureAdminId || null,
+            p_credit_days: extra?.creditDays || 0,
+            p_billing_bank: extra?.billingBank || null,
+            p_billing_social_reason: extra?.billingSocialReason || null,
+            p_billing_invoice_number: extra?.billingInvoiceNumber || null,
+            p_delivery_receiver_name: extra?.deliveryReceiverName || null
         });
 
         if (error) {
             console.error("Error processing sale:", error);
             throw new Error(error.message);
-        }
-
-        // Actualizamos campos adicionales (Mayoreo, Crédito, Cliente, Admin)
-        if (data) {
-            const updates: any = {};
-            if (clientId) updates.client_id = clientId;
-            if (extra?.isWholesale !== undefined) updates.is_wholesale = extra.isWholesale;
-            if (extra?.paymentType) updates.payment_type = extra.paymentType;
-            if (extra?.departureAdminId) updates.departure_admin_id = extra.departureAdminId;
-            if (extra?.creditDays !== undefined) updates.credit_days = extra.creditDays;
-
-            // New fields updates
-            if (extra?.billingBank) updates.billing_bank = extra.billingBank;
-            if (extra?.billingSocialReason) updates.billing_social_reason = extra.billingSocialReason;
-            if (extra?.billingInvoiceNumber) updates.billing_invoice_number = extra.billingInvoiceNumber;
-            if (extra?.deliveryReceiverName) updates.delivery_receiver_name = extra.deliveryReceiverName;
-
-            if (Object.keys(updates).length > 0) {
-                await supabase
-                    .from('sales')
-                    .update(updates)
-                    .eq('id', data);
-            }
         }
 
         return data;

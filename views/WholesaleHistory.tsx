@@ -18,7 +18,9 @@ const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) =
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
+    const [selectedBranch, setSelectedBranch] = useState<string>(
+        user.role === UserRole.ADMIN ? 'ALL' : (user.branchId || 'BR-CENTRO')
+    );
 
     // Filters
     const [period, setPeriod] = useState<Period>('today');
@@ -138,17 +140,19 @@ const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) =
                             </select>
                         </div>
 
-                        <div className="space-y-1 w-full md:w-auto">
-                            <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Sucursal</label>
-                            <select
-                                className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"
-                                value={selectedBranch}
-                                onChange={e => setSelectedBranch(e.target.value)}
-                            >
-                                <option value="ALL">Todas</option>
-                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                            </select>
-                        </div>
+                        {(user.role === UserRole.ADMIN || user.role === UserRole.WAREHOUSE) && (
+                            <div className="space-y-1 w-full md:w-auto">
+                                <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Sucursal</label>
+                                <select
+                                    className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"
+                                    value={selectedBranch}
+                                    onChange={e => setSelectedBranch(e.target.value)}
+                                >
+                                    <option value="ALL">Todas</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
 
                         {period === 'custom' && (
                             <div className="flex gap-4 w-full md:w-auto">

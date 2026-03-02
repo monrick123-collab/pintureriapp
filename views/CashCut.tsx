@@ -193,6 +193,48 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                                         <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Efectivo - Gastos</p>
                                     </div>
                                 </div>
+
+                                <div className="pt-10 space-y-6">
+                                    <h3 className="text-xl font-black flex items-center gap-2">
+                                        <span className="material-symbols-outlined">history</span>
+                                        Historial de Ventas
+                                    </h3>
+                                    <div className="border dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <th className="px-6 py-3 text-left">Hora</th>
+                                                    <th className="px-6 py-3 text-left">Folio / ID</th>
+                                                    <th className="px-6 py-3 text-left">Método</th>
+                                                    <th className="px-6 py-3 text-right">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y dark:divide-slate-700">
+                                                {data.sales.map((s: any) => (
+                                                    <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                        <td className="px-6 py-3 font-medium text-slate-500 whitespace-nowrap">
+                                                            {new Date(s.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                                                        </td>
+                                                        <td className="px-6 py-3 font-bold text-slate-700 dark:text-slate-300">
+                                                            {s.id.split('-')[0].toUpperCase()}
+                                                        </td>
+                                                        <td className="px-6 py-3">
+                                                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                                                                {s.payment_method || 'Efectivo'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3 text-right font-black text-emerald-600">
+                                                            ${Number(s.total).toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {data.sales.length === 0 && (
+                                                    <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-300 italic">No hay ventas registradas hoy.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </>
                         )}
 

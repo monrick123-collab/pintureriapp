@@ -112,7 +112,8 @@ export const AccountingService = {
             summary,
             expenses,
             coupons,
-            salesCount: sales.length
+            salesCount: sales.length,
+            sales
         };
     },
 

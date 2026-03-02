@@ -16,6 +16,8 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedTransfer, setSelectedTransfer] = useState<any>(null);
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
     const [notes, setNotes] = useState('');
@@ -86,6 +88,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleViewTransfer = async (transfer: StockTransfer) => {
+        try {
+            setLoading(true);
+            const detail = await InventoryService.getStockTransferDetail(transfer.id);
+            setSelectedTransfer(detail);
+            setIsDetailModalOpen(true);
+        } catch (e: any) {
+            console.error("Error al cargar detalles:", e);
+            alert("Error al obtener los detalles: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
@@ -140,7 +156,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-primary transition-colors">
+                                                <button
+                                                    onClick={() => handleViewTransfer(t)}
+                                                    className="p-2 text-slate-400 hover:text-primary transition-colors"
+                                                >
                                                     <span className="material-symbols-outlined">visibility</span>
                                                 </button>
                                             </td>
@@ -278,6 +297,88 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Detalles del Traspaso */}
+                {isDetailModalOpen && selectedTransfer && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col scale-in-95 animate-in">
+                            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">local_shipping</span>
+                                        Detalle de Traspaso #T-{selectedTransfer.folio.toString().padStart(4, '0')}
+                                    </h3>
+                                    <p className="text-slate-500 text-sm font-medium mt-1">
+                                        Creado el {new Date(selectedTransfer.createdAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <button onClick={() => setIsDetailModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6 flex-1">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border dark:border-slate-800">
+                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Origen</span>
+                                        <p className="font-bold text-slate-800 dark:text-white">{selectedTransfer.fromBranchName}</p>
+                                    </div>
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border dark:border-slate-800">
+                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Destino</span>
+                                        <p className="font-bold text-slate-800 dark:text-white">{selectedTransfer.toBranchName}</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
+                                        <span className="material-symbols-outlined text-primary text-xl">inventory_2</span>
+                                        Materiales Trasladados
+                                    </h4>
+                                    <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 shadow-sm rounded-2xl overflow-hidden">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <th className="px-4 py-3">Producto</th>
+                                                    <th className="px-4 py-3 text-center">SKU</th>
+                                                    <th className="px-4 py-3 text-right">Cantidad</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y dark:divide-slate-700">
+                                                {selectedTransfer.items?.map((item: any) => (
+                                                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="size-10 bg-slate-100 dark:bg-slate-700 rounded-xl p-1 flex-shrink-0">
+                                                                    {item.productImage ? (
+                                                                        <img src={item.productImage} alt={item.productName} className="w-full h-full object-contain" />
+                                                                    ) : (
+                                                                        <span className="material-symbols-outlined text-slate-300 mx-auto mt-1 block">image</span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="font-bold text-sm text-slate-800 dark:text-white">{item.productName}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-center text-xs font-bold text-slate-400">{item.productSku}</td>
+                                                        <td className="px-4 py-4 text-right">
+                                                            <span className="font-black text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg text-sm">{item.quantity}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {selectedTransfer.notes && (
+                                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 p-4 rounded-2xl">
+                                        <p className="text-[10px] font-black uppercase text-amber-500 tracking-widest block mb-2">Notas / Observaciones</p>
+                                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{selectedTransfer.notes}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

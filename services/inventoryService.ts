@@ -961,6 +961,39 @@ export const InventoryService = {
         }));
     },
 
+    async getStockTransferDetail(transferId: string): Promise<any> {
+        const { data, error } = await supabase
+            .from('stock_transfers')
+            .select(`
+                *,
+                from:branches!from_branch_id (name),
+                to:branches!to_branch_id (name),
+                items:stock_transfer_items (
+                    *,
+                    product:products ( name, sku, image )
+                )
+            `)
+            .eq('id', transferId)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            ...data,
+            fromBranchName: (data.from as any)?.name,
+            toBranchName: (data.to as any)?.name,
+            items: (data.items || []).map((i: any) => ({
+                id: i.id,
+                transferId: i.transfer_id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                productName: i.product?.name,
+                productSku: i.product?.sku,
+                productImage: i.product?.image
+            }))
+        };
+    },
+
     async createStockTransfer(fromId: string, toId: string, notes: string, items: { productId: string, quantity: number }[]): Promise<void> {
         let finalFolio = 0;
         try {

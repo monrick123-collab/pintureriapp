@@ -959,7 +959,9 @@ export const InventoryService = {
         return (data || []).map(t => ({
             ...t,
             fromBranchName: (t.from as any)?.name,
-            toBranchName: (t.to as any)?.name
+            toBranchName: (t.to as any)?.name,
+            createdAt: t.created_at,
+            updatedAt: t.updated_at
         }));
     },
 
@@ -984,6 +986,8 @@ export const InventoryService = {
             ...data,
             fromBranchName: (data.from as any)?.name,
             toBranchName: (data.to as any)?.name,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
             items: (data.items || []).map((i: any) => ({
                 id: i.id,
                 transferId: i.transfer_id,

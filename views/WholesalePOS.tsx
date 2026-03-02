@@ -14,7 +14,8 @@ interface WholesalePOSProps {
 }
 
 const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
-    const currentBranchId = 'BR-MAIN'; // Wholesale usually from Warehouse/Main
+    // For wholesale operations we use the user's branch (or fallback to BR-MAIN)
+    const currentBranchId = user.branchId || 'BR-MAIN';
     const [products, setProducts] = useState<Product[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [admins, setAdmins] = useState<{ id: string, name: string }[]>([]);

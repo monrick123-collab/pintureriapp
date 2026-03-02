@@ -113,7 +113,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                     {requests.map(r => (
                                         <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                                             <td className="px-8 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
-                                            <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">Sucursal {r.branchId}</td>
+                                            <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
                                             <td className="px-8 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
                                             <td className="px-8 py-5">
                                                 {r.breakdown ? (

@@ -381,6 +381,7 @@ export interface LeasePayment {
 export interface CoinChangeRequest {
   id: string;
   branchId: string;
+  branchName?: string;
   folio: number;
   amount: number;
   breakdown?: Record<string, number>; // e.g. { "500": 2, "200": 5 }

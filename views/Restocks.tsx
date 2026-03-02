@@ -390,8 +390,8 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                     {item.quantity}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-sm text-slate-900 dark:text-white">{item.products?.name || 'Producto Desconocido'}</p>
-                                                    <p className="text-[10px] font-black text-slate-400 mt-0.5 uppercase tracking-widest">{item.products?.sku || 'N/A'}</p>
+                                                    <p className="font-bold text-sm text-slate-900 dark:text-white">{item.product?.name || 'Producto Desconocido'}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 mt-0.5 uppercase tracking-widest">{item.product?.sku || 'N/A'}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">

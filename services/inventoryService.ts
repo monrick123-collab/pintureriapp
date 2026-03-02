@@ -428,6 +428,8 @@ export const InventoryService = {
         return {
             ...sheet,
             branchName: sheet.branches?.name,
+            totalAmount: sheet.total_amount,
+            createdAt: sheet.created_at,
             items: (items || []).map(i => ({
                 id: i.id,
                 sheetId: i.sheet_id,

@@ -987,7 +987,7 @@ export const InventoryService = {
             finalFolio = (maxCheck && maxCheck.length > 0) ? (maxCheck[0].folio + 1) : 1;
 
             // Defensively try to insert into branch_folios to fix it for next time
-            supabase.from('branch_folios').insert({ branch_id: fromId, last_transfer_folio: finalFolio }).catch(() => { });
+            supabase.from('branch_folios').insert({ branch_id: fromId, last_transfer_folio: finalFolio }).then(() => { }, () => { });
         }
 
         const { data: transfer, error: tError } = await supabase

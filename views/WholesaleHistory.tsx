@@ -12,16 +12,26 @@ interface WholesaleHistoryProps {
     onLogout: () => void;
 }
 
+type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
+
 const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) => {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
 
+    // Filters
+    const [period, setPeriod] = useState<Period>('today');
+    const [customStart, setCustomStart] = useState('');
+    const [customEnd, setCustomEnd] = useState('');
+
     useEffect(() => {
         loadBranches();
+    }, []);
+
+    useEffect(() => {
         fetchSales();
-    }, [selectedBranch]);
+    }, [period, customStart, customEnd, selectedBranch]);
 
     const loadBranches = async () => {
         try {
@@ -32,15 +42,44 @@ const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) =
         }
     };
 
+    const calculateDateRange = () => {
+        const end = new Date();
+        let start = new Date();
+
+        end.setHours(23, 59, 59, 999);
+        start.setHours(0, 0, 0, 0);
+
+        switch (period) {
+            case 'today':
+                break;
+            case 'week':
+                const day = start.getDay();
+                const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+                start.setDate(diff);
+                break;
+            case 'fortnight':
+                start.setDate(start.getDate() - 15);
+                break;
+            case 'month':
+                start.setDate(1);
+                break;
+            case 'custom':
+                if (!customStart || !customEnd) return null;
+                start = new Date(customStart);
+                const endCustom = new Date(customEnd);
+                endCustom.setHours(23, 59, 59, 999);
+                return { start: start.toISOString(), end: endCustom.toISOString() };
+        }
+        return { start: start.toISOString(), end: end.toISOString() };
+    };
+
     const fetchSales = async () => {
+        const range = calculateDateRange();
+        if (!range) return;
+
         setLoading(true);
         try {
-            // Get last 30 days for now
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - 30);
-
-            const data = await SalesService.getSalesWithFilters(start.toISOString(), end.toISOString(), selectedBranch);
+            const data = await SalesService.getSalesWithFilters(range.start, range.end, selectedBranch);
             // Filter only wholesale
             setSales(data.filter(s => s.isWholesale));
         } catch (e) {
@@ -63,14 +102,46 @@ const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) =
                         <span className="material-symbols-outlined text-primary font-black">history_edu</span>
                         <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Historial Mayoreo</h1>
                     </div>
+
+                    <div className="hidden lg:flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        {(['today', 'week', 'fortnight', 'month'] as Period[]).map(p => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${period === p
+                                    ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                            >
+                                {{ today: 'Hoy', week: 'Semana', fortnight: 'Quincena', month: 'Mes', custom: 'Personalizado' }[p]}
+                            </button>
+                        ))}
+                    </div>
                 </header>
 
                 <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
-                    <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border dark:border-slate-800 shadow-sm">
-                        <div className="flex items-center gap-4">
+                    {/* Controls Bar */}
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-end bg-white dark:bg-slate-900 p-6 rounded-2xl border dark:border-slate-800 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/10">
+                        {/* Period Selector (Mobile only) */}
+                        <div className="lg:hidden w-full space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Periodo</label>
+                            <select
+                                className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold"
+                                value={period}
+                                onChange={e => setPeriod(e.target.value as Period)}
+                            >
+                                <option value="today">Hoy</option>
+                                <option value="week">Esta Semana</option>
+                                <option value="fortnight">Quincena</option>
+                                <option value="month">Este Mes</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-1 w-full md:w-auto">
                             <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Sucursal</label>
                             <select
-                                className="bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-xs font-bold px-3 py-2"
+                                className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"
                                 value={selectedBranch}
                                 onChange={e => setSelectedBranch(e.target.value)}
                             >
@@ -78,7 +149,21 @@ const WholesaleHistory: React.FC<WholesaleHistoryProps> = ({ user, onLogout }) =
                                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex gap-4">
+
+                        {period === 'custom' && (
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <div className="flex-1 space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
+                                    <input type="date" className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold" value={customStart} onChange={e => setCustomStart(e.target.value)} />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
+                                    <input type="date" className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-4 ml-auto">
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase">Total Periodo</p>
                                 <p className="text-xl font-black text-primary">${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString()}</p>

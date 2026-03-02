@@ -233,14 +233,26 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                             <h2 className="text-lg font-black uppercase tracking-tight">Ventas Mayoreo</h2>
                         </div>
                     </div>
-                    <button onClick={() => setIsCartOpen(true)} className="lg:hidden p-2 bg-slate-100 rounded-xl relative">
-                        <span className="material-symbols-outlined">shopping_cart</span>
-                        {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] size-5 rounded-full flex items-center justify-center font-black">{cart.length}</span>}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsCartOpen(true)}
+                            className="lg:hidden relative p-2 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl"
+                        >
+                            <span className="material-symbols-outlined">shopping_cart</span>
+                            {cart.length > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] size-5 rounded-full flex items-center justify-center font-black animate-in zoom-in">
+                                    {cart.length}
+                                </span>
+                            )}
+                        </button>
+                        <div className="text-[10px] md:text-xs font-bold text-slate-400 hidden sm:block">
+                            {user.name}
+                        </div>
+                    </div>
                 </header>
 
                 <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900 relative">
-                    <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isCartOpen ? 'lg:mr-[400px]' : ''}`}>
+                    <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="p-6 pb-2 space-y-4">
                             <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-14 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                                 <div className="flex items-center justify-center px-4 text-slate-400"><span className="material-symbols-outlined">search</span></div>
@@ -254,18 +266,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                                         </button>
                                     ))}
                                 </div>
-                                <button
-                                    onClick={() => setIsCartOpen(!isCartOpen)}
-                                    className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${isCartOpen ? 'bg-slate-200 text-slate-600' : 'bg-primary text-white shadow-lg shadow-primary/20'}`}
-                                >
-                                    <span className="material-symbols-outlined text-base">{isCartOpen ? 'last_page' : 'shopping_cart'}</span>
-                                    {isCartOpen ? 'Ocultar Carrito' : 'Ver Carrito'}
-                                </button>
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
-                            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isCartOpen ? 'xl:grid-cols-3' : 'xl:grid-cols-4 2xl:grid-cols-5'} gap-4 transition-all`}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 transition-all">
                                 {filteredProducts.map(p => (
                                     <div key={p.id} className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md" onClick={() => addToCart(p)}>
                                         <div className="aspect-square bg-slate-50 dark:bg-slate-900/50 p-4 relative">
@@ -286,13 +291,22 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
                         </div>
                     </div>
 
+                    {/* Cart Overlay for Mobile */}
+                    {isCartOpen && (
+                        <div className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-all" onClick={() => setIsCartOpen(false)} />
+                    )}
+
                     {/* Cart Sidebar */}
-                    <div className={`fixed inset-y-0 right-0 w-full sm:w-[400px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col z-50 transition-transform duration-300 shadow-2xl lg:shadow-none ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <div className={`fixed lg:static top-0 right-0 h-full w-[320px] md:w-[400px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col z-[45] shadow-2xl lg:shadow-none transition-all duration-300 ${isCartOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
                         <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                            <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Carrito de Venta</h3>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setIsCartOpen(false)} className="lg:hidden text-slate-400 hover:text-primary transition-colors">
+                                    <span className="material-symbols-outlined">arrow_forward_ios</span>
+                                </button>
+                                <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Carrito de Venta</h3>
+                            </div>
                             <div className="flex gap-2">
                                 <button onClick={() => setCart([])} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
-                                <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined">close</span></button>
                             </div>
                         </div>
 

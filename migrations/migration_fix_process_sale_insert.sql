@@ -85,4 +85,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Volver a otorgar permisos al rol anon
-GRANT EXECUTE ON FUNCTION public.process_sale TO anon;
+GRANT EXECUTE ON FUNCTION public.process_sale(
+  TEXT, DECIMAL, TEXT, JSONB, DECIMAL, 
+  DECIMAL, DECIMAL, UUID, BOOLEAN, TEXT, 
+  TEXT, INTEGER, TEXT, TEXT, TEXT, TEXT
+) TO anon;

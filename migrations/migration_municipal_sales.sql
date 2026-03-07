@@ -88,10 +88,10 @@ ALTER TABLE public.municipal_sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.municipal_sale_items ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Full access municipal_sales" ON public.municipal_sales;
-CREATE POLICY "Full access municipal_sales" ON public.municipal_sales FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Full access municipal_sales" ON public.municipal_sales FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Full access municipal_sale_items" ON public.municipal_sale_items;
-CREATE POLICY "Full access municipal_sale_items" ON public.municipal_sale_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Full access municipal_sale_items" ON public.municipal_sale_items FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- 6. Cuentas y Pagos Municipales
 CREATE TABLE IF NOT EXISTS public.municipal_accounts (
@@ -122,7 +122,7 @@ ALTER TABLE public.municipal_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.municipal_payments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Full access municipal_accounts" ON public.municipal_accounts;
-CREATE POLICY "Full access municipal_accounts" ON public.municipal_accounts FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Full access municipal_accounts" ON public.municipal_accounts FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Full access municipal_payments" ON public.municipal_payments;
-CREATE POLICY "Full access municipal_payments" ON public.municipal_payments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Full access municipal_payments" ON public.municipal_payments FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);

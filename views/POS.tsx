@@ -283,7 +283,6 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     }
   };
 
-  re
   return (
     <div className="h-screen flex overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} />

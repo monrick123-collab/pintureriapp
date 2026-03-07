@@ -24,7 +24,7 @@ const DENOMINATIONS = [
 const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const [requests, setRequests] = useState<CoinChangeRequest[]>([]);
     const [loading, setLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
 
     // Form State
     const [breakdown, setBreakdown] = useState<Record<string, number>>({});
@@ -34,14 +34,25 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const isAdmin = user.role === UserRole.ADMIN;
     const branchId = user.branchId || 'BR-MAIN';
 
+    // Fechas
+    const today = new Date();
+    const localDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const firstDay = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
+    const [startDate, setStartDate] = useState(firstDay);
+    const [endDate, setEndDate] = useState(localDate);
+
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async (sd = startDate, ed = endDate) => {
         try {
             setLoading(true);
-            const data = await InventoryService.getCoinChangeRequests(isAdmin ? undefined : branchId);
+            const data = await InventoryService.getCoinChangeRequests(
+                isAdmin ? undefined : branchId,
+                sd || undefined,
+                ed || undefined
+            );
             setRequests(data);
         } catch (e) {
             console.error(e);
@@ -57,7 +68,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
             setLoading(true);
             // Convert numbers to strings for JSON Record
             await InventoryService.createCoinChangeRequest(branchId, user.id, totalAmount, breakdown);
-            setIsModalOpen(false);
+            setActiveTab('history');
             setBreakdown({});
             loadData();
             alert("Solicitud de cambio creada.");
@@ -82,83 +93,110 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
                 <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-amber-500 text-3xl">payments</span>
-                        Cambio de Moneda
-                    </h1>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="h-12 px-6 bg-amber-500 text-white rounded-2xl font-black flex items-center gap-2 shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all"
-                    >
-                        <span className="material-symbols-outlined">add</span>
-                        Solicitar Cambio
-                    </button>
-                </header>
-
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="max-w-5xl mx-auto space-y-6">
-                        <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
-                                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <th className="px-8 py-5">Folio</th>
-                                        <th className="px-8 py-5">Sucursal</th>
-                                        <th className="px-8 py-5">Monto Total</th>
-                                        <th className="px-8 py-5">Desglose</th>
-                                        <th className="px-8 py-5">Fecha</th>
-                                        <th className="px-8 py-5 text-center">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y dark:divide-slate-700">
-                                    {requests.map(r => (
-                                        <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                                            <td className="px-8 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
-                                            <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
-                                            <td className="px-8 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
-                                            <td className="px-8 py-5">
-                                                {r.breakdown ? (
-                                                    <div className="flex flex-wrap gap-1 max-w-xs">
-                                                        {Object.entries(r.breakdown).map(([val, qty]) => (
-                                                            qty > 0 && (
-                                                                <span key={val} className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-bold border dark:border-slate-600">
-                                                                    {qty}x ${val}
-                                                                </span>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                ) : <span className="text-slate-400 text-xs">-</span>}
-                                            </td>
-                                            <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(r.createdAt).toLocaleDateString()}</td>
-                                            <td className="px-8 py-5 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                                                    r.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                        'bg-amber-500/10 text-amber-500'
-                                                    }`}>
-                                                    {r.status === 'pending' ? 'Pendiente' : r.status === 'completed' ? 'Completado' : 'Cancelado'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {requests.length === 0 && (
-                                        <tr>
-                                            <td colSpan={6} className="px-8 py-12 text-center text-slate-400 italic font-medium">No hay solicitudes de cambio.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-amber-500 text-3xl">currency_exchange</span>
+                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">Cambio de Moneda</h1>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
+                            {([
+                                { key: 'new', label: 'Nuevo Cambio', icon: 'add_circle' },
+                                { key: 'history', label: 'Historial', icon: 'list' }
+                            ] as const).map(tab => (
+                                <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
+                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                </div>
+                </header>
 
-                {isModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                        <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[40px] shadow-2xl p-8 flex flex-col max-h-[90vh]">
-                            <h3 className="text-2xl font-black mb-2">Solicitar Feria / Cambio</h3>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Ingresa la cantidad de billetes/monedas que necesitas</p>
+                {activeTab === 'history' ? (
+                    <>
+                        {/* Filtro por fechas */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
+                                <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
+                                <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                            </div>
+                            <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-amber-500 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-amber-500/20 hover:scale-105 transition-all">Filtrar</button>
+                            {(startDate || endDate) && (
+                                <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>
+                            )}
+                            <span className="text-[10px] text-slate-400 font-bold ml-auto">{requests.length} solicitud{requests.length !== 1 ? 'es' : ''}</span>
+                        </div>
 
-                            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto space-y-6">
+                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                <th className="px-8 py-5">Folio</th>
+                                                <th className="px-8 py-5">Sucursal</th>
+                                                <th className="px-8 py-5">Monto Total</th>
+                                                <th className="px-8 py-5">Desglose</th>
+                                                <th className="px-8 py-5">Fecha</th>
+                                                <th className="px-8 py-5 text-center">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-700">
+                                            {requests.map(r => (
+                                                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                                    <td className="px-8 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
+                                                    <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
+                                                    <td className="px-8 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
+                                                    <td className="px-8 py-5">
+                                                        {r.breakdown ? (
+                                                            <div className="flex flex-wrap gap-1 max-w-xs">
+                                                                {Object.entries(r.breakdown).map(([val, qty]) => (
+                                                                    qty > 0 && (
+                                                                        <span key={val} className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-bold border dark:border-slate-600">
+                                                                            {qty}x ${val}
+                                                                        </span>
+                                                                    )
+                                                                ))}
+                                                            </div>
+                                                        ) : <span className="text-slate-400 text-xs">-</span>}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(r.createdAt).toLocaleDateString()}</td>
+                                                    <td className="px-8 py-5 text-center">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                                                            r.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                                'bg-amber-500/10 text-amber-500'
+                                                            }`}>
+                                                            {r.status === 'pending' ? 'Pendiente' : r.status === 'completed' ? 'Completado' : 'Cancelado'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {requests.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400 italic font-medium">No hay solicitudes de cambio.</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex overflow-hidden justify-center">
+                        <div className="w-full max-w-4xl bg-white dark:bg-slate-900 mx-8 my-4 rounded-3xl shadow-sm border dark:border-slate-800 p-8 flex flex-col h-fit max-h-[calc(100%-2rem)]">
+                            <div className="mb-6 shrink-0">
+                                <h3 className="text-2xl font-black mb-2">Solicitar Feria / Cambio</h3>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Ingresa la cantidad de billetes/monedas que necesitas</p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+                                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                         {DENOMINATIONS.map(d => (
                                             <div key={d.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl flex flex-col items-center gap-2 border border-transparent focus-within:border-amber-500/50 focus-within:bg-amber-50/50 dark:focus-within:bg-slate-800 transition-colors">
                                                 <span className={`text-xs font-black uppercase tracking-widest ${d.type === 'billete' ? 'text-green-600' : 'text-amber-600'}`}>
@@ -193,21 +231,18 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-2">
-                                    <div className="flex justify-between items-center mb-6 px-4">
-                                        <span className="text-slate-400 font-bold uppercase text-xs tracking-widest">Total a Solicitar</span>
-                                        <span className="text-3xl font-black text-amber-500">${totalAmount.toLocaleString()}</span>
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-6 shrink-0">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <span className="text-slate-400 font-bold uppercase text-sm tracking-widest">Total a Solicitar</span>
+                                        <span className="text-4xl font-black text-amber-500">${totalAmount.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex gap-4">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest underline decoration-2 underline-offset-8">Cancelar</button>
-                                        <button
-                                            type="submit"
-                                            disabled={totalAmount <= 0 || loading}
-                                            className="flex-1 py-4 bg-amber-500 text-white font-black rounded-2xl shadow-xl shadow-amber-500/20 uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                                        >
-                                            Confirmar Solicitud
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={totalAmount <= 0 || loading}
+                                        className="w-full py-5 bg-amber-500 text-white font-black rounded-2xl shadow-xl shadow-amber-500/20 uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        Confirmar Solicitud
+                                    </button>
                                 </div>
                             </form>
                         </div>

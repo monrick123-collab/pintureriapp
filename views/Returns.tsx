@@ -34,19 +34,32 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const [receivedBy, setReceivedBy] = useState('');
 
     const isAdmin = user.role === UserRole.ADMIN;
+    const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
     const [showAuth, setShowAuth] = useState(false);
+    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+
+    // Fechas
+    const today = new Date();
+    const localDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const firstDay = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
+    const [startDate, setStartDate] = useState(firstDay);
+    const [endDate, setEndDate] = useState(localDate);
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async (sd = startDate, ed = endDate) => {
         try {
             setLoading(true);
             const [prodData, retData] = await Promise.all([
                 InventoryService.getProductsByBranch(user.branchId || 'BR-MAIN'),
-                InventoryService.getReturnRequests(isAdmin ? undefined : user.branchId)
+                InventoryService.getReturnRequests(
+                    (isAdmin || isWarehouse) ? undefined : user.branchId,
+                    sd || undefined,
+                    ed || undefined
+                )
             ]);
             setProducts(prodData);
             setReturns(retData as unknown as Return[]);
@@ -95,6 +108,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 receivedBy
             );
             setIsModalOpen(false);
+            setActiveTab('history');
             setCart([]);
             setTransportedBy('');
             setReceivedBy('');
@@ -114,106 +128,178 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleConfirmReception = async (id: string) => {
+        if (!confirm('¿Confirmas que el producto fue recibido físicamente en bodega?')) return;
+        try {
+            const { supabase } = await import('../services/supabase');
+            const { error } = await supabase
+                .from('returns')
+                .update({ status: 'received_at_warehouse', updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) throw error;
+            loadData();
+            alert('Recepción confirmada en bodega.');
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        }
+    };
+
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
                 <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
-                    <h1 className="text-xl font-black">Devoluciones a Bodega</h1>
-                    {!isAdmin && (
-                        <button onClick={() => isSub ? setShowAuth(true) : setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Nueva Devolución</button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-primary text-3xl">keyboard_return</span>
+                        <div>
+                            <h1 className="text-xl font-black">Devoluciones a Bodega</h1>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Gestión de devoluciones</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
+                            {([
+                                { key: 'new', label: 'Nueva Devolución', icon: 'add_circle' },
+                                { key: 'history', label: 'Historial', icon: 'list' }
+                            ] as const).map(tab => (
+                                <button key={tab.key} onClick={() => {
+                                    if (tab.key === 'new' && isSub) {
+                                        setShowAuth(true);
+                                    } else {
+                                        setActiveTab(tab.key);
+                                    }
+                                }}
+                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </header>
 
                 <AuthorizationModal
                     isOpen={showAuth}
                     onClose={() => setShowAuth(false)}
-                    onAuthorized={() => setIsModalOpen(true)}
+                    onAuthorized={() => setActiveTab('new')}
                     description="El subencargado requiere autorización para generar devoluciones."
                 />
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
-                                    <tr>
-                                        <th className="px-8 py-5">Folio</th>
-                                        <th className="px-8 py-5">Producto</th>
-                                        <th className="px-6 py-5">Cantidad</th>
-                                        <th className="px-6 py-5">Sucursal</th>
-                                        <th className="px-6 py-5">Logística</th>
-                                        <th className="px-6 py-5">Estado</th>
-                                        <th className="px-8 py-5 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y dark:divide-slate-700">
-                                    {returns.map((r: any) => (
-                                        <tr key={r.id}>
-                                            <td className="px-8 py-5 font-black text-primary">
-                                                #{(user.branchId || 'SC').substring(0, 3)}-{(r.folio || 0).toString().padStart(4, '0')}
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold">{r.products?.name}</span>
-                                                    <span className="text-[10px] text-slate-400 capitalize">{r.reason.replace('_', ' ')}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5 font-black">{r.quantity}</td>
-                                            <td className="px-6 py-5 font-medium">{r.branches?.name}</td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex flex-col text-[10px] font-bold text-slate-500">
-                                                    <span>🚚 {r.transported_by || 'N/A'}</span>
-                                                    <span>👤 {r.received_by || 'N/A'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                    {translateStatus(r.status)}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-5 text-right">
-                                                {isAdmin && r.status === 'pending_authorization' && (
-                                                    <div className="flex justify-end gap-2">
-                                                        <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
-                                                        <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {returns.length === 0 && (
-                                        <tr><td colSpan={7} className="text-center py-10 text-slate-400 italic">No hay devoluciones registradas.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                {activeTab === 'history' ? (
+                    <>
+                        {/* Filtro por fechas */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
+                                <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
+                                <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                            </div>
+                            <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            {(startDate || endDate) && (
+                                <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>
+                            )}
+                            <span className="text-[10px] text-slate-400 font-bold ml-auto">{returns.length} devolución{returns.length !== 1 ? 'es' : ''}</span>
                         </div>
-                    </div>
-                </div>
 
-                {isModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                        <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col md:flex-row">
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
+                                            <tr>
+                                                <th className="px-8 py-5">Folio</th>
+                                                <th className="px-8 py-5">Producto</th>
+                                                <th className="px-6 py-5">Cantidad</th>
+                                                <th className="px-6 py-5">Sucursal</th>
+                                                <th className="px-6 py-5">Logística</th>
+                                                <th className="px-6 py-5">Estado</th>
+                                                <th className="px-8 py-5 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-700">
+                                            {returns.map((r: any) => (
+                                                <tr key={r.id}>
+                                                    <td className="px-8 py-5 font-black text-primary">
+                                                        #{(user.branchId || 'SC').substring(0, 3)}-{(r.folio || 0).toString().padStart(4, '0')}
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold">{r.products?.name}</span>
+                                                            <span className="text-[10px] text-slate-400 capitalize">{r.reason === 'uso_tienda' ? 'Consumo Interno' : r.reason.replace('_', ' ')}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5 font-black">{r.quantity}</td>
+                                                    <td className="px-6 py-5 font-medium">{r.branches?.name}</td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex flex-col text-[10px] font-bold text-slate-500">
+                                                            <span>🚚 {r.transported_by || 'N/A'}</span>
+                                                            <span>👤 {r.received_by || 'N/A'}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' :
+                                                            r.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                                                                r.status === 'received_at_warehouse' ? 'bg-blue-100 text-blue-600' :
+                                                                    'bg-amber-100 text-amber-600'
+                                                            }`}>
+                                                            {translateStatus(r.status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        {isAdmin && r.status === 'pending_authorization' && (
+                                                            <div className="flex justify-end gap-2">
+                                                                <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
+                                                                <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
+                                                            </div>
+                                                        )}
+                                                        {isWarehouse && r.status === 'approved' && (
+                                                            <button
+                                                                onClick={() => handleConfirmReception(r.id)}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-black transition-colors"
+                                                                title="Confirmar Recepción en Bodega"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">inventory</span>
+                                                                Recibido
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {returns.length === 0 && (
+                                                <tr><td colSpan={7} className="text-center py-10 text-slate-400 italic">No hay devoluciones registradas.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+
+                    <div className="flex-1 flex overflow-hidden">
+                        <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 mx-8 my-4 rounded-3xl shadow-sm border dark:border-slate-800 overflow-hidden">
                             {/* Form Section */}
-                            <div className="flex-1 p-8 overflow-y-auto border-r border-slate-100 dark:border-slate-800">
+                            <div className="flex-[3] p-8 overflow-y-auto border-r border-slate-100 dark:border-slate-800 custom-scrollbar">
                                 <h3 className="text-2xl font-black mb-6">Nueva Devolución</h3>
-                                <div className="space-y-4">
+                                <div className="space-y-6 max-w-2xl">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Producto</label>
-                                        <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
+                                        <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
                                             <option value="">Selecciona...</option>
                                             {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock} dispon.)</option>)}
                                         </select>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
-                                            <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
+                                            <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black border border-slate-200 dark:border-slate-700" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
-                                            <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={reason} onChange={e => setReason(e.target.value)}>
-                                                <option value="uso_tienda">Uso de Tienda</option>
+                                            <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={reason} onChange={e => setReason(e.target.value)}>
+                                                <option value="uso_tienda">Consumo Interno</option>
                                                 <option value="demostracion">Demostraciones</option>
                                                 <option value="defecto">Defecto de Material</option>
                                                 <option value="traspaso_matriz">Retorno a Matriz</option>
@@ -224,57 +310,59 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         type="button"
                                         onClick={addToCart}
                                         disabled={!selectedProductId || quantity <= 0}
-                                        className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-xl uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                                        className="w-full py-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-2xl uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                                     >
                                         Agregar a Lista
                                     </button>
 
-                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
                                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Datos Logísticos</h4>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
-                                            <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe (Almacén)</label>
-                                            <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
+                                                <input className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe (Almacén)</label>
+                                                <input className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Cart Section */}
-                            <div className="flex-1 bg-slate-50 dark:bg-slate-900/50 p-8 flex flex-col">
+                            <div className="flex-[2] bg-slate-50 dark:bg-slate-900/50 p-8 flex flex-col">
                                 <div className="flex justify-between items-center mb-6">
                                     <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Resumen de Devolución</h4>
-                                    <span className="bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg">{cart.length} items</span>
+                                    <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1.5 rounded-xl">{cart.length} items</span>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar mb-6">
+                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar mb-8">
                                     {cart.map((item, idx) => (
-                                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center group">
+                                        <div key={idx} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center group shadow-sm hover:border-primary/30 transition-colors">
                                             <div>
-                                                <p className="font-bold text-sm">{item.productName}</p>
-                                                <p className="text-[10px] text-slate-400 uppercase font-black">{item.reason.replace('_', ' ')} • Cant: {item.quantity}</p>
+                                                <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.productName}</p>
+                                                <p className="text-xs text-slate-500 uppercase font-black mt-1">{item.reason.replace('_', ' ')} • Cant: {item.quantity}</p>
                                             </div>
-                                            <button onClick={() => removeFromCart(idx)} className="text-slate-300 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
+                                            <button onClick={() => removeFromCart(idx)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><span className="material-symbols-outlined">delete</span></button>
                                         </div>
                                     ))}
                                     {cart.length === 0 && (
-                                        <div className="h-40 flex items-center justify-center text-slate-400 italic text-sm">Lista vacía</div>
+                                        <div className="h-40 flex flex-col items-center justify-center text-slate-400 italic text-sm gap-2">
+                                            <span className="material-symbols-outlined text-4xl opacity-50">shopping_cart</span>
+                                            <span>Lista vacía</span>
+                                        </div>
                                     )}
                                 </div>
 
-                                <div className="flex gap-4">
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Cancelar</button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={cart.length === 0 || !transportedBy || !receivedBy}
-                                        className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl disabled:opacity-50 disabled:shadow-none transition-all"
-                                    >
-                                        Confirmar
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={cart.length === 0 || !transportedBy || !receivedBy}
+                                    className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 disabled:opacity-50 disabled:shadow-none transition-all uppercase text-sm tracking-wide"
+                                >
+                                    Confirmar Devolución
+                                </button>
                             </div>
                         </div>
                     </div>

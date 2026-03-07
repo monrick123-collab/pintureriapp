@@ -61,8 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         ...(isAdmin || isStoreManager ? [{ label: 'Cotizador', path: '/quotations', icon: 'request_quote' }] : []),
         ...(isAdmin || isWarehouse || isStoreManager ? [{ label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' }] : []),
         ...(isAdmin || isStoreManager ? [{ label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' }] : []),
-        { label: 'Historial Ventas', path: '/sales-history', icon: 'receipt_long' },
-        ...(isAdmin || isWarehouse ? [{ label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' }] : []),
+
         { label: 'Clientes', path: '/clients', icon: 'group' },
       ].filter(Boolean) as NavItem[],
     }] : []),
@@ -81,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         ...(isWarehouse ? [
           { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
           { label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' },
-          { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
+
         ] : []),
       ] as NavItem[],
     }] : []),

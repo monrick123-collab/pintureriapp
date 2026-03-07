@@ -14,11 +14,11 @@ import Returns from './views/Returns';
 import Supplies from './views/Supplies';
 import AiAssistant from './components/AiAssistant';
 import Packaging from './views/Packaging';
-import SalesHistory from './views/SalesHistory';
+
 import WarehouseDashboard from './views/WarehouseDashboard';
 import ShippingNote from './views/ShippingNote';
 import WholesalePOS from './views/WholesalePOS';
-import WholesaleHistory from './views/WholesaleHistory';
+
 import WholesaleNote from './views/WholesaleNote';
 import MunicipalPOS from './views/MunicipalPOS';
 import FinanceDashboard from './views/FinanceDashboard';
@@ -78,7 +78,7 @@ const App: React.FC = () => {
 
           <Route path="/finance" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <Finance user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/inventory" element={user ? <Inventory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
-          <Route path="/sales-history" element={user ? <SalesHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+
           <Route path="/shipping-note/:id" element={user ? <ShippingNote /> : <Navigate to="/login" replace />} />
           <Route path="/users" element={user?.role === UserRole.ADMIN ? <UserManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
@@ -89,7 +89,7 @@ const App: React.FC = () => {
           <Route path="/packaging" element={user ? <Packaging user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
 
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
-          <Route path="/wholesale-history" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <WholesaleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+
           <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
           <Route path="/municipal-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalPOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 

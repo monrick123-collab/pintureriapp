@@ -377,7 +377,7 @@ export const InventoryService = {
 
     // --- NUEVAS FUNCIONES DE HOJAS DE RESURTIDO ---
 
-    async getRestockSheets(branchId?: string): Promise<any[]> {
+    async getRestockSheets(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
         let query = supabase
             .from('restock_sheets')
             .select(`
@@ -387,6 +387,8 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -755,7 +757,7 @@ export const InventoryService = {
         if (error) throw error;
     },
 
-    async getReturnRequests(branchId?: string): Promise<any[]> {
+    async getReturnRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
         let query = supabase
             .from('returns')
             .select(`
@@ -766,6 +768,8 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -851,7 +855,7 @@ export const InventoryService = {
         if (error) throw error;
     },
 
-    async getPackagingRequests(branchId?: string): Promise<any[]> {
+    async getPackagingRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
         let query = supabase
             .from('packaging_requests')
             .select(`
@@ -861,7 +865,12 @@ export const InventoryService = {
             `)
             .order('created_at', { ascending: false });
 
+        // Solo filtrar por sucursal si se especifica explicitamente
         if (branchId) query = query.eq('branch_id', branchId);
+
+        // Filtro por rango de fechas (basado en created_at)
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -872,9 +881,16 @@ export const InventoryService = {
     },
 
     async updatePackagingStatus(requestId: string, status: string): Promise<void> {
+        const now = new Date().toISOString();
+        const update: Record<string, any> = { status, updated_at: now };
+        // Guardar fecha de inicio al comenzar envasado
+        if (status === 'processing') update.started_at = now;
+        // Guardar fecha de terminado al completar
+        if (status === 'completed') update.completed_at = now;
+
         const { error } = await supabase
             .from('packaging_requests')
-            .update({ status, updated_at: new Date().toISOString() })
+            .update(update)
             .eq('id', requestId);
         if (error) throw error;
     },
@@ -897,7 +913,7 @@ export const InventoryService = {
 
     // --- COIN CHANGE ---
 
-    async getCoinChangeRequests(branchId?: string): Promise<any[]> {
+    async getCoinChangeRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
         let query = supabase
             .from('coin_change_requests')
             .select(`
@@ -907,6 +923,8 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -939,7 +957,7 @@ export const InventoryService = {
 
     // --- STOCK TRANSFERS ---
 
-    async getStockTransfers(branchId?: string): Promise<any[]> {
+    async getStockTransfers(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
         let query = supabase
             .from('stock_transfers')
             .select(`
@@ -952,6 +970,8 @@ export const InventoryService = {
         if (branchId) {
             query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
         }
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -1001,33 +1021,29 @@ export const InventoryService = {
     },
 
     async createStockTransfer(fromId: string, toId: string, notes: string, items: { productId: string, quantity: number }[]): Promise<void> {
-        let finalFolio = 0;
+        // Always derive folio from MAX(folio)+1 for this branch to avoid stale RPC counters
+        const { data: maxCheck } = await supabase
+            .from('stock_transfers')
+            .select('folio')
+            .eq('from_branch_id', fromId)
+            .order('folio', { ascending: false })
+            .limit(1);
+
+        const maxFolio = (maxCheck && maxCheck.length > 0) ? maxCheck[0].folio : 0;
+
+        // Also check the RPC hint — use whichever is higher to handle concurrent inserts
+        let rpcFolio = 0;
         try {
-            const { data: rpcFolio } = await supabase.rpc('get_next_folio', {
+            const { data } = await supabase.rpc('get_next_folio', {
                 p_branch_id: fromId,
                 p_folio_type: 'transfer'
             });
-            if (rpcFolio && typeof rpcFolio === 'number') {
-                finalFolio = rpcFolio;
-            }
+            if (data && typeof data === 'number') rpcFolio = data;
         } catch (e) {
-            console.warn("RPC get_next_folio failed, using fallback:", e);
+            console.warn("RPC get_next_folio failed, using table max:", e);
         }
 
-        // Fallback: If RPC returned null (branch not initialized), get max from stock_transfers manually
-        if (!finalFolio) {
-            const { data: maxCheck } = await supabase
-                .from('stock_transfers')
-                .select('folio')
-                .eq('from_branch_id', fromId)
-                .order('folio', { ascending: false })
-                .limit(1);
-
-            finalFolio = (maxCheck && maxCheck.length > 0) ? (maxCheck[0].folio + 1) : 1;
-
-            // Defensively try to insert into branch_folios to fix it for next time
-            supabase.from('branch_folios').insert({ branch_id: fromId, last_transfer_folio: finalFolio }).then(() => { }, () => { });
-        }
+        const finalFolio = Math.max(maxFolio + 1, rpcFolio);
 
         const { data: transfer, error: tError } = await supabase
             .from('stock_transfers')

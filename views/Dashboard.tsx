@@ -122,29 +122,65 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         <div className="p-4 md:p-10 max-w-[1600px] mx-auto w-full space-y-6 md:space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1">
-              <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Venta Consolidada</p>
+            {/* Venta Consolidada */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Venta Consolidada</p>
+                <div className="p-2.5 bg-green-500/10 rounded-2xl text-green-500 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">payments</span>
+                </div>
+              </div>
               <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">${(410500 + sessionSalesTotal).toLocaleString()}</h3>
               <p className="text-xs font-bold text-green-500 flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">trending_up</span> +12.4% vs mes anterior
               </p>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1">
-              <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Despachos Hoy</p>
+
+            {/* Despachos Hoy */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Despachos Hoy</p>
+                <div className="p-2.5 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">local_shipping</span>
+                </div>
+              </div>
               <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">14</h3>
-              <p className="text-xs font-bold text-slate-500 italic">4 pedidos en ruta</p>
+              <p className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">route</span> 4 pedidos en ruta
+              </p>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1">
-              <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Uso de Almacén</p>
+
+            {/* Uso de Almacén */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Uso de Almacén</p>
+                <div className="p-2.5 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">warehouse</span>
+                </div>
+              </div>
               <h3 className="text-4xl font-black text-primary leading-none tracking-tighter">62%</h3>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[62%]"></div>
+                <div className="bg-primary h-full w-[62%] transition-all duration-700"></div>
               </div>
             </div>
-            <div className="bg-slate-900 dark:bg-primary p-8 rounded-[32px] text-white shadow-2xl shadow-primary/20 space-y-4 transition-all hover:scale-[1.02]">
-              <p className="text-[11px] font-black opacity-60 uppercase tracking-[0.2em]">Solicitudes Pendientes</p>
-              <h3 className="text-4xl font-black leading-none tracking-tighter">{(requests.length + discountRequests.length)} Solicitudes</h3>
-              <p className="text-xs font-bold opacity-80 uppercase tracking-widest">{discountRequests.length} de descuento • {requests.length} de stock</p>
+
+            {/* Solicitudes Pendientes */}
+            <div className="bg-slate-900 dark:bg-primary p-8 rounded-[32px] text-white shadow-2xl shadow-primary/20 space-y-4 transition-all hover:scale-[1.02] group relative overflow-hidden">
+              <div className="absolute top-4 right-4 opacity-10">
+                <span className="material-symbols-outlined text-[80px]">pending_actions</span>
+              </div>
+              <div className="flex items-center justify-between relative">
+                <p className="text-[11px] font-black opacity-60 uppercase tracking-[0.2em]">Pendientes</p>
+                <div className="p-2.5 bg-white/10 rounded-2xl group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">notification_important</span>
+                </div>
+              </div>
+              <h3 className="text-4xl font-black leading-none tracking-tighter relative">{(requests.length + discountRequests.length)}</h3>
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest flex items-center gap-2 relative">
+                <span className="material-symbols-outlined text-sm">percent</span>{discountRequests.length} descuento
+                <span className="opacity-40">·</span>
+                <span className="material-symbols-outlined text-sm">inventory</span>{requests.length} stock
+              </p>
             </div>
           </div>
 

@@ -220,7 +220,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {returns.map((r: any) => (
-                                                <tr key={r.id}>
+                                                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                                                     <td className="px-8 py-5 font-black text-primary">
                                                         #{(user.branchId || 'SC').substring(0, 3)}-{(r.folio || 0).toString().padStart(4, '0')}
                                                     </td>
@@ -233,9 +233,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                     <td className="px-6 py-5 font-black">{r.quantity}</td>
                                                     <td className="px-6 py-5 font-medium">{r.branches?.name}</td>
                                                     <td className="px-6 py-5">
-                                                        <div className="flex flex-col text-[10px] font-bold text-slate-500">
-                                                            <span>🚚 {r.transported_by || 'N/A'}</span>
-                                                            <span>👤 {r.received_by || 'N/A'}</span>
+                                                        <div className="flex flex-col text-[10px] font-bold text-slate-500 gap-1">
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm text-slate-400">local_shipping</span>
+                                                                {r.transported_by || 'N/A'}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm text-slate-400">person</span>
+                                                                {r.received_by || 'N/A'}
+                                                            </span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-5">
@@ -268,7 +274,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 </tr>
                                             ))}
                                             {returns.length === 0 && (
-                                                <tr><td colSpan={7} className="text-center py-10 text-slate-400 italic">No hay devoluciones registradas.</td></tr>
+                                                <tr>
+                                                    <td colSpan={7} className="py-20 text-center">
+                                                        <div className="flex flex-col items-center gap-3 text-slate-300 dark:text-slate-600">
+                                                            <span className="material-symbols-outlined text-6xl">keyboard_return</span>
+                                                            <p className="font-black text-base text-slate-400">Sin devoluciones</p>
+                                                            <p className="text-xs text-slate-400">Selecciona un rango de fechas diferente o crea la primera devolución.</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -310,8 +324,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         type="button"
                                         onClick={addToCart}
                                         disabled={!selectedProductId || quantity <= 0}
-                                        className="w-full py-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-2xl uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                                        className="w-full py-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-2xl uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
                                         Agregar a Lista
                                     </button>
 

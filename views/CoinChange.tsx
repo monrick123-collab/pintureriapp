@@ -177,7 +177,13 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                             ))}
                                             {requests.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400 italic font-medium">No hay solicitudes de cambio.</td>
+                                                    <td colSpan={6} className="py-20 text-center">
+                                                        <div className="flex flex-col items-center gap-3">
+                                                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">currency_exchange</span>
+                                                            <p className="font-black text-base text-slate-400">Sin solicitudes de cambio</p>
+                                                            <p className="text-xs text-slate-400">Solicita feria o cambio de moneda desde la pesta&ntilde;a &quot;Nuevo Cambio&quot;.</p>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             )}
                                         </tbody>

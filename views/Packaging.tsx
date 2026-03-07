@@ -323,6 +323,17 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 </td>
                                             </tr>
                                         ))}
+                                        {requests.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="py-20 text-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">colors</span>
+                                                        <p className="font-black text-base text-slate-400">Sin solicitudes de envasado</p>
+                                                        <p className="text-xs text-slate-400">Crea la primera solicitud desde la pesta&ntilde;a "Nueva Solicitud".</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

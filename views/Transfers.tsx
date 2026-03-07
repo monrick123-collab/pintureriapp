@@ -205,7 +205,13 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                             ))}
                                             {transfers.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400 italic font-medium">No hay traspasos registrados.</td>
+                                                    <td colSpan={6} className="py-20 text-center">
+                                                        <div className="flex flex-col items-center gap-3">
+                                                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">local_shipping</span>
+                                                            <p className="font-black text-base text-slate-400">Sin traspasos</p>
+                                                            <p className="text-xs text-slate-400">Filtra por fechas o crea el primer traspaso de inventario.</p>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             )}
                                         </tbody>

@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const sections: Section[] = [
     // ── PRINCIPAL ──────────────────────────────────────
     {
-      title: 'Principal',
+      title: '⚡ Principal',
       items: [
         {
           label: isAdmin ? 'Panel de Control' : isWarehouse ? 'Panel Bodega' : isFinance ? 'Contabilidad' : 'Punto de Venta',
@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     // ── VENTAS ─────────────────────────────────────────
     ...((!isWarehouse && !isFinance) ? [{
-      title: 'Ventas',
+      title: '🛒 Ventas',
       items: [
         ...(isAdmin || isStoreManager ? [{ label: 'Cotizador', path: '/quotations', icon: 'request_quote' }] : []),
         ...(isAdmin || isWarehouse || isStoreManager ? [{ label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' }] : []),
@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     // ── BODEGA / LOGÍSTICA ─────────────────────────────
     ...(isAdmin || isWarehouse || isStoreManager ? [{
-      title: 'Bodega / Logística',
+      title: '📦 Bodega',
       items: [
         ...(isAdmin || isWarehouse || isStoreManager ? [
           { label: 'Devoluciones', path: '/returns', icon: 'keyboard_return' },
@@ -78,7 +78,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           { label: 'Envasado', path: '/packaging', icon: 'colors' },
           { label: 'Suministros', path: '/supplies', icon: 'dry_cleaning' },
         ] : []),
-        // Venta Municipio también para bodega
         ...(isWarehouse ? [
           { label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' },
         ] : []),
@@ -87,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     // ── ADMINISTRACIÓN ─────────────────────────────────
     ...(isAdmin || isStoreManager ? [{
-      title: 'Administración',
+      title: '⚙️ Admin',
       items: [
         ...(isAdmin || isStoreManager ? [
           { label: 'Cambio Moneda', path: '/coin-change', icon: 'currency_exchange' },
@@ -104,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     // Corte de caja para bodega/warehouse
     ...(isWarehouse ? [{
-      title: 'Administración',
+      title: '⚙️ Admin',
       items: [
         ...(user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB
           ? [{ label: 'Corte de Caja', path: '/cash-cut', icon: 'point_of_sale' }]
@@ -114,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     // ── FINANZAS ───────────────────────────────────────
     ...(isAdmin || isFinance ? [{
-      title: 'Finanzas',
+      title: '📈 Finanzas',
       items: [
         { label: 'Finanzas', path: '/finance-dashboard', icon: 'account_balance' },
         { label: 'Proveedores', path: '/suppliers', icon: 'local_shipping' },
@@ -161,8 +160,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
           {sections.map((section, si) => (
             <div key={si} className="mb-1">
+              {/* Section separator (except first) */}
+              {si > 0 && (
+                <div className="mx-4 my-2 h-px bg-slate-100 dark:bg-slate-800" />
+              )}
               {/* Section label */}
-              <p className="px-5 pt-3 pb-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-600">
+              <p className="px-5 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
                 {section.title}
               </p>
               {section.items.map(item => (
@@ -175,10 +178,14 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
                       : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-primary dark:hover:text-primary'
                     }`}
                 >
-                  <span className="material-symbols-outlined text-[20px] shrink-0">{item.icon}</span>
+                  <span className={`material-symbols-outlined text-[20px] shrink-0 transition-transform ${location.pathname === item.path ? '' : 'group-hover:scale-110'
+                    }`}>{item.icon}</span>
                   <span className={`text-sm tracking-tight leading-none ${location.pathname === item.path ? 'font-black' : 'font-semibold'}`}>
                     {item.label}
                   </span>
+                  {location.pathname === item.path && (
+                    <span className="ml-auto size-1.5 rounded-full bg-white/60"></span>
+                  )}
                 </Link>
               ))}
             </div>

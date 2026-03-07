@@ -79,7 +79,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           { label: 'Suministros', path: '/supplies', icon: 'dry_cleaning' },
         ] : []),
         ...(isWarehouse ? [
+          { label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' },
           { label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' },
+          { label: 'Historial Mayoreo', path: '/wholesale-history', icon: 'history_edu' },
         ] : []),
       ] as NavItem[],
     }] : []),
@@ -174,8 +176,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
                   to={item.path}
                   onClick={() => setIsOpen(false)}
                   className={`mx-2 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${location.pathname === item.path
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-primary dark:hover:text-primary'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-primary dark:hover:text-primary'
                     }`}
                 >
                   <span className={`material-symbols-outlined text-[20px] shrink-0 transition-transform ${location.pathname === item.path ? '' : 'group-hover:scale-110'

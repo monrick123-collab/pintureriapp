@@ -34,6 +34,7 @@ export const translateStatus = (status: string): string => {
         'resolved': 'Resuelto',
         'approved': 'Aprobado',
         'pending_authorization': 'Pendiente',
+        'received_at_warehouse': 'En Bodega',
         // 'pending', 'rejected' shared
 
         // Sucursales

@@ -58,6 +58,33 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
   const [brandFilter, setBrandFilter] = useState<string>('all');
 
+  // --- Modal: Consultar producto en otras sucursales ---
+  const [isBranchLookupOpen, setIsBranchLookupOpen] = useState(false);
+  const [lookupSearch, setLookupSearch] = useState('');
+  const [lookupProducts, setLookupProducts] = useState<Product[]>([]);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  const handleOpenBranchLookup = async () => {
+    setIsBranchLookupOpen(true);
+    if (lookupProducts.length === 0) {
+      try {
+        setLookupLoading(true);
+        // Traemos todos los productos de todas las sucursales (usando 'BR-MAIN' que tiene el catálogo global)
+        const all = await InventoryService.getProductsByBranch('BR-MAIN');
+        setLookupProducts(all);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLookupLoading(false);
+      }
+    }
+  };
+
+  const lookupFiltered = lookupProducts.filter(p =>
+    p.name.toLowerCase().includes(lookupSearch.toLowerCase()) ||
+    p.sku.toLowerCase().includes(lookupSearch.toLowerCase())
+  );
+
   useEffect(() => {
     loadData();
   }, [selectedBranchId, viewMode, statusFilter]);
@@ -284,6 +311,15 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           <div className="flex gap-2 print:hidden">
             <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleCSVUpload} />
             <div className="hidden sm:flex gap-2">
+              {/* Botón consultar stock en sucursales */}
+              <button
+                onClick={handleOpenBranchLookup}
+                className="h-10 px-4 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold flex items-center gap-2 border border-indigo-100 dark:border-indigo-800 shadow-sm hover:bg-indigo-100 transition-colors"
+                title="Ver stock de un producto en todas las sucursales"
+              >
+                <span className="material-symbols-outlined text-lg">search_insights</span>
+                <span className="text-xs uppercase">Consultar Sucursales</span>
+              </button>
               <button onClick={() => {
                 const action = handlePrintInventory;
                 if (isWarehouse) {
@@ -652,6 +688,91 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           </div>
         )}
       </main>
+
+      {/* MODAL: Consultar stock de producto en todas las sucursales */}
+      {isBranchLookupOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between p-8 border-b border-slate-100 dark:border-slate-700 shrink-0">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Consultar Stock por Sucursal</h3>
+                <p className="text-xs text-slate-400 mt-1">Busca un producto para ver su existencia en todas las tiendas</p>
+              </div>
+              <button onClick={() => setIsBranchLookupOpen(false)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-8 pt-6 shrink-0">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                <input
+                  autoFocus
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                  placeholder="Nombre o SKU del producto..."
+                  value={lookupSearch}
+                  onChange={e => setLookupSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
+              {lookupLoading ? (
+                <div className="py-16 text-center text-slate-400 font-bold">Cargando productos...</div>
+              ) : lookupSearch.trim() === '' ? (
+                <div className="py-16 text-center">
+                  <span className="material-symbols-outlined text-5xl text-slate-300">manage_search</span>
+                  <p className="text-sm text-slate-400 mt-3 font-medium">Escribe el nombre o SKU para buscar</p>
+                </div>
+              ) : lookupFiltered.length === 0 ? (
+                <div className="py-16 text-center">
+                  <span className="material-symbols-outlined text-5xl text-slate-300">search_off</span>
+                  <p className="text-sm text-slate-400 mt-3 font-medium">Sin resultados para "{lookupSearch}"</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {lookupFiltered.slice(0, 10).map(p => (
+                    <div key={p.id} className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+                      {/* Product header */}
+                      <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-slate-700">
+                        <img src={p.image} className="size-10 rounded-xl object-contain bg-white p-1 border border-slate-100" />
+                        <div>
+                          <p className="font-black text-sm text-slate-800 dark:text-white">{p.name}</p>
+                          <p className="text-[10px] font-mono text-slate-400">{p.sku}</p>
+                        </div>
+                      </div>
+                      {/* Stock per branch */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-0 divide-x divide-y divide-slate-100 dark:divide-slate-700">
+                        {branches.map(branch => {
+                          const stock = p.inventory?.[branch.id] ?? 0;
+                          const isLow = stock <= (p.min_stock || 10);
+                          return (
+                            <div key={branch.id} className="p-3 flex flex-col gap-0.5">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">{branch.name}</span>
+                              <span className={`text-xl font-black ${stock === 0 ? 'text-red-400' :
+                                  isLow ? 'text-amber-500 animate-pulse' :
+                                    'text-slate-800 dark:text-white'
+                                }`}>{stock}</span>
+                              {isLow && stock > 0 && <span className="text-[8px] text-amber-500 font-black uppercase">Stock Bajo</span>}
+                              {stock === 0 && <span className="text-[8px] text-red-400 font-black uppercase">Agotado</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {lookupFiltered.length > 10 && (
+                    <p className="text-center text-xs text-slate-400 font-bold pt-2">Mostrando primeros 10 de {lookupFiltered.length} resultados. Afina tu búsqueda.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

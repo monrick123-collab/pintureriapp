@@ -20,6 +20,7 @@ import ShippingNote from './views/ShippingNote';
 import WholesalePOS from './views/WholesalePOS';
 import WholesaleHistory from './views/WholesaleHistory';
 import WholesaleNote from './views/WholesaleNote';
+import MunicipalPOS from './views/MunicipalPOS';
 import FinanceDashboard from './views/FinanceDashboard';
 import SupplierManagement from './views/SupplierManagement';
 import AccountsPayable from './views/AccountsPayable';
@@ -33,19 +34,20 @@ import { User, UserRole } from './types';
 
 const App: React.FC = () => {
   // ... existing hook ...
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('pintamax_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.error("Failed to parse user session:", e);
-        localStorage.removeItem('pintamax_user');
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('pintamax_user');
+      if (savedUser) {
+        try {
+          return JSON.parse(savedUser);
+        } catch (e) {
+          console.error("Failed to parse user session:", e);
+          localStorage.removeItem('pintamax_user');
+        }
       }
     }
-  }, []);
+    return null;
+  });
 
   const handleLogin = (u: User) => {
     setUser(u);
@@ -89,6 +91,7 @@ const App: React.FC = () => {
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/wholesale-history" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <WholesaleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
+          <Route path="/municipal-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalPOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           {/* Finance Routes */}
           <Route path="/finance-dashboard" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <FinanceDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

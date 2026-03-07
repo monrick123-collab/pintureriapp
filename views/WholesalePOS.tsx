@@ -95,7 +95,6 @@ useEffect(() => {
         }
     };
 
-    c
     // --- HISTORY EFFECTS & METHODS ---
     useEffect(() => {
         if (activeTab === 'history') {
@@ -299,7 +298,6 @@ const addToCart = (product: Product) => {
         }
     };
 
-    return
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />

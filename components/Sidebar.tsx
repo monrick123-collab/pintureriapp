@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { User, UserRole } from '../types';
+import NotificationBell from './NotificationBell';
 
 interface SidebarProps {
   user: User;
@@ -204,6 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
               <p className="text-sm font-black text-slate-900 dark:text-white truncate leading-none">{user.name}</p>
               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{user.role}</p>
             </div>
+            <NotificationBell user={user} />
             <button
               onClick={() => setIsDark(!isDark)}
               className="text-slate-400 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"

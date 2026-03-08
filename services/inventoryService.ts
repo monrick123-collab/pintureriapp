@@ -1,6 +1,7 @@
 
 import { supabase } from './supabase';
 import { Product, Branch, RestockRequest } from '../types';
+import { NotificationService } from './notificationService';
 
 // Convertir respuesta de DB a Tipos de App
 const mapDbProduct = (item: Record<string, any>): Product => ({
@@ -307,6 +308,19 @@ export const InventoryService = {
             status: 'pending_admin'
         });
         if (error) throw error;
+
+        // Notification to WAREHOUSE
+        try {
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', branchId).single();
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Nueva Solicitud de Resurtido',
+                message: `La sucursal ${bData?.name || branchId} solicitó un nuevo producto.`,
+                actionUrl: '/restocks'
+            });
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
     },
 
     async updateRestockStatus(requestId: string, newStatus: string): Promise<void> {
@@ -319,6 +333,25 @@ export const InventoryService = {
             .update(updates)
             .eq('id', requestId);
         if (error) throw error;
+
+        // Notification to Branch based on requestId
+        try {
+            if (newStatus === 'shipped') {
+                 const { data: reqData } = await supabase.from('restock_requests').select('branch_id').eq('id', requestId).single();
+                 if (reqData) {
+                     const { data: bData } = await supabase.from('branches').select('name').eq('id', reqData.branch_id).single();
+                     await NotificationService.createNotification({
+                         // Normally we should target specific branch users, but targetting admins + store managers is a good start
+                         targetRole: 'STORE_MANAGER',
+                         title: 'Resurtido en Camino',
+                         message: `Un paquete de resurtido para la sucursal ${bData?.name || 'Local'} va en camino.`,
+                         actionUrl: '/restocks'
+                     });
+                 }
+            }
+        } catch (e) {
+            console.error('Failed to notify', e);
+        }
     },
 
     async confirmRestockArrival(requestId: string): Promise<void> {
@@ -721,6 +754,19 @@ export const InventoryService = {
             .eq('id', requestId);
 
         if (rError) throw rError;
+
+        // Notify user who requested
+        try {
+            const { data } = await supabase.from('price_requests').select('requester_id, products(name)').eq('id', requestId).single();
+            if (data) {
+                await NotificationService.createNotification({
+                    userId: data.requester_id,
+                    title: 'Precio Autorizado',
+                    message: `Se ha autorizado un nuevo precio para el producto ${(data.products as any)?.name}.`,
+                    actionUrl: '/pos'
+                });
+            }
+        } catch(e) { console.error(e) }
     },
 
     async createPriceRequest(productId: string, userId: string): Promise<void> {
@@ -730,6 +776,16 @@ export const InventoryService = {
             status: 'pending'
         });
         if (error) throw error;
+
+        try {
+            const { data } = await supabase.from('products').select('name').eq('id', productId).single();
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Solicitud de Precio',
+                message: `Se ha solicitado autorización de precio para: ${data?.name}.`,
+                actionUrl: '/inventory'
+            });
+        } catch(e) { console.error(e) }
     },
 
     // --- RETURNS FLOW (Punto 6) ---
@@ -755,6 +811,17 @@ export const InventoryService = {
             .from('returns')
             .insert(returnRows);
         if (error) throw error;
+
+        // Notify ADMIN
+        try {
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', branchId).single();
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nueva Solicitud de Devolución',
+                message: `La sucursal ${bData?.name || branchId} ha enviado productos rotos o dañados.`,
+                actionUrl: '/returns'
+            });
+        } catch(e) { console.error(e) }
     },
 
     async getReturnRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {

@@ -416,3 +416,14 @@ export interface StockTransferItem {
   productName?: string;
   quantity: number;
 }
+
+export interface Notification {
+  id: string;
+  userId?: string;
+  targetRole?: string;
+  title: string;
+  message: string;
+  actionUrl?: string;
+  isRead: boolean;
+  createdAt: string;
+}

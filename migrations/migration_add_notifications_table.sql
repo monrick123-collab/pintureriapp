@@ -1,7 +1,7 @@
 -- Create Notifications Table
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE, -- If null, refers to a role
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE, -- If null, refers to a role
     target_role TEXT, -- e.g., 'ADMIN', 'WAREHOUSE'. If null, refers to a specific user
     title TEXT NOT NULL,
     message TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE POLICY "Users can view own or role notifications"
     ON public.notifications FOR SELECT
     USING (
         user_id = auth.uid() OR
-        target_role = (SELECT role FROM public.users WHERE id = auth.uid()) OR
+        target_role = (SELECT role FROM public.profiles WHERE id = auth.uid()) OR
         target_role = 'ALL'
     );
 
@@ -37,6 +37,6 @@ CREATE POLICY "Users can update own notifications"
     ON public.notifications FOR UPDATE
     USING (
         user_id = auth.uid() OR
-        target_role = (SELECT role FROM public.users WHERE id = auth.uid()) OR
+        target_role = (SELECT role FROM public.profiles WHERE id = auth.uid()) OR
         target_role = 'ALL'
     );

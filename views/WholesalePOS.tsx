@@ -570,8 +570,8 @@ const addToCart = (product: Product) => {
                                                                     <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-2">
                                                                         <div className="flex justify-between items-start">
                                                                             <div>
-                                                                                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Sugerencia: {aiSuggestion.discount}%</p>
-                                                                                <p className="text-[10px] text-indigo-600/80 leading-tight mt-1">{aiSuggestion.reasoning}</p>
+                                                                                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Sugerencia: {aiSuggestion?.discount}%</p>
+                                                                                <p className="text-[10px] text-indigo-600/80 leading-tight mt-1">{aiSuggestion?.reasoning}</p>
                                                                             </div>
                                                                             <button onClick={() => setAiSuggestion(null)} className="text-indigo-400 hover:text-indigo-600"><span className="material-symbols-outlined text-sm">close</span></button>
                                                                         </div>
@@ -641,8 +641,8 @@ const addToCart = (product: Product) => {
                                                         <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Sucursal</label>
                                                         <select
                                                             className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"
-                                                            value={selectedBranch}
-                                                            onChange={e => setSelectedBranch(e.target.value)}
+                                                            value={selectedHistoryBranch}
+                                                            onChange={e => setSelectedHistoryBranch(e.target.value)}
                                                         >
                                                             <option value="ALL">Todas</option>
                                                             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -752,7 +752,7 @@ const addToCart = (product: Product) => {
                                                     <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
                                                         <div>
                                                             <h3 className="font-black text-slate-900 dark:text-white text-lg">Detalle de Venta Mayoreo</h3>
-                                                            <p className="text-xs text-slate-500 font-mono">ID: {selectedHistorySale.id.slice(0, 8).toUpperCase()}</p>
+                                                            <p className="text-xs text-slate-500 font-mono">ID: {selectedHistorySale?.id.slice(0, 8).toUpperCase()}</p>
                                                         </div>
                                                         <button
                                                             onClick={() => setSelectedHistorySale(null)}
@@ -767,7 +767,7 @@ const addToCart = (product: Product) => {
                                                         <div>
                                                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Productos</p>
                                                             <div className="space-y-2">
-                                                                {selectedHistorySale.items.map((item: any, idx: number) => (
+                                                                {selectedHistorySale?.items.map((item: any, idx: number) => (
                                                                     <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border dark:border-slate-800">
                                                                         <div>
                                                                             <p className="text-xs font-bold text-slate-900 dark:text-white">{item.productName}</p>
@@ -783,7 +783,7 @@ const addToCart = (product: Product) => {
                                                         </div>
                         
                                                         {/* Delivery Info */}
-                                                        {selectedHistorySale.deliveryReceiverName && (
+                                                        {selectedHistorySale?.deliveryReceiverName && (
                                                             <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl">
                                                                 <p className="text-[9px] uppercase font-bold text-amber-500 mb-1">Entregado A</p>
                                                                 <div className="flex items-center gap-2">
@@ -794,23 +794,23 @@ const addToCart = (product: Product) => {
                                                         )}
                         
                                                         {/* Billing Info */}
-                                                        {(selectedHistorySale.billingSocialReason || selectedHistorySale.billingInvoiceNumber || selectedHistorySale.billingBank) && (
+                                                        {(selectedHistorySale?.billingSocialReason || selectedHistorySale?.billingInvoiceNumber || selectedHistorySale?.billingBank) && (
                                                             <div>
                                                                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Datos Fiscales y Bancarios</p>
                                                                 <div className="grid grid-cols-2 gap-3">
-                                                                    {selectedHistorySale.billingSocialReason && (
+                                                                    {selectedHistorySale?.billingSocialReason && (
                                                                         <div className="col-span-2 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl">
                                                                             <p className="text-[9px] uppercase font-bold text-blue-400 mb-1">Razón Social</p>
                                                                             <p className="text-xs font-bold text-blue-900 dark:text-blue-100">{selectedHistorySale.billingSocialReason}</p>
                                                                         </div>
                                                                     )}
-                                                                    {selectedHistorySale.billingInvoiceNumber && (
+                                                                    {selectedHistorySale?.billingInvoiceNumber && (
                                                                         <div className="p-3 bg-slate-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl">
                                                                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">No. Factura</p>
                                                                             <p className="text-xs font-bold text-slate-900 dark:text-white">{selectedHistorySale.billingInvoiceNumber}</p>
                                                                         </div>
                                                                     )}
-                                                                    {selectedHistorySale.billingBank && (
+                                                                    {selectedHistorySale?.billingBank && (
                                                                         <div className="p-3 bg-slate-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl">
                                                                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Banco</p>
                                                                             <p className="text-xs font-bold text-slate-900 dark:text-white">{selectedHistorySale.billingBank}</p>
@@ -824,29 +824,29 @@ const addToCart = (product: Product) => {
                                                         <div className="border-t dark:border-slate-800 pt-4 space-y-2">
                                                             <div className="flex justify-between text-xs text-slate-500">
                                                                 <span>Subtotal</span>
-                                                                <span>${selectedHistorySale.subtotal.toLocaleString()}</span>
+                                                                <span>${selectedHistorySale?.subtotal.toLocaleString()}</span>
                                                             </div>
-                                                            {selectedHistorySale.discountAmount > 0 && (
+                                                            {(selectedHistorySale?.discountAmount ?? 0) > 0 && (
                                                                 <div className="flex justify-between text-xs text-amber-600 font-bold">
                                                                     <span>Descuento</span>
-                                                                    <span>-${selectedHistorySale.discountAmount.toLocaleString()}</span>
+                                                                    <span>-${selectedHistorySale?.discountAmount.toLocaleString()}</span>
                                                                 </div>
                                                             )}
                                                             <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white pt-2">
                                                                 <span>Total Pagado</span>
-                                                                <span>${selectedHistorySale.total.toLocaleString()}</span>
+                                                                <span>${selectedHistorySale?.total.toLocaleString()}</span>
                                                             </div>
                                                             <div className="flex justify-end pt-1 gap-2">
                                                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase
-                                                                    ${selectedHistorySale.paymentMethod === 'cash' ? 'bg-emerald-100 text-emerald-700' :
-                                                                        selectedHistorySale.paymentMethod === 'card' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'}
+                                                                    ${selectedHistorySale?.paymentMethod === 'cash' ? 'bg-emerald-100 text-emerald-700' :
+                                                                        selectedHistorySale?.paymentMethod === 'card' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'}
                                                                 `}>
-                                                                    Método: {selectedHistorySale.paymentMethod === 'cash' ? 'Efectivo' : selectedHistorySale.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
+                                                                    Método: {selectedHistorySale?.paymentMethod === 'cash' ? 'Efectivo' : selectedHistorySale?.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
                                                                 </span>
                                                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase
-                                                                    ${selectedHistorySale.paymentType === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}
+                                                                    ${selectedHistorySale?.paymentType === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}
                                                                 `}>
-                                                                    Tipo: {selectedHistorySale.paymentType === 'credito' ? 'Crédito' : 'Contado'}
+                                                                    Tipo: {selectedHistorySale?.paymentType === 'credito' ? 'Crédito' : 'Contado'}
                                                                 </span>
                                                             </div>
                                                         </div>

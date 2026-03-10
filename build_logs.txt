@@ -1,0 +1,15 @@
+
+> pintamax---gestión-integral-de-pinturerías@0.0.0 build
+> vite build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 92 modules transformed.
+✗ Build failed in 2.75s
+error during build:
+Could not resolve "../lib/supabase" from "components/NotificationBell.tsx"
+file: /home/fergus/Descargas/pintureriapp-main/components/NotificationBell.tsx
+    at getRollupError (file:///home/fergus/Descargas/pintureriapp-main/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///home/fergus/Descargas/pintureriapp-main/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at ModuleLoader.handleInvalidResolvedId (file:///home/fergus/Descargas/pintureriapp-main/node_modules/rollup/dist/es/shared/node-entry.js:21661:24)
+    at file:///home/fergus/Descargas/pintureriapp-main/node_modules/rollup/dist/es/shared/node-entry.js:21621:26

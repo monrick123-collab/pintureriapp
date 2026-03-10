@@ -1,0 +1,2 @@
+views/POS.tsx(643,30): error TS2304: Cannot find name 'selectedBranch'.
+views/POS.tsx(644,38): error TS2304: Cannot find name 'setSelectedBranch'.

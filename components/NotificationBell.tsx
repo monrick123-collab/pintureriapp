@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Notification } from '../types';
 import { NotificationService } from '../services/notificationService';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../services/supabase';
 
 interface NotificationBellProps {
   user: User;

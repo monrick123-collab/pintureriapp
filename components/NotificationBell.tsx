@@ -116,7 +116,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-[100] animate-in slide-in-from-top-2 fade-in duration-200 overflow-hidden">
+        <div 
+          className="fixed left-64 bottom-20 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 overflow-hidden"
+          style={{ transform: 'translateX(1rem)' }}
+        >
           <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
             <h3 className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">Notificaciones</h3>
             {notifications.length > 0 && (

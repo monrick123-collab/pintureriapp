@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { User, RestockSheet, Branch, Product, UserRole } from '../types';
+import { User, RestockSheet, Branch, Product, UserRole, SupplyOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 
@@ -15,7 +15,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
     const [sheets, setSheets] = useState<RestockSheet[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
-    const [supplyOrders, setSupplyOrders] = useState<any[]>([]);
+    const [supplyOrders, setSupplyOrders] = useState<SupplyOrder[]>([]);
     const [loading, setLoading] = useState(false);
     const [currentTab, setCurrentTab] = useState<'branches' | 'sheets' | 'supply'>('branches');
     const [isResurtirModalOpen, setIsResurtirModalOpen] = useState(false);

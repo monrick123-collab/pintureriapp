@@ -33,8 +33,17 @@ const WholesaleNote: React.FC = () => {
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
+    const handlePrint = () => {
+        const wasDark = document.documentElement.classList.contains('dark');
+        if (wasDark) document.documentElement.classList.remove('dark');
+        setTimeout(() => {
+            window.print();
+            if (wasDark) document.documentElement.classList.add('dark');
+        }, 150);
+    };
+
     return (
-        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center">
+        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center print-format-container">
             {/* Action Bar */}
             <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center print:hidden">
                 <button
@@ -45,7 +54,7 @@ const WholesaleNote: React.FC = () => {
                     Regresar
                 </button>
                 <button
-                    onClick={() => window.print()}
+                    onClick={handlePrint}
                     className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl font-black shadow-lg shadow-primary/20"
                 >
                     <span className="material-symbols-outlined">print</span>
@@ -94,7 +103,7 @@ const WholesaleNote: React.FC = () => {
                     <div className="flex-1 mb-8">
                         <table className="w-full border-collapse">
                             <thead>
-                                <tr className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest">
+                                <tr className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest print:bg-transparent print:text-slate-900 print:border-b-2 print:border-slate-800">
                                     <th className="p-3 text-left rounded-tl-lg">Producto / Descripción</th>
                                     <th className="p-3 text-right">Precio Unit.</th>
                                     <th className="p-3 text-center">Cant.</th>
@@ -103,14 +112,14 @@ const WholesaleNote: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100 border-x border-b border-slate-100">
                                 {sale.items.map((item, idx) => (
-                                    <tr key={idx} className="text-[11px]">
+                                    <tr key={idx} className="text-[11px] print:text-black">
                                         <td className="p-3">
-                                            <p className="font-bold text-slate-900">{item.productName}</p>
-                                            <p className="text-[8px] font-mono text-slate-400">MAYOREO PROTECTED</p>
+                                            <p className="font-bold text-slate-900 print:text-black">{item.productName}</p>
+                                            <p className="text-[8px] font-mono text-slate-400 print:text-black">MAYOREO PROTECTED</p>
                                         </td>
-                                        <td className="p-3 text-right font-medium">${item.price.toLocaleString()}</td>
-                                        <td className="p-3 text-center font-black text-sm">{item.quantity}</td>
-                                        <td className="p-3 text-right font-black">${item.total.toLocaleString()}</td>
+                                        <td className="p-3 text-right font-medium print:text-black">${item.price.toLocaleString()}</td>
+                                        <td className="p-3 text-center font-black text-sm print:text-black">{item.quantity}</td>
+                                        <td className="p-3 text-right font-black print:text-black">${item.total.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 {sale.items.length < 10 && Array.from({ length: 10 - sale.items.length }).map((_, i) => (
@@ -118,15 +127,15 @@ const WholesaleNote: React.FC = () => {
                                 ))}
                             </tbody>
                             <tfoot>
-                                <tr className="bg-slate-50">
-                                    <td colSpan={3} className="p-4 text-right font-black text-slate-500 uppercase text-[10px] tracking-widest">Subtotal:</td>
-                                    <td className="p-4 text-right font-black text-slate-900">${sale.subtotal?.toLocaleString()}</td>
+                                <tr className="bg-slate-50 print:bg-slate-50">
+                                    <td colSpan={3} className="p-4 text-right font-black text-slate-500 uppercase text-[10px] tracking-widest print:text-slate-700">Subtotal:</td>
+                                    <td className="p-4 text-right font-black text-slate-900 print:text-black">${sale.subtotal?.toLocaleString()}</td>
                                 </tr>
-                                <tr className="bg-slate-50">
-                                    <td colSpan={3} className="p-2 text-right font-black text-slate-500 uppercase text-[10px] tracking-widest">IVA (16%):</td>
-                                    <td className="p-2 text-right font-black text-slate-900">${sale.iva?.toLocaleString()}</td>
+                                <tr className="bg-slate-50 print:bg-slate-50">
+                                    <td colSpan={3} className="p-2 text-right font-black text-slate-500 uppercase text-[10px] tracking-widest print:text-slate-700">IVA (16%):</td>
+                                    <td className="p-2 text-right font-black text-slate-900 print:text-black">${sale.iva?.toLocaleString()}</td>
                                 </tr>
-                                <tr className="bg-slate-900 text-white">
+                                <tr className="bg-slate-900 text-white print:bg-transparent print:text-slate-900 print:border-t-2 print:border-slate-800">
                                     <td colSpan={3} className="p-4 text-right font-black uppercase text-[12px] tracking-widest">Total a Pagar:</td>
                                     <td className="p-4 text-right font-black text-xl italic">${sale.total.toLocaleString()}</td>
                                 </tr>
@@ -158,16 +167,6 @@ const WholesaleNote: React.FC = () => {
                     </div>
                 </div>
             </div>
-
-            <style>
-                {`
-                    @media print {
-                        @page { margin: 0; }
-                        body { margin: 1.6cm; }
-                        .print\\:hidden { display: none !important; }
-                    }
-                `}
-            </style>
         </div>
     );
 };

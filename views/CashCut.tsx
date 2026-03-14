@@ -50,14 +50,19 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
     };
 
     const handlePrint = () => {
-        window.print();
+        const wasDark = document.documentElement.classList.contains('dark');
+        if (wasDark) document.documentElement.classList.remove('dark');
+        setTimeout(() => {
+            window.print();
+            if (wasDark) document.documentElement.classList.add('dark');
+        }, 150);
     };
 
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
 
-            <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
+            <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full print-format-container">
                 <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0 print:hidden">
                     <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-3xl">point_of_sale</span>
@@ -116,9 +121,9 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vales</p>
                                         <h3 className="text-xl font-black text-purple-600">${data.coupons.reduce((acc: number, c: any) => acc + Number(c.amount), 0).toLocaleString()}</h3>
                                     </div>
-                                    <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Venta Total</p>
-                                        <h3 className="text-xl font-black">${data.summary.total.toLocaleString()}</h3>
+                                    <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl print:bg-transparent print:border print:border-slate-300 print:text-slate-900 print:shadow-none">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 print:text-slate-500">Venta Total</p>
+                                        <h3 className="text-xl font-black print:text-slate-900">${data.summary.total.toLocaleString()}</h3>
                                     </div>
                                 </div>
 
@@ -139,8 +144,8 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                                                 <tbody className="divide-y dark:divide-slate-700">
                                                     {data.expenses.map((e: any) => (
                                                         <tr key={e.id}>
-                                                            <td className="px-6 py-3 font-bold">{e.description}</td>
-                                                            <td className="px-6 py-3 text-right font-black text-red-500">-${e.amount.toLocaleString()}</td>
+                                                            <td className="px-6 py-3 font-bold print:text-black">{e.description}</td>
+                                                            <td className="px-6 py-3 text-right font-black text-red-500 print:text-red-700">-${e.amount.toLocaleString()}</td>
                                                         </tr>
                                                     ))}
                                                     {data.expenses.length === 0 && (
@@ -167,8 +172,8 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                                                 <tbody className="divide-y dark:divide-slate-700">
                                                     {data.coupons.map((c: any) => (
                                                         <tr key={c.id}>
-                                                            <td className="px-6 py-3 font-black text-primary uppercase">{c.code}</td>
-                                                            <td className="px-6 py-3 text-right font-black text-purple-600">${Number(c.amount).toLocaleString()}</td>
+                                                            <td className="px-6 py-3 font-black text-primary uppercase print:text-black">{c.code}</td>
+                                                            <td className="px-6 py-3 text-right font-black text-purple-600 print:text-purple-700">${Number(c.amount).toLocaleString()}</td>
                                                         </tr>
                                                     ))}
                                                     {data.coupons.length === 0 && (
@@ -212,18 +217,18 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                                             <tbody className="divide-y dark:divide-slate-700">
                                                 {data.sales.map((s: any) => (
                                                     <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                        <td className="px-6 py-3 font-medium text-slate-500 whitespace-nowrap">
+                                                        <td className="px-6 py-3 font-medium text-slate-500 whitespace-nowrap print:text-black">
                                                             {new Date(s.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                                                         </td>
-                                                        <td className="px-6 py-3 font-bold text-slate-700 dark:text-slate-300">
+                                                        <td className="px-6 py-3 font-bold text-slate-700 dark:text-slate-300 print:text-black">
                                                             {s.id.split('-')[0].toUpperCase()}
                                                         </td>
-                                                        <td className="px-6 py-3">
-                                                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                                                        <td className="px-6 py-3 print:text-black">
+                                                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 print:text-black print:bg-slate-200">
                                                                 {s.payment_method || 'Efectivo'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-right font-black text-emerald-600">
+                                                        <td className="px-6 py-3 text-right font-black text-emerald-600 print:text-black">
                                                             ${Number(s.total).toLocaleString()}
                                                         </td>
                                                     </tr>

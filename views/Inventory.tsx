@@ -144,7 +144,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const totalValue = filtered.reduce((acc, p) => acc + ((p.inventory[selectedBranchId] || 0) * (p.price || 0)), 0);
 
   const handlePrintInventory = () => {
-    window.print();
+    const wasDark = document.documentElement.classList.contains('dark');
+    if (wasDark) document.documentElement.classList.remove('dark');
+    setTimeout(() => {
+        window.print();
+        if (wasDark) document.documentElement.classList.add('dark');
+    }, 150);
   };
 
   const resetForm = () => {

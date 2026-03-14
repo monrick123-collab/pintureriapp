@@ -52,8 +52,17 @@ const ShippingNote: React.FC = () => {
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
+    const handlePrint = () => {
+        const wasDark = document.documentElement.classList.contains('dark');
+        if (wasDark) document.documentElement.classList.remove('dark');
+        setTimeout(() => {
+            window.print();
+            if (wasDark) document.documentElement.classList.add('dark');
+        }, 150);
+    };
+
     return (
-        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center">
+        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center print-format-container">
             {/* Action Bar (Hidden on print) */}
             <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center print:hidden">
                 <button
@@ -64,7 +73,7 @@ const ShippingNote: React.FC = () => {
                     Regresar
                 </button>
                 <button
-                    onClick={() => window.print()}
+                    onClick={handlePrint}
                     className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all"
                 >
                     <span className="material-symbols-outlined">print</span>
@@ -113,7 +122,7 @@ const ShippingNote: React.FC = () => {
                     <div className="flex-1 mb-8 overflow-hidden">
                         <table className="w-full border-collapse">
                             <thead>
-                                <tr className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest">
+                                <tr className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest print:bg-transparent print:text-slate-900 print:border-b-2 print:border-slate-800">
                                     <th className="p-3 text-left rounded-tl-lg">SKU / Producto</th>
                                     <th className="p-3 text-center">Tipo</th>
                                     <th className="p-3 text-right">Unitario</th>
@@ -123,21 +132,21 @@ const ShippingNote: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100 border-x border-b border-slate-100">
                                 {sheet.items.map((item: any) => (
-                                    <tr key={item.id} className="text-[11px]">
+                                    <tr key={item.id} className="text-[11px] print:text-black">
                                         <td className="p-3">
-                                            <p className="font-bold text-slate-900">{item.product?.name}</p>
-                                            <p className="text-[8px] font-mono text-slate-400">{item.product?.sku}</p>
+                                            <p className="font-bold text-slate-900 print:text-black">{item.product?.name}</p>
+                                            <p className="text-[8px] font-mono text-slate-400 print:text-black">{item.product?.sku}</p>
                                         </td>
-                                        <td className="p-3 text-center capitalize text-slate-500">
+                                        <td className="p-3 text-center capitalize text-slate-500 print:text-slate-700">
                                             {item.product?.packageType || '---'}
                                         </td>
-                                        <td className="p-3 text-right font-medium">
+                                        <td className="p-3 text-right font-medium print:text-black">
                                             ${item.unit_price?.toLocaleString() || '0'}
                                         </td>
-                                        <td className="p-3 text-center font-black text-sm">
+                                        <td className="p-3 text-center font-black text-sm print:text-black">
                                             {item.quantity}
                                         </td>
-                                        <td className="p-3 text-right font-black">
+                                        <td className="p-3 text-right font-black print:text-black">
                                             ${item.total_price?.toLocaleString() || '0'}
                                         </td>
                                     </tr>

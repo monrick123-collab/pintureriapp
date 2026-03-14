@@ -355,7 +355,21 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                             <button onClick={() => updateQty(item.id, -1)} className="size-7 rounded-lg bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
                                                 <span className="material-symbols-outlined text-sm">remove</span>
                                             </button>
-                                            <span className="w-6 text-center font-black text-sm">{item.quantity}</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-10 bg-transparent text-center font-black text-sm border-none outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none p-0"
+                                                value={item.quantity === 0 ? '' : item.quantity}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                                                }}
+                                                onBlur={(e) => {
+                                                    if (!e.target.value || parseInt(e.target.value) === 0) {
+                                                        setCart(prev => prev.filter(i => i.id !== item.id));
+                                                    }
+                                                }}
+                                            />
                                             <button onClick={() => updateQty(item.id, 1)} className="size-7 rounded-lg bg-primary text-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform">
                                                 <span className="material-symbols-outlined text-sm">add</span>
                                             </button>

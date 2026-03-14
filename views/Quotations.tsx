@@ -95,7 +95,12 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const wasDark = document.documentElement.classList.contains('dark');
+    if (wasDark) document.documentElement.classList.remove('dark');
+    setTimeout(() => {
+        window.print();
+        if (wasDark) document.documentElement.classList.add('dark');
+    }, 150);
   };
 
   const handleRequestDiscount = async () => {
@@ -228,7 +233,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         <div className="rounded-[24px] overflow-hidden border border-slate-100 shadow-sm">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em]">
+              <tr className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] print:bg-transparent print:text-slate-900 print:border-b-2 print:border-slate-800">
                 <th className="px-6 py-5 text-center w-20">Imagen</th>
                 <th className="px-8 py-5 text-left">Referencia / Descripción</th>
                 <th className="px-6 py-5 text-center">Cantidad</th>
@@ -238,7 +243,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {items.map((item, idx) => (
-                <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50 print:bg-slate-50'}>
                   <td className="px-6 py-6 text-center">
                     <div className="size-12 mx-auto rounded-lg overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-1">
                       <img src={item.image} className="max-h-full max-w-full object-contain" alt={item.name} />
@@ -246,22 +251,22 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">{item.sku}</span>
-                      <span className="text-sm font-bold text-slate-800 tracking-tight">{item.name}</span>
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5 print:text-black">{item.sku}</span>
+                      <span className="text-sm font-bold text-slate-800 tracking-tight print:text-black">{item.name}</span>
                     </div>
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <span className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-black text-slate-600">
+                    <span className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-black text-slate-600 print:bg-slate-200 print:text-black">
                       {item.quantity}
                     </span>
                   </td>
                   <td className="px-6 py-6 text-right">
-                    <span className="text-xs font-bold text-slate-500">
+                    <span className="text-xs font-bold text-slate-500 print:text-black">
                       ${(item.wholesalePrice && item.wholesaleMinQty && item.quantity >= item.wholesaleMinQty ? item.wholesalePrice : item.price).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <span className="text-sm font-black text-slate-900">
+                    <span className="text-sm font-black text-slate-900 print:text-black">
                       ${((item.wholesalePrice && item.wholesaleMinQty && item.quantity >= item.wholesaleMinQty ? item.wholesalePrice : item.price) * item.quantity).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </span>
                   </td>
@@ -307,28 +312,28 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </div>
         </div>
 
-        <div className="bg-slate-900 rounded-[32px] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden">
-          <div className="absolute -bottom-10 -left-10 size-40 bg-white/5 rounded-full blur-2xl" />
+        <div className="bg-slate-900 rounded-[32px] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden print:bg-transparent print:border print:border-slate-300 print:text-slate-900 print:shadow-none">
+          <div className="absolute -bottom-10 -left-10 size-40 bg-white/5 rounded-full blur-2xl print:hidden" />
           <div className="space-y-4 relative z-10">
-            <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest print:text-slate-500">
               <span>Subtotal</span>
-              <span className="text-white">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              <span className="text-white print:text-slate-900">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
             </div>
             {appliedDiscount && (
-              <div className="flex justify-between items-center text-[10px] font-black text-green-400 uppercase tracking-widest">
+              <div className="flex justify-between items-center text-[10px] font-black text-green-400 uppercase tracking-widest print:text-green-600">
                 <span>Descuento</span>
                 <span>-${discountAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
               </div>
             )}
-            <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest print:text-slate-500">
               <span>IVA (16%)</span>
-              <span className="text-white">${iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              <span className="text-white print:text-slate-900">${iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
             </div>
-            <div className="pt-6 mt-2 border-t border-white/10 flex flex-col items-end">
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Inversión Total</span>
+            <div className="pt-6 mt-2 border-t border-white/10 print:border-slate-300 flex flex-col items-end">
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1 print:text-slate-600">Inversión Total</span>
               <div className="flex items-baseline gap-2">
-                <span className="text-xs font-bold text-white/40">MXN</span>
-                <span className="text-4xl font-black text-white tracking-tighter">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                <span className="text-xs font-bold text-white/40 print:text-slate-500">MXN</span>
+                <span className="text-4xl font-black text-white tracking-tighter print:text-slate-900">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -349,8 +354,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   return (
     <div className="h-screen flex overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} />
-
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-slate-950 relative">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-slate-950 relative print-format-container">
         <header className="h-20 flex items-center justify-between px-6 md:px-10 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-10 lg:hidden" />
@@ -492,12 +496,17 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                         <button onClick={() => updateQty(item.id, -1)} className="size-7 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-lg text-lg font-bold transition-colors">-</button>
                         <input
                           type="number"
-                          min="1"
-                          className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
-                          value={item.quantity}
+                          min="0"
+                          className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={item.quantity === 0 ? '' : item.quantity}
                           onChange={(e) => {
                             const val = parseInt(e.target.value) || 0;
                             setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                          }}
+                          onBlur={(e) => {
+                            if (!e.target.value || parseInt(e.target.value) === 0) {
+                              updateQty(item.id, -item.quantity);
+                            }
                           }}
                         />
                         <button onClick={() => updateQty(item.id, 1)} className="size-7 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-lg text-lg font-bold transition-colors">+</button>
@@ -638,9 +647,6 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </div>
         )}
 
-        <div className="hidden print:block w-full">
-          <QuoteDocument />
-        </div>
       </main>
     </div>
   );

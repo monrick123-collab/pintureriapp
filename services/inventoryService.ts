@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Product, Branch, RestockRequest } from '../types';
+import { Product, Branch, RestockRequest, SupplyOrder, StockTransfer } from '../types';
 import { NotificationService } from './notificationService';
 
 // Convertir respuesta de DB a Tipos de App
@@ -238,7 +238,7 @@ export const InventoryService = {
 
     // --- RESTOCK FLOW ---
 
-    async getRestockRequests(branchId?: string, status?: string | string[]): Promise<any[]> {
+    async getRestockRequests(branchId?: string, status?: string | string[]): Promise<RestockRequest[]> {
         let query = supabase
             .from('restock_requests')
             .select(`
@@ -274,7 +274,7 @@ export const InventoryService = {
         }));
     },
 
-    async getRestockRequestById(id: string): Promise<any> {
+    async getRestockRequestById(id: string): Promise<RestockRequest> {
         const { data, error } = await supabase
             .from('restock_requests')
             .select(`
@@ -538,7 +538,7 @@ export const InventoryService = {
 
     // --- SUPPLY ORDERS (Punto 2) ---
 
-    async getSupplyOrders(branchId?: string): Promise<any[]> {
+    async getSupplyOrders(branchId?: string): Promise<SupplyOrder[]> {
         let query = supabase
             .from('supply_orders')
             .select(`
@@ -843,6 +843,21 @@ export const InventoryService = {
         return data || [];
     },
 
+    async getReturnRequestById(returnId: string): Promise<any> {
+        const { data, error } = await supabase
+            .from('returns')
+            .select(`
+                *,
+                products (name, sku),
+                branches (name)
+            `)
+            .eq('id', returnId)
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
     async authorizeReturn(returnId: string, adminId: string, approved: boolean): Promise<void> {
         // Simple regex to check if adminId is a valid UUID
         const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(adminId);
@@ -1024,7 +1039,7 @@ export const InventoryService = {
 
     // --- STOCK TRANSFERS ---
 
-    async getStockTransfers(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
+    async getStockTransfers(branchId?: string, startDate?: string, endDate?: string): Promise<StockTransfer[]> {
         let query = supabase
             .from('stock_transfers')
             .select(`
@@ -1052,7 +1067,7 @@ export const InventoryService = {
         }));
     },
 
-    async getStockTransferDetail(transferId: string): Promise<any> {
+    async getStockTransferDetail(transferId: string): Promise<StockTransfer> {
         const { data, error } = await supabase
             .from('stock_transfers')
             .select(`

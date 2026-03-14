@@ -406,13 +406,18 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                             <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1) }} className="size-5 rounded border flex items-center justify-center text-xs">-</button>
                             <input
                               type="number"
-                              min="1"
-                              className="w-12 text-center text-xs font-bold bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary"
-                              value={item.quantity}
+                              min="0"
+                              className="w-12 text-center text-xs font-bold bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.quantity === 0 ? '' : item.quantity}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value) || 0;
                                 setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                              }}
+                              onBlur={(e) => {
+                                if (!e.target.value || parseInt(e.target.value) === 0) {
+                                  updateQuantity(item.id, -item.quantity);
+                                }
                               }}
                             />
                             <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1) }} className="size-5 rounded border flex items-center justify-center text-xs">+</button>
@@ -640,8 +645,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
                     <select
                       className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold"
-                      value={selectedBranch}
-                      onChange={e => setSelectedBranch(e.target.value)}
+                      value={selectedHistoryBranch}
+                      onChange={e => setSelectedHistoryBranch(e.target.value)}
                     >
                       <option value="ALL">Todas</option>
                       {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

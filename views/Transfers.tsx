@@ -17,7 +17,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [selectedTransfer, setSelectedTransfer] = useState<any>(null);
+    const [selectedTransfer, setSelectedTransfer] = useState<StockTransfer | null>(null);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
@@ -73,8 +73,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     };
 
     const updateQty = (id: string, qty: number) => {
-        if (qty <= 0) return removeFromCart(id);
-        setCart(cart.map(item => item.id === id ? { ...item, quantity: qty } : item));
+        setCart(cart.map(item => item.id === id ? { ...item, quantity: Math.max(0, qty) } : item));
     };
 
     const handleSubmit = async () => {
@@ -288,10 +287,24 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                 <p className="font-bold text-sm text-slate-800 dark:text-white truncate">{item.name}</p>
                                                 <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase">{item.sku}</p>
                                                 <div className="flex items-center gap-2">
-                                                    <button onClick={() => updateQty(item.id, item.quantity - 1)} className="size-8 rounded-lg bg-white dark:bg-slate-800 border dark:border-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                    <button onClick={() => item.quantity <= 1 ? removeFromCart(item.id) : updateQty(item.id, item.quantity - 1)} className="size-8 rounded-lg bg-white dark:bg-slate-800 border dark:border-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                                         <span className="material-symbols-outlined text-sm">remove</span>
                                                     </button>
-                                                    <span className="w-10 text-center font-black text-lg">{item.quantity}</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        value={item.quantity === 0 ? '' : item.quantity}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            updateQty(item.id, val);
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            if (!e.target.value || parseInt(e.target.value) === 0) {
+                                                                removeFromCart(item.id);
+                                                            }
+                                                        }}
+                                                    />
                                                     <button onClick={() => updateQty(item.id, item.quantity + 1)} className="size-8 rounded-lg bg-primary text-white shadow-lg flex items-center justify-center hover:scale-110">
                                                         <span className="material-symbols-outlined text-sm">add</span>
                                                     </button>

@@ -4,6 +4,7 @@ import { User, Product, Return, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 import AuthorizationModal from '../components/AuthorizationModal';
+import { useNavigate } from 'react-router-dom';
 
 interface ReturnsProps {
     user: User;
@@ -22,6 +23,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const [returns, setReturns] = useState<Return[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
+    const navigate = useNavigate();
 
     // Form States
     const [cart, setCart] = useState<ReturnItem[]>([]);
@@ -45,24 +48,33 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const firstDay = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
     const [startDate, setStartDate] = useState(firstDay);
     const [endDate, setEndDate] = useState(localDate);
+    const [selectedBranchFilter, setSelectedBranchFilter] = useState('');
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async (sd = startDate, ed = endDate) => {
+    const loadData = async (sd = startDate, ed = endDate, branchFilter = selectedBranchFilter) => {
         try {
             setLoading(true);
-            const [prodData, retData] = await Promise.all([
+            const branchIdToFetch = (isAdmin || isWarehouse) 
+                ? (branchFilter || undefined) 
+                : user.branchId;
+                
+            const [prodData, retData, branchesData] = await Promise.all([
                 InventoryService.getProductsByBranch(user.branchId || 'BR-MAIN'),
                 InventoryService.getReturnRequests(
-                    (isAdmin || isWarehouse) ? undefined : user.branchId,
+                    branchIdToFetch,
                     sd || undefined,
                     ed || undefined
-                )
+                ),
+                (isAdmin || isWarehouse) ? InventoryService.getBranches() : Promise.resolve([])
             ]);
             setProducts(prodData);
             setReturns(retData as unknown as Return[]);
+            if (branchesData.length > 0) {
+                setBranches(branchesData);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -188,6 +200,21 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                     <>
                         {/* Filtro por fechas */}
                         <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            {(isAdmin || isWarehouse) && (
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
+                                    <select 
+                                        className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20"
+                                        value={selectedBranchFilter} 
+                                        onChange={e => setSelectedBranchFilter(e.target.value)}
+                                    >
+                                        <option value="">Todas las Sucursales</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -196,9 +223,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
-                            <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
-                            {(startDate || endDate) && (
-                                <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>
+                            <button onClick={() => loadData(startDate, endDate, selectedBranchFilter)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            {(startDate || endDate || selectedBranchFilter) && (
+                                <button onClick={() => { setStartDate(''); setEndDate(''); setSelectedBranchFilter(''); loadData('', '', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>
                             )}
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{returns.length} devolución{returns.length !== 1 ? 'es' : ''}</span>
                         </div>
@@ -270,6 +297,13 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                                 Recibido
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => navigate(`/returns/${r.id}/print`)}
+                                                            className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-black transition-colors"
+                                                            title="Imprimir Formato"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">print</span>
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -317,6 +351,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 <option value="demostracion">Demostraciones</option>
                                                 <option value="defecto">Defecto de Material</option>
                                                 <option value="traspaso_matriz">Retorno a Matriz</option>
+                                                {(isAdmin || isWarehouse) && (
+                                                    <option value="devolucion_proveedor">Devolución a Proveedor</option>
+                                                )}
                                             </select>
                                         </div>
                                     </div>

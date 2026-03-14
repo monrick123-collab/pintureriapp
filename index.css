@@ -6,12 +6,79 @@
 
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
+        -webkit-appearance: none !important;
+        margin: 0 !important;
     }
 
     input[type="number"] {
-        -moz-appearance: textfield;
-        appearance: textfield;
+        -moz-appearance: textfield !important;
+        appearance: textfield !important;
+    }
+}
+
+@media print {
+    :root, html, body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    /* Force all elements inside .dark to render as light mode */
+    .dark * {
+        background-color: transparent !important;
+        color: #000000 !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+@page {
+    margin: 0;
+}
+
+@page halfLetter {
+    size: 140mm 216mm;
+    margin: 0;
+}
+
+@media print {
+    .format-half-letter {
+        page: halfLetter;
+    }
+    
+    /* Strict override for completely neutralizing dark mode printing issues */
+    .dark .print-format-container,
+    .dark .print-format-container * {
+        background-color: transparent !important;
+        color: #000000 !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .print-format-container tr.bg-slate-800,
+    .print-format-container tr.bg-slate-900,
+    .print-format-container th,
+    .print-format-container thead,
+    .print-format-container tfoot tr.bg-slate-900,
+    .print-format-container .bg-slate-900 {
+        background-color: #f1f5f9 !important;
+        color: #000 !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        box-shadow: none !important;
+    }
+
+    .print-format-container td,
+    .print-format-container p,
+    .print-format-container span,
+    .print-format-container div,
+    .print-format-container h1,
+    .print-format-container h2,
+    .print-format-container h3,
+    .print-format-container h4,
+    .print-format-container h5 {
+        color: #000 !important;
     }
 }

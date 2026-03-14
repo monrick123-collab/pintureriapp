@@ -1,0 +1,5 @@
+a29ccda feat: improve UI components and fix bugs
+abbe842 feat: implement new modular architecture with Zustand
+dd67ce3 Fix NotificationBell z-index positioning
+d746f53 Fix RLS anon policies for Warehouse POS
+7c31246 fix(notifications): correct user table reference to profiles in SQL migration

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './views/Login';
 import POS from './views/POS';
@@ -11,9 +11,11 @@ import Clients from './views/Clients';
 import Branches from './views/Branches';
 import Quotations from './views/Quotations';
 import Returns from './views/Returns';
+import ReturnNote from './views/ReturnNote';
 import Supplies from './views/Supplies';
 import AiAssistant from './components/AiAssistant';
 import Packaging from './views/Packaging';
+import Toast from './components/ui/Toast';
 
 import WarehouseDashboard from './views/WarehouseDashboard';
 import ShippingNote from './views/ShippingNote';
@@ -30,33 +32,35 @@ import Transfers from './views/Transfers';
 import CoinChange from './views/CoinChange';
 import CashCut from './views/CashCut';
 import AdminCashCuts from './views/AdminCashCuts';
-import { User, UserRole } from './types';
+import RestockNote from './views/RestockNote';
+import { UserRole } from './types';
+import { useAuthStore } from './store/authStore';
 
 const App: React.FC = () => {
-  // ... existing hook ...
-  const [user, setUser] = useState<User | null>(() => {
+  const { user, setUser, login, logout } = useAuthStore();
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('pintamax_user');
       if (savedUser) {
         try {
-          return JSON.parse(savedUser);
+          const parsedUser = JSON.parse(savedUser);
+          setUser(parsedUser);
         } catch (e) {
           console.error("Failed to parse user session:", e);
           localStorage.removeItem('pintamax_user');
+          setUser(null);
         }
       }
     }
-    return null;
-  });
+  }, [setUser]);
 
-  const handleLogin = (u: User) => {
-    setUser(u);
-    localStorage.setItem('pintamax_user', JSON.stringify(u));
+  const handleLogin = (u: any) => {
+    login(u);
   };
 
   const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('pintamax_user');
+    logout();
   };
 
   return (
@@ -85,6 +89,8 @@ const App: React.FC = () => {
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/quotations" element={user ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/returns" element={user ? <Returns user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/returns/:id/print" element={user ? <ReturnNote /> : <Navigate to="/login" replace />} />
+          <Route path="/restocks/:id/print" element={user ? <RestockNote user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/supplies" element={user ? <Supplies user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/packaging" element={user ? <Packaging user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
 
@@ -109,6 +115,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         {user && <AiAssistant />}
+        <Toast />
       </div>
     </BrowserRouter>
   );

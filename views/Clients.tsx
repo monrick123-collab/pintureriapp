@@ -28,12 +28,14 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
     phone: '',
     taxId: '',
     address: '',
-    type: 'Individual' as 'Individual' | 'Empresa',
+    type: 'Individual' as 'Individual' | 'Empresa' | 'Municipio',
     municipality: '',
     locality: '',
     creditLimit: 0,
     creditDays: 0,
-    isActiveCredit: false
+    isActiveCredit: false,
+    isMunicipality: false,
+    extraPercentage: 0
   });
 
   useEffect(() => {
@@ -113,7 +115,9 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
       locality: c.locality || '',
       creditLimit: c.creditLimit || 0,
       creditDays: c.creditDays || 0,
-      isActiveCredit: c.isActiveCredit || false
+      isActiveCredit: c.isActiveCredit || false,
+      isMunicipality: c.isMunicipality || false,
+      extraPercentage: c.extraPercentage || 0
     });
     setIsModalOpen(true);
   };
@@ -124,7 +128,8 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
     setSelectedClientId(null);
     setNewClient({
       name: '', email: '', phone: '', taxId: '', address: '', type: 'Individual',
-      municipality: '', locality: '', creditLimit: 0, creditDays: 0, isActiveCredit: false
+      municipality: '', locality: '', creditLimit: 0, creditDays: 0, isActiveCredit: false,
+      isMunicipality: false, extraPercentage: 0
     });
   };
 
@@ -184,14 +189,15 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase text-slate-400 font-black tracking-widest">
-                      <th className="px-6 py-4">Información del Cliente</th>
-                      <th className="px-6 py-4">RFC / Contacto</th>
-                      <th className="px-6 py-4">Ubicación</th>
-                      <th className="px-6 py-4">Crédito</th>
-                      <th className="px-6 py-4">Tipo</th>
-                      <th className="px-6 py-4 text-right">Acciones</th>
-                    </tr>
+                     <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase text-slate-400 font-black tracking-widest">
+                       <th className="px-6 py-4">Información del Cliente</th>
+                       <th className="px-6 py-4">RFC / Contacto</th>
+                       <th className="px-6 py-4">Ubicación</th>
+                       <th className="px-6 py-4">Crédito</th>
+                       <th className="px-6 py-4">Tipo</th>
+                       <th className="px-6 py-4">Municipio</th>
+                       <th className="px-6 py-4 text-right">Acciones</th>
+                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {filteredClients.map(c => (
@@ -232,12 +238,26 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                             {c.isActiveCredit && <span className="text-[10px] text-slate-400">{c.creditDays} días de plazo</span>}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${c.type === 'Empresa' ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'
-                            }`}>
-                            {c.type}
-                          </span>
-                        </td>
+                         <td className="px-6 py-4">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${c.type === 'Empresa' ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'
+                             }`}>
+                             {c.type}
+                           </span>
+                         </td>
+                         <td className="px-6 py-4">
+                           {c.isMunicipality ? (
+                             <div className="flex flex-col items-start">
+                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
+                                 Municipio
+                               </span>
+                               {(c.extraPercentage || 0) > 0 && (
+                                 <span className="text-[10px] text-slate-500 mt-0.5">+{c.extraPercentage}%</span>
+                               )}
+                             </div>
+                           ) : (
+                             <span className="text-[10px] text-slate-400">No</span>
+                           )}
+                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button onClick={() => {
@@ -300,6 +320,7 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                     <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold" value={newClient.type} onChange={e => setNewClient({ ...newClient, type: e.target.value as any })}>
                       <option value="Individual">Individual</option>
                       <option value="Empresa">Empresa / RFC</option>
+                      <option value="Municipio">Municipio</option>
                     </select>
                   </div>
                 </div>
@@ -350,10 +371,26 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Domicilio Fiscal / Envío</label>
-                  <textarea className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm h-24 resize-none" value={newClient.address} onChange={e => setNewClient({ ...newClient, address: e.target.value })} />
-                </div>
+                 <div className="space-y-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Domicilio Fiscal / Envío</label>
+                   <textarea className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm h-24 resize-none" value={newClient.address} onChange={e => setNewClient({ ...newClient, address: e.target.value })} />
+                 </div>
+
+                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                   <div className="flex items-center justify-between">
+                     <label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase">¿Es Municipio?</label>
+                     <input type="checkbox" className="size-5 rounded border-slate-300 text-primary focus:ring-primary" checked={newClient.isMunicipality} onChange={e => setNewClient({ ...newClient, isMunicipality: e.target.checked })} />
+                   </div>
+                   {newClient.isMunicipality && (
+                     <div className="animate-in fade-in slide-in-from-top-2">
+                       <div className="space-y-1">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Porcentaje Extra (%)</label>
+                         <input type="number" min="0" max="100" step="0.1" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.extraPercentage} onChange={e => setNewClient({ ...newClient, extraPercentage: parseFloat(e.target.value) || 0 })} />
+                         <p className="text-[10px] text-slate-400 mt-1">Porcentaje adicional aplicado a las ventas de este municipio</p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
 
                 <div className="flex gap-4 mt-2">
                   <button type="button" onClick={closeModal} className="flex-1 py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors">Descartar</button>

@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { InventoryService } from '../services/inventoryService';
 import { DiscountService } from '../services/discountService';
 import { RestockRequest, DiscountRequest, User, SupplyOrder } from '../types';
-import { AiInsightsWidget } from '../components/AiInsightsWidget';
+// import { AiInsightsWidget } from '../components/AiInsightsWidget';
 
 interface DashboardProps {
   user: User;
@@ -185,9 +185,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </div>
 
           {/* AI Insights Widget (Only for Admin/Finance) */}
-          {(user.role === 'ADMIN' || user.role === 'FINANCE') && (
+          {/* {(user.role === 'ADMIN' || user.role === 'FINANCE') && (
             <AiInsightsWidget />
-          )}
+          )} */}
 
           {requests.length > 0 && (
             <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm">

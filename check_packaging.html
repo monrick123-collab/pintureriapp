@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verificación Envasado</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .test { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 10px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Verificación de Cambios en Envasado</h1>
+    
+    <div class="test">
+        <h2>1. Archivo Packaging.tsx</h2>
+        <p>Verificando opciones en línea 514-517...</p>
+        <pre id="file-check">Cargando...</pre>
+    </div>
+    
+    <div class="test">
+        <h2>2. Tipos TypeScript</h2>
+        <p>Verificando tipos en types.ts...</p>
+        <pre id="types-check">Cargando...</pre>
+    </div>
+    
+    <div class="test">
+        <h2>3. Instrucciones para Forzar Recarga</h2>
+        <p>Si no ves los cambios en el navegador:</p>
+        <ol>
+            <li><strong>Chrome/Firefox/Edge:</strong> Presiona <code>Ctrl + Shift + R</code> (Forzar recarga completa)</li>
+            <li><strong>Alternativa:</strong> Abre DevTools (F12) → Network → Marca "Disable cache" → Recarga</li>
+            <li><strong>Navegador móvil:</strong> Cierra completamente la app y vuelve a abrir</li>
+        </ol>
+    </div>
+    
+    <div class="test">
+        <h2>4. Qué deberías ver</h2>
+        <p>En el formulario de Envasado deberías ver:</p>
+        <ul>
+            <li>✅ <code>¼ LITRO (0.25 L)</code></li>
+            <li>✅ <code>½ LITRO (0.5 L)</code></li>
+            <li>✅ <code>LITRO (1 L)</code></li>
+            <li>✅ <code>GALÓN (3.8 L)</code></li>
+        </ul>
+        <p>Y en la tabla de historial debería mostrar cálculos automáticos.</p>
+    </div>
+    
+    <script>
+        // Verificar archivo Packaging.tsx
+        fetch('views/Packaging.tsx')
+            .then(response => response.text())
+            .then(text => {
+                const lines = text.split('\n');
+                const optionsLine = lines.findIndex(line => line.includes('option value="cuarto_litro"'));
+                if (optionsLine !== -1) {
+                    const options = lines.slice(optionsLine, optionsLine + 4).join('\n');
+                    document.getElementById('file-check').innerHTML = 
+                        '<span class="success">✅ OPCIONES ENCONTRADAS:</span>\n' + options;
+                } else {
+                    document.getElementById('file-check').innerHTML = 
+                        '<span class="error">❌ OPCIONES NO ENCONTRADAS</span>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('file-check').innerHTML = 
+                    '<span class="error">❌ Error al leer archivo: ' + error + '</span>';
+            });
+        
+        // Verificar tipos
+        fetch('types.ts')
+            .then(response => response.text())
+            .then(text => {
+                if (text.includes("'cuarto_litro' | 'medio_litro' | 'litro' | 'galon'")) {
+                    document.getElementById('types-check').innerHTML = 
+                        '<span class="success">✅ TIPOS CORRECTOS:</span>\n' +
+                        "targetPackageType: 'cuarto_litro' | 'medio_litro' | 'litro' | 'galon'";
+                } else {
+                    document.getElementById('types-check').innerHTML = 
+                        '<span class="error">❌ TIPOS INCORRECTOS O NO ENCONTRADOS</span>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('types-check').innerHTML = 
+                    '<span class="error">❌ Error al leer tipos: ' + error + '</span>';
+            });
+    </script>
+</body>
+</html>

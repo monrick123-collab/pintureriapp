@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, CartItem, UserRole } from '../types';
+import { User, Product, CartItem, UserRole, Client } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
+import { ClientService } from '../services/clientService';
 
 interface MunicipalPOSProps {
     user: User;
@@ -17,11 +18,22 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     // Products & admins
     const [products, setProducts] = useState<Product[]>([]);
     const [admins, setAdmins] = useState<{ id: string; name: string }[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [search, setSearch] = useState('');
+    const [clientSearch, setClientSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    
+    // Client filters
+    const [clientFilter, setClientFilter] = useState({
+        search: '',
+        type: 'all' as 'all' | 'Individual' | 'Empresa',
+        municipality: 'all' as 'all' | string,
+        activeCredit: 'all' as 'all' | 'active' | 'inactive',
+        isMunicipality: 'all' as 'all' | 'yes' | 'no'
+    });
 
     // Tabs: pos | history | accounts
     const [activeTab, setActiveTab] = useState<'pos' | 'history' | 'accounts'>('pos');
@@ -40,6 +52,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [creditDays, setCreditDays] = useState(30);
     const [notes, setNotes] = useState('');
     const [blockedWarning, setBlockedWarning] = useState<string | null>(null);
+    const [transferReference, setTransferReference] = useState(''); // Para aprobación de pagos
 
     // History
     const [history, setHistory] = useState<any[]>([]);
@@ -66,30 +79,47 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         try {
             setLoading(true);
             // Fetch independently so a missing table doesn't block everything
-            const [prodData, adminData, historyData, accountsData] = await Promise.all([
+            const [prodData, clientsData] = await Promise.all([
                 InventoryService.getProductsByBranch(branchId).catch(() => []),
-                SalesService.getAdmins().catch(() => []),
-                SalesService.getMunicipalSales(isAdmin ? undefined : branchId, sd || undefined, ed || undefined).catch(() => []),
-                SalesService.getMunicipalAccounts(isAdmin ? undefined : branchId).catch(() => []),
+                ClientService.getClients().catch(() => []),
             ]);
             setProducts(prodData);
-            setAdmins(adminData);
-            setHistory(historyData);
-            setAccounts(accountsData);
+            setClients(clientsData);
+            
+            // Cargar datos adicionales por separado para evitar errores
+            try {
+                // 1. Cargar admins
+                const admins = await SalesService.getAdmins().catch(() => []);
+                setAdmins(admins);
+                
+                // 2. Cargar historial de ventas municipales
+                const historyData = await SalesService.getMunicipalSales(branchId, sd, ed).catch(() => []);
+                setHistory(historyData);
+                
+                // 3. Cargar cuentas municipales  
+                const accountsData = await SalesService.getMunicipalAccounts(isAdmin ? undefined : branchId).catch(() => []);
+                setAccounts(accountsData);
+            } catch (e) {
+                console.log('Algunos datos no pudieron cargarse:', e);
+            }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
 
     // Check block when municipality changes and paymentType is credito
     useEffect(() => {
-        if (!municipality || paymentType !== 'credito') { setBlockedWarning(null); return; }
-        SalesService.getMunicipalAccount(municipality, branchId)
-            .then(acc => {
-                if (acc?.is_blocked) setBlockedWarning(`⛔ Cuenta bloqueada: ${acc.block_reason || 'sin razón especificada'}`);
-                else setBlockedWarning(null);
-            })
-            .catch(() => setBlockedWarning(null));
-    }, [municipality, paymentType]);
+        if (!municipality || paymentType !== 'credito') { 
+            setBlockedWarning(null); 
+            return; 
+        }
+        // Buscar si la cuenta municipal está bloqueada
+        const account = accounts.find(acc => acc.municipality === municipality);
+        if (account?.is_blocked) {
+            setBlockedWarning(`La cuenta de ${municipality} está bloqueada. Razón: ${account.block_reason || 'No especificada'}`);
+        } else {
+            setBlockedWarning(null);
+        }
+    }, [municipality, paymentType, accounts]);
 
     const addToCart = (p: Product) => {
         setCart(prev => {
@@ -106,18 +136,57 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const iva = subtotal * 0.16;
     const total = subtotal + iva;
 
+    // Filter clients based on filters
+    const filteredClients = clients.filter(client => {
+        // Search filter
+        if (clientFilter.search && !client.name.toLowerCase().includes(clientFilter.search.toLowerCase()) && 
+            !(client.taxId || '').toLowerCase().includes(clientFilter.search.toLowerCase()) &&
+            !client.email.toLowerCase().includes(clientFilter.search.toLowerCase())) {
+            return false;
+        }
+        
+        // Type filter
+        if (clientFilter.type !== 'all' && client.type !== clientFilter.type) {
+            return false;
+        }
+        
+        // Municipality filter
+        if (clientFilter.municipality !== 'all' && client.municipality !== clientFilter.municipality) {
+            return false;
+        }
+        
+        // Active credit filter
+        if (clientFilter.activeCredit !== 'all') {
+            if (clientFilter.activeCredit === 'active' && !client.isActiveCredit) return false;
+            if (clientFilter.activeCredit === 'inactive' && client.isActiveCredit) return false;
+        }
+        
+        // Is municipality filter
+        if (clientFilter.isMunicipality !== 'all') {
+            if (clientFilter.isMunicipality === 'yes' && !client.isMunicipality) return false;
+            if (clientFilter.isMunicipality === 'no' && client.isMunicipality) return false;
+        }
+        
+        return true;
+    });
+
     const handleFinalizeSale = async () => {
         if (!municipality.trim()) { alert('Ingrese el nombre del municipio.'); return; }
         if (!deliveryReceiver.trim()) { alert('Ingrese quién recibe la mercancía.'); return; }
         if (!authorizedExitBy) { alert('Seleccione el administrador que autoriza la salida.'); return; }
         if (cart.length === 0) { alert('Agregue al menos un producto.'); return; }
         if (blockedWarning) { alert('La cuenta de este municipio está bloqueada. No se puede procesar la venta.'); return; }
+        // Validación para transferencias
+        if (paymentMethod === 'transfer' && !transferReference.trim()) {
+            alert('Para pagos con Transferencia, ingrese la referencia de transferencia.');
+            return;
+        }
         try {
             setLoading(true);
             await SalesService.createMunicipalSale(
                 branchId,
                 cart.map(i => ({ productId: i.id, productName: i.name, quantity: i.quantity, price: i.price })),
-                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes }
+                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference }
             );
             setShowSuccess(true);
             setTimeout(() => {
@@ -125,6 +194,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 setMunicipality(''); setDepartment(''); setContactName('');
                 setSocialReason(''); setRfc(''); setInvoiceNumber('');
                 setDeliveryReceiver(''); setAuthorizedExitBy(''); setNotes('');
+                setTransferReference('');
                 loadData();
             }, 2000);
         } catch (e: any) {
@@ -191,6 +261,16 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         } catch (e: any) { alert('Error: ' + e.message); }
     };
 
+    // Select a client and auto-fill municipality fields
+    const handleSelectClient = (client: Client) => {
+        setMunicipality(client.name);
+        setContactName(client.name);
+        setSocialReason(client.name);
+        setRfc(client.taxId || '');
+        // Clear client search after selection
+        setClientFilter(prev => ({ ...prev, search: '' }));
+    };
+
     const filtered = products.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
@@ -236,6 +316,67 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Municipio *</label>
                                 <input className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-bold focus:ring-2 focus:ring-primary/20" placeholder="Ej: Monterrey" value={municipality} onChange={e => setMunicipality(e.target.value)} />
+                            </div>
+                            
+                            {/* Client search and selection */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Buscar Cliente Registrado</label>
+                                    <button type="button" onClick={() => setClientFilter(prev => ({ ...prev, search: '' }))} className="text-[10px] text-slate-400 hover:text-slate-600">Limpiar</button>
+                                </div>
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                                    <input
+                                        className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                                        placeholder="Buscar cliente por nombre, RFC..."
+                                        value={clientFilter.search}
+                                        onChange={e => setClientFilter(prev => ({ ...prev, search: e.target.value }))}
+                                    />
+                                </div>
+                                
+                                {/* Client filters */}
+                                {clientFilter.search && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <select className="text-xs p-2 bg-slate-100 dark:bg-slate-800 rounded-lg" value={clientFilter.type} onChange={e => setClientFilter(prev => ({ ...prev, type: e.target.value as any }))}>
+                                            <option value="all">Todos los tipos</option>
+                                            <option value="Individual">Individual</option>
+                                            <option value="Empresa">Empresa</option>
+                                        </select>
+                                        <select className="text-xs p-2 bg-slate-100 dark:bg-slate-800 rounded-lg" value={clientFilter.isMunicipality} onChange={e => setClientFilter(prev => ({ ...prev, isMunicipality: e.target.value as any }))}>
+                                            <option value="all">Todos</option>
+                                            <option value="yes">Solo municipios</option>
+                                            <option value="no">No municipios</option>
+                                        </select>
+                                    </div>
+                                )}
+                                
+                                {/* Client results */}
+                                {clientFilter.search && filteredClients.length > 0 && (
+                                    <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+                                        {filteredClients.slice(0, 10).map(client => (
+                                            <button
+                                                key={client.id}
+                                                type="button"
+                                                onClick={() => handleSelectClient(client)}
+                                                className="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-700 last:border-0 flex items-center justify-between"
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-900 dark:text-white">{client.name}</span>
+                                                    <span className="text-[10px] text-slate-500">{client.taxId} • {client.municipality || 'Sin municipio'}</span>
+                                                </div>
+                                                {client.isMunicipality && (
+                                                    <span className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Municipio</span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                
+                                {clientFilter.search && filteredClients.length === 0 && (
+                                    <div className="p-4 text-center text-slate-400 text-sm">
+                                        No se encontraron clientes
+                                    </div>
+                                )}
                             </div>
                             {/* Blocked warning */}
                             {blockedWarning && (
@@ -297,14 +438,28 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                     <button key={m.key} onClick={() => setPaymentMethod(m.key)} className={`py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${paymentMethod === m.key ? 'bg-primary/10 text-primary ring-2 ring-primary/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
                                         <span className="material-symbols-outlined text-sm">{m.icon}</span>{m.label}
                                     </button>
-                                ))}
-                            </div>
-                            {paymentType === 'credito' && (
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Días de Crédito</label>
-                                    <input type="number" min={1} className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black focus:ring-2 focus:ring-primary/20" value={creditDays} onChange={e => setCreditDays(parseInt(e.target.value) || 30)} />
-                                </div>
-                            )}
+                                 ))}
+                             </div>
+                             
+                             {/* Campo para referencia de transferencia */}
+                             {paymentMethod === 'transfer' && (
+                                 <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Referencia de Transferencia</label>
+                                     <input 
+                                         className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black focus:ring-2 focus:ring-primary/20" 
+                                         placeholder="Ej: TRF-123456" 
+                                         value={transferReference} 
+                                         onChange={e => setTransferReference(e.target.value)} 
+                                     />
+                                 </div>
+                             )}
+                             
+                             {paymentType === 'credito' && (
+                                 <div className="space-y-1">
+                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Días de Crédito</label>
+                                     <input type="number" min={1} className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black focus:ring-2 focus:ring-primary/20" value={creditDays} onChange={e => setCreditDays(parseInt(e.target.value) || 30)} />
+                                 </div>
+                             )}
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Observaciones</label>
                                 <textarea className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-medium resize-none h-20 focus:ring-2 focus:ring-primary/20" placeholder="Notas adicionales..." value={notes} onChange={e => setNotes(e.target.value)} />
@@ -323,7 +478,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                 {filtered.map(p => (
                                     <button key={p.id} onClick={() => addToCart(p)} className="p-4 bg-white dark:bg-slate-800 rounded-3xl text-left border border-transparent hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group active:scale-95">
                                         <div className="size-20 bg-slate-100 dark:bg-slate-700 rounded-2xl p-2 mb-3 group-hover:scale-105 transition-transform mx-auto">
-                                            <img src={p.image} className="w-full h-full object-contain" alt={p.name} />
+                                            <img src={p.image || null} className="w-full h-full object-contain" alt={p.name} />
                                         </div>
                                         <p className="font-black text-slate-800 dark:text-white text-sm line-clamp-2 leading-tight mb-1">{p.name}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{p.sku}</p>
@@ -434,11 +589,19 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.payment_type === 'credito' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{s.payment_type}</span>
                                                     </td>
                                                     <td className="px-6 py-4 font-black">{fmtMoney(s.total)}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.payment_status === 'paid' ? 'bg-green-100 text-green-600' : s.payment_status === 'invoiced' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
-                                                            {s.payment_status === 'paid' ? 'Pagado' : s.payment_status === 'invoiced' ? 'Facturado' : 'Pendiente'}
-                                                        </span>
-                                                    </td>
+                                                     <td className="px-6 py-4">
+                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                             s.payment_status === 'approved' ? 'bg-green-100 text-green-600' : 
+                                                             s.payment_status === 'rejected' ? 'bg-red-100 text-red-600' :
+                                                             s.payment_status === 'expired' ? 'bg-gray-100 text-gray-600' :
+                                                             'bg-orange-100 text-orange-600' // pending
+                                                         }`}>
+                                                             {s.payment_status === 'approved' ? 'Aprobado' : 
+                                                              s.payment_status === 'rejected' ? 'Rechazado' :
+                                                              s.payment_status === 'expired' ? 'Expirado' :
+                                                              'Pendiente'}
+                                                         </span>
+                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{fmtDate(s.created_at)}</td>
                                                 </tr>
                                             ))}

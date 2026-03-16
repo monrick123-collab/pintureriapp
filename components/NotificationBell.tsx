@@ -14,6 +14,43 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Función para reproducir sonido de notificación
+  const playNotificationSound = () => {
+    try {
+      // Crear audio element si no existe
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+        // Sonido de notificación simple (beep)
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } else {
+        // Intentar reproducir con HTML5 Audio como fallback
+        const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
+        audio.volume = 0.3;
+        audio.play().catch(() => {
+          // Fallback a beep simple si el audio HTML falla
+          console.log('🔔 Nueva notificación');
+        });
+      }
+    } catch (error) {
+      console.log('🔔 Nueva notificación (sonido no disponible)');
+    }
+  };
 
   useEffect(() => {
     fetchNotifications();
@@ -36,6 +73,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
             newNotif.target_role === user.role ||
             newNotif.target_role === 'ALL'
           ) {
+            // Play notification sound
+            playNotificationSound();
             fetchNotifications(); // Refresh list to get formatted data
           }
         }

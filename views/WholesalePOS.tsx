@@ -13,7 +13,7 @@ interface WholesalePOSProps {
     onLogout: () => void;
 }
 
-type TabType = 'pos' | 'history';
+type TabType = 'pos' | 'history' | 'accounts';
 type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 
 const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
@@ -45,6 +45,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [billingData, setBillingData] = useState({ bank: '', socialReason: '', invoiceNumber: '' });
     const [deliveryReceiver, setDeliveryReceiver] = useState('');
     const [clientFinancials, setClientFinancials] = useState<{ balance: number, oldestPendingDate: string | null } | null>(null);
+    const [transferReference, setTransferReference] = useState(''); // Para aprobación de pagos
 
     
     // --- HISTORY STATES ---
@@ -58,6 +59,26 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
     const [selectedHistorySale, setSelectedHistorySale] = useState<Sale | null>(null);
+
+    // --- ACCOUNTS STATES ---
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentNotes, setPaymentNotes] = useState('');
+    const [paymentFormType, setPaymentFormType] = useState<'abono' | 'pago_completo'>('abono');
+    const [blockReason, setBlockReason] = useState('');
+    const [showBlockForm, setShowBlockForm] = useState(false);
+    const [limitAmount, setLimitAmount] = useState('');
+
+    // --- FILTER STATES ---
+    const [clientFilter, setClientFilter] = useState({
+        search: '',
+        type: 'all' as 'all' | 'Individual' | 'Empresa',
+        municipality: '',
+        hasCredit: 'all' as 'all' | 'active' | 'inactive',
+        isMunicipality: 'all' as 'all' | 'yes' | 'no'
+    });
 
 useEffect(() => {
         if (selectedClient) {
@@ -209,6 +230,26 @@ const addToCart = (product: Product) => {
         }
     };
 
+    const handleEditInvoice = async (sale: Sale) => {
+        const invoiceNumber = prompt('Ingrese el número de factura:', sale.billingInvoiceNumber || '');
+        if (invoiceNumber !== null) {
+            try {
+                setLoading(true);
+                await SalesService.updateInvoiceNumber(sale.id, invoiceNumber);
+                alert('Factura actualizada correctamente');
+                // Recargar historial
+                if (activeTab === 'history') {
+                    await fetchHistorySales();
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error al actualizar factura');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     const handleFinalizeSale = async () => {
         if (!selectedClient || !selectedAdminId) {
             alert("Seleccione cliente y administrador de salida");
@@ -223,8 +264,13 @@ const addToCart = (product: Product) => {
 
         // 2. Validation: Billing Data (if Contado + Card/Transfer)
         if (paymentType === 'contado' && (paymentMethod === 'card' || paymentMethod === 'transfer')) {
-            if (!billingData.bank || !billingData.socialReason || !billingData.invoiceNumber) {
+            if (!billingData.bank || !billingData.socialReason) {
                 alert("Para pagos con Tarjeta o Transferencia, los datos de facturación son obligatorios.");
+                return;
+            }
+            // Para transferencias, solicitar referencia
+            if (paymentMethod === 'transfer' && !transferReference.trim()) {
+                alert("Para pagos con Transferencia, ingrese la referencia de transferencia.");
                 return;
             }
         }
@@ -275,8 +321,10 @@ const addToCart = (product: Product) => {
                     creditDays: paymentType === 'credito' ? creditDays : 0,
                     billingBank: paymentMethod !== 'cash' ? billingData.bank : undefined,
                     billingSocialReason: paymentMethod !== 'cash' ? billingData.socialReason : undefined,
-                    billingInvoiceNumber: paymentMethod !== 'cash' ? billingData.invoiceNumber : undefined,
-                    deliveryReceiverName: deliveryReceiver
+                    billingInvoiceNumber: undefined, // Se agregará manualmente después
+                    deliveryReceiverName: deliveryReceiver,
+                    transferReference: paymentMethod === 'transfer' ? transferReference : undefined,
+                    paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved'
                 }
             );
 
@@ -297,6 +345,46 @@ const addToCart = (product: Product) => {
             setLoading(false);
         }
     };
+
+    // Filtrar clientes según criterios
+    const filteredClients = clients.filter(client => {
+        // Filtro de búsqueda
+        if (clientFilter.search && 
+            !client.name.toLowerCase().includes(clientFilter.search.toLowerCase()) &&
+            !client.taxId.toLowerCase().includes(clientFilter.search.toLowerCase()) &&
+            !client.email.toLowerCase().includes(clientFilter.search.toLowerCase())) {
+            return false;
+        }
+        
+        // Filtro por tipo
+        if (clientFilter.type !== 'all' && client.type !== clientFilter.type) {
+            return false;
+        }
+        
+        // Filtro por municipio
+        if (clientFilter.municipality && 
+            (!client.municipality || !client.municipality.toLowerCase().includes(clientFilter.municipality.toLowerCase()))) {
+            return false;
+        }
+        
+        // Filtro por crédito activo
+        if (clientFilter.hasCredit === 'active' && !client.isActiveCredit) {
+            return false;
+        }
+        if (clientFilter.hasCredit === 'inactive' && client.isActiveCredit) {
+            return false;
+        }
+        
+        // Filtro por municipio (cliente municipio)
+        if (clientFilter.isMunicipality === 'yes' && !client.isMunicipality) {
+            return false;
+        }
+        if (clientFilter.isMunicipality === 'no' && client.isMunicipality) {
+            return false;
+        }
+        
+        return true;
+    });
 
     return (
         <div className="h-screen flex overflow-hidden">
@@ -523,14 +611,21 @@ const addToCart = (product: Product) => {
                     
                                                         {/* Billing Data (Conditional) */}
                                                         {paymentType === 'contado' && (paymentMethod === 'card' || paymentMethod === 'transfer') && (
-                                                            <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-top-2">
+                                                             <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-top-2">
                                                                 <div className="flex items-center gap-2 mb-2">
                                                                     <span className="material-symbols-outlined text-blue-500 text-sm">receipt_long</span>
                                                                     <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase">Datos Facturación Obligatorios</span>
                                                                 </div>
                                                                 <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Banco" value={billingData.bank} onChange={e => setBillingData({ ...billingData, bank: e.target.value })} />
                                                                 <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Razón Social" value={billingData.socialReason} onChange={e => setBillingData({ ...billingData, socialReason: e.target.value })} />
-                                                                <input className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="No. Factura / Referencia" value={billingData.invoiceNumber} onChange={e => setBillingData({ ...billingData, invoiceNumber: e.target.value })} />
+                                                                {paymentMethod === 'transfer' && (
+                                                                    <input 
+                                                                        className="w-full p-2 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" 
+                                                                        placeholder="Referencia de Transferencia" 
+                                                                        value={transferReference} 
+                                                                        onChange={e => setTransferReference(e.target.value)} 
+                                                                    />
+                                                                )}
                                                             </div>
                                                         )}
                     
@@ -841,19 +936,32 @@ const addToCart = (product: Product) => {
                                                                 <span>Total Pagado</span>
                                                                 <span>${selectedHistorySale?.total.toLocaleString()}</span>
                                                             </div>
-                                                            <div className="flex justify-end pt-1 gap-2">
+                                                             <div className="flex justify-end pt-1 gap-2">
                                                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase
                                                                     ${selectedHistorySale?.paymentMethod === 'cash' ? 'bg-emerald-100 text-emerald-700' :
                                                                         selectedHistorySale?.paymentMethod === 'card' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'}
-                                                                `}>
+                                                                    `}>
                                                                     Método: {selectedHistorySale?.paymentMethod === 'cash' ? 'Efectivo' : selectedHistorySale?.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
                                                                 </span>
                                                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase
                                                                     ${selectedHistorySale?.paymentType === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}
-                                                                `}>
+                                                                    `}>
                                                                     Tipo: {selectedHistorySale?.paymentType === 'credito' ? 'Crédito' : 'Contado'}
                                                                 </span>
                                                             </div>
+                                                            
+                                                            {/* Botón para agregar/editar factura */}
+                                                            {selectedHistorySale && (
+                                                                <div className="pt-4 border-t dark:border-slate-800">
+                                                                    <button 
+                                                                        onClick={() => handleEditInvoice(selectedHistorySale)}
+                                                                        className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">receipt_long</span>
+                                                                        {selectedHistorySale.billingInvoiceNumber ? 'Editar Factura' : 'Agregar Factura'}
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

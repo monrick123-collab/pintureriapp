@@ -14,10 +14,10 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [bulkProducts, setBulkProducts] = useState<Product[]>([]);
     const [requests, setRequests] = useState<PackagingRequest[]>([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [activeTab, setActiveTab] = useState<'new' | 'history' | 'drums'>('new');
 
     const [bulkId, setBulkId] = useState('');
-    const [targetType, setTargetType] = useState<'litro' | 'galon'>('litro');
+    const [targetType, setTargetType] = useState<'cuarto_litro' | 'medio_litro' | 'litro' | 'galon'>('cuarto_litro');
     const [drumQty, setDrumQty] = useState(1);
     const [branchId, setBranchId] = useState('');
     const [branches, setBranches] = useState<any[]>([]);
@@ -41,8 +41,40 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         return idx >= 0 ? idx : (status === 'cancelled' ? -1 : 0);
     };
 
+    const formatPackageType = (type: string) => {
+        switch (type) {
+            case 'cuarto_litro': return '¼ LITRO (0.25 L)';
+            case 'medio_litro': return '½ LITRO (0.5 L)';
+            case 'litro': return 'LITRO (1 L)';
+            case 'galon': return 'GALÓN (3.8 L)';
+            default: return type.toUpperCase();
+        }
+    };
+
+    const getLitersPerPackage = (type: string): number => {
+        switch (type) {
+            case 'cuarto_litro': return 0.25;
+            case 'medio_litro': return 0.5;
+            case 'litro': return 1;
+            case 'galon': return 3.8;
+            default: return 0;
+        }
+    };
+
+    const calculatePackagesPerDrum = (drumQty: number, packageType: string): number => {
+        const litersPerPackage = getLitersPerPackage(packageType);
+        if (litersPerPackage === 0) return 0;
+        const totalLiters = drumQty * 200; // Cada tambo es 200L
+        return Math.floor(totalLiters / litersPerPackage);
+    };
+
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    
+    // Estados para tabla de tambos
+    const [drumProducts, setDrumProducts] = useState<Product[]>([]);
+    const [drumInventory, setDrumInventory] = useState<Record<string, Record<string, number>>>({});
+    const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
 
     useEffect(() => {
         loadData();
@@ -61,13 +93,40 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                 ),
                 InventoryService.getBranches()
             ]);
-            setBulkProducts(prods.filter(p => (p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L')));
+            
+            // Filtrar productos de tambo
+            const drumProds = prods.filter(p => (p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L'));
+            setBulkProducts(drumProds);
+            setDrumProducts(drumProds);
             setRequests(requestsData as unknown as PackagingRequest[]);
             setBranches(branchesData);
+            
+            // Cargar inventario de tambos
+            await loadDrumInventory(drumProds, branchesData);
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadDrumInventory = async (drumProducts: Product[], branches: any[]) => {
+        try {
+            const inventoryData: Record<string, Record<string, number>> = {};
+            
+            // Para cada producto de tambo, obtener inventario por sucursal
+            for (const product of drumProducts) {
+                inventoryData[product.id] = {};
+                
+                // El inventario ya viene en el campo inventory del producto
+                if (product.inventory) {
+                    inventoryData[product.id] = product.inventory;
+                }
+            }
+            
+            setDrumInventory(inventoryData);
+        } catch (e) {
+            console.error('Error cargando inventario de tambos:', e);
         }
     };
 
@@ -91,7 +150,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
     const handleUpdateStatus = async (id: string, status: string) => {
         try {
-            await InventoryService.updatePackagingStatus(id, status);
+            await InventoryService.updatePackagingStatus(id, status, user.id);
             loadData();
         } catch (e: any) {
             alert("Error: " + e.message);
@@ -125,18 +184,19 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
                 <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
                     <h1 className="text-xl font-black">Envasado (Litreados)</h1>
-                    {/* Bodega crea solicitudes; Encargado solo gestiona las que llegan a su sucursal */}
-                    {isWarehouse && (
-                        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
+                    {/* Bodega y Admin ven las pestañas; Encargado solo ve la lista por defecto */}
+                    {(isWarehouse || isAdmin) && (
+                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
                             {([
                                 { key: 'new', label: 'Nueva Solicitud', icon: 'add_circle' },
-                                { key: 'history', label: 'Historial', icon: 'list' }
+                                { key: 'history', label: 'Historial', icon: 'list' },
+                                { key: 'drums', label: 'Tambos', icon: 'inventory' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => {
                                     if (tab.key === 'new' && isSub) {
                                         setShowAuth(true);
                                     } else {
-                                        setActiveTab(tab.key as 'new' | 'history')
+                                        setActiveTab(tab.key as 'new' | 'history' | 'drums')
                                     }
                                 }}
                                     className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -157,7 +217,103 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                     description="El subencargado requiere autorización para solicitar envasado."
                 />
 
-                {activeTab === 'history' || isStoreManager ? (
+                {activeTab === 'drums' ? (
+                    // TABLA DE TAMBOS POR SUCURSAL
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Barra de filtro por sucursal */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filtrar por Sucursal</label>
+                                <select
+                                    className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20"
+                                    value={selectedBranchFilter}
+                                    onChange={e => setSelectedBranchFilter(e.target.value)}
+                                >
+                                    <option value="ALL">Todas las sucursales</option>
+                                    {branches.filter(b => b.type === 'store').map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-bold ml-auto">
+                                {drumProducts.length} producto{drumProducts.length !== 1 ? 's' : ''} de tambo
+                            </span>
+                        </div>
+
+                        {/* Tabla de tambos */}
+                        <div className="mx-8 my-4 bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border dark:border-slate-800 overflow-hidden flex-1 overflow-y-auto">
+                            <table className="w-full">
+                                <thead className="border-b dark:border-slate-800">
+                                    <tr>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Producto</th>
+                                        {branches
+                                            .filter(b => b.type === 'store')
+                                            .filter(b => selectedBranchFilter === 'ALL' || b.id === selectedBranchFilter)
+                                            .map(branch => (
+                                                <th key={branch.id} className="px-6 py-5 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                                    {branch.name}
+                                                </th>
+                                            ))}
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y dark:divide-slate-800">
+                                    {drumProducts.map(product => {
+                                        // Calcular total por producto
+                                        let total = 0;
+                                        const branchQuantities = branches
+                                            .filter(b => b.type === 'store')
+                                            .filter(b => selectedBranchFilter === 'ALL' || b.id === selectedBranchFilter)
+                                            .map(branch => {
+                                                const quantity = drumInventory[product.id]?.[branch.id] || 0;
+                                                total += quantity;
+                                                return quantity;
+                                            });
+
+                                        return (
+                                            <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold">{product.name}</span>
+                                                        <span className="text-[10px] text-slate-400">{product.sku}</span>
+                                                    </div>
+                                                </td>
+                                                {branchQuantities.map((quantity, index) => {
+                                                    const branch = branches
+                                                        .filter(b => b.type === 'store')
+                                                        .filter(b => selectedBranchFilter === 'ALL' || b.id === selectedBranchFilter)[index];
+                                                    return (
+                                                        <td key={branch.id} className="px-6 py-5">
+                                                            <div className={`px-3 py-1.5 rounded-lg text-center font-black text-sm ${quantity === 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : quantity < 5 ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-green-50 dark:bg-green-900/20 text-green-500'}`}>
+                                                                {quantity.toLocaleString()} L
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="px-6 py-5">
+                                                    <div className={`px-3 py-1.5 rounded-lg text-center font-black text-sm ${total === 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : total < 10 ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-green-50 dark:bg-green-900/20 text-green-500'}`}>
+                                                        {total.toLocaleString()} L
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {drumProducts.length === 0 && (
+                                        <tr>
+                                            <td colSpan={branches.filter(b => b.type === 'store').length + 2} className="py-20 text-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">inventory</span>
+                                                    <p className="font-black text-base text-slate-400">No hay productos de tambo</p>
+                                                    <p className="text-xs text-slate-400">Agrega productos de tipo tambo en el inventario.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ) : activeTab === 'history' || isStoreManager ? (
                     <>
 
                         {/* Barra de filtro por fechas */}
@@ -214,10 +370,10 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                             <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                                                 <td className="px-8 py-5 font-bold">{r.products?.name}</td>
                                                 <td className="px-6 py-5 text-sm text-slate-500">{r.branches?.name}</td>
-                                                <td className="px-6 py-5">
+                                                 <td className="px-6 py-5">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="font-black uppercase text-xs">{r.target_package_type}</span>
-                                                        <span className="text-[10px] text-slate-400 font-bold">{r.quantity_drum} tambo{r.quantity_drum !== 1 ? 's' : ''}</span>
+                                                        <span className="font-black uppercase text-xs">{formatPackageType(r.target_package_type)}</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold">{r.quantity_drum} tambo{r.quantity_drum !== 1 ? 's' : ''} • {Math.floor((r.quantity_drum * 200) / getLitersPerPackage(r.target_package_type)).toLocaleString()} envases</span>
                                                     </div>
                                                 </td>
                                                 {/* Columna de fechas */}
@@ -355,8 +511,10 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Envase Destino</label>
                                         <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={targetType} onChange={e => setTargetType(e.target.value as any)}>
-                                            <option value="litro">LITRO</option>
-                                            <option value="galon">GALÓN</option>
+                                            <option value="cuarto_litro">¼ LITRO (0.25 L)</option>
+                                            <option value="medio_litro">½ LITRO (0.5 L)</option>
+                                            <option value="litro">LITRO (1 L)</option>
+                                            <option value="galon">GALÓN (3.8 L)</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1">
@@ -364,6 +522,25 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={drumQty} onChange={e => setDrumQty(parseInt(e.target.value) || 0)} />
                                     </div>
                                 </div>
+                                
+                                {/* Información de cálculo */}
+                                {drumQty > 0 && (
+                                    <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mt-2">
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black uppercase text-slate-400">Total Litros</span>
+                                                <p className="font-bold text-lg">{(drumQty * 200).toLocaleString()} L</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black uppercase text-slate-400">Envases a producir</span>
+                                                <p className="font-bold text-lg">{calculatePackagesPerDrum(drumQty, targetType).toLocaleString()} {formatPackageType(targetType).split(' ')[0]}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-2">
+                                            Cada tambo de 200L produce aproximadamente {Math.floor(200 / getLitersPerPackage(targetType)).toLocaleString()} envases de {formatPackageType(targetType).toLowerCase()}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase text-slate-500">Sucursal que envasa</label>
                                     <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={branchId} onChange={e => setBranchId(e.target.value)}>

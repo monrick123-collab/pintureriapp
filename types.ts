@@ -165,12 +165,14 @@ export interface Client {
   phone: string;
   taxId: string;
   address: string;
-  type: 'Individual' | 'Empresa';
+  type: 'Individual' | 'Empresa' | 'Municipio';
   municipality?: string;
   locality?: string;
   creditLimit?: number;
   creditDays?: number;
   isActiveCredit?: boolean;
+  isMunicipality?: boolean;
+  extraPercentage?: number;
 }
 
 export interface SaleItem {
@@ -193,6 +195,10 @@ export interface Sale {
   total: number;
   status: 'completed' | 'cancelled';
   paymentMethod: 'cash' | 'card' | 'transfer';
+  paymentStatus?: 'pending' | 'approved' | 'rejected';
+  transferReference?: string;
+  pendingSince?: string;
+  rejectionReason?: string;
   createdAt: string;
   items: SaleItem[];
   isWholesale: boolean;
@@ -250,7 +256,7 @@ export interface InternalSupply {
 export interface PackagingRequest {
   id: string;
   bulkProductId: string;
-  targetPackageType: 'litro' | 'galon';
+  targetPackageType: 'cuarto_litro' | 'medio_litro' | 'litro' | 'galon';
   quantityDrum: number;
   status: 'sent_to_branch' | 'received_at_branch' | 'processing' | 'completed' | 'cancelled';
   stockReleased?: boolean;
@@ -414,6 +420,36 @@ export interface StockTransferItem {
   transferId: string;
   productId: string;
   productName?: string;
+  quantity: number;
+}
+
+export interface BarterTransfer {
+  id: string;
+  fromBranchId: string;
+  fromBranchName?: string;
+  toBranchId: string;
+  toBranchName?: string;
+  folio: number;
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+  notes?: string;
+  requestedBy: string;
+  requestedByName?: string;
+  authorizedBy?: string;
+  authorizedByName?: string;
+  authorizedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  givenItems?: BarterItem[];
+  receivedItems?: BarterItem[];
+}
+
+export interface BarterItem {
+  id: string;
+  barterId: string;
+  productId: string;
+  productName?: string;
+  productSku?: string;
+  productImage?: string;
   quantity: number;
 }
 

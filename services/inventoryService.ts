@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Product, Branch, RestockRequest, SupplyOrder, StockTransfer } from '../types';
+import { Product, Branch, RestockRequest, SupplyOrder, StockTransfer, BarterTransfer, BarterItem } from '../types';
 import { NotificationService } from './notificationService';
 
 // Convertir respuesta de DB a Tipos de App
@@ -962,13 +962,54 @@ export const InventoryService = {
         }));
     },
 
-    async updatePackagingStatus(requestId: string, status: string): Promise<void> {
+    async updatePackagingStatus(requestId: string, status: string, userId?: string): Promise<void> {
         const now = new Date().toISOString();
         const update: Record<string, any> = { status, updated_at: now };
         // Guardar fecha de inicio al comenzar envasado
         if (status === 'processing') update.started_at = now;
         // Guardar fecha de terminado al completar
-        if (status === 'completed') update.completed_at = now;
+        if (status === 'completed') {
+            update.completed_at = now;
+            
+            // Cuando se completa el envasado, disminuir el inventario del tambo
+            // Primero obtenemos los detalles del request
+            const { data: request, error: fetchError } = await supabase
+                .from('packaging_requests')
+                .select('bulk_product_id, branch_id, quantity_drum, target_package_type')
+                .eq('id', requestId)
+                .single();
+            
+            if (!fetchError && request && request.bulk_product_id && request.branch_id && request.quantity_drum && request.target_package_type) {
+                // Calcular litros por tipo de envase
+                const getLitersPerPackage = (type: string): number => {
+                    switch (type) {
+                        case 'cuarto_litro': return 0.25;
+                        case 'medio_litro': return 0.5;
+                        case 'litro': return 1;
+                        case 'galon': return 3.8;
+                        default: return 0;
+                    }
+                };
+                
+                const litersPerPackage = getLitersPerPackage(request.target_package_type);
+                // Cada tambo es 200L, así que disminuimos 200 litros por cada tambo
+                const quantityToDecrease = request.quantity_drum * 200; // 200 litros por tambo
+                
+                // Llamamos a la función RPC para disminuir el inventario
+                const { error: consumptionError } = await supabase.rpc('process_internal_consumption', {
+                    p_product_id: request.bulk_product_id,
+                    p_branch_id: request.branch_id,
+                    p_user_id: userId || 'system',
+                    p_quantity: quantityToDecrease,
+                    p_reason: `Envasado a ${request.target_package_type} (${litersPerPackage} L c/u)`
+                });
+                
+                if (consumptionError) {
+                    console.error('Error al disminuir inventario:', consumptionError);
+                    // No lanzamos error para no bloquear la actualización de estado
+                }
+            }
+        }
 
         const { error } = await supabase
             .from('packaging_requests')
@@ -1149,5 +1190,213 @@ export const InventoryService = {
 
         const { error: iError } = await supabase.from('stock_transfer_items').insert(transferItems);
         if (iError) throw iError;
+    },
+
+    // --- BARTER SYSTEM (TRUEQUES) ---
+
+    async getBarterTransfers(branchId?: string, startDate?: string, endDate?: string): Promise<BarterTransfer[]> {
+        let query = supabase
+            .from('barter_transfers')
+            .select(`
+                *,
+                from_branch:branches!from_branch_id(name),
+                to_branch:branches!to_branch_id(name)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (branchId) {
+            query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
+        }
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return (data || []).map(t => ({
+            ...t,
+            fromBranchName: (t.from as any)?.name,
+            toBranchName: (t.to as any)?.name,
+            createdAt: t.created_at,
+            updatedAt: t.updated_at,
+            requestedBy: t.requested_by,
+            authorizedBy: t.authorized_by,
+            authorizedAt: t.authorized_at
+        }));
+    },
+
+    async getBarterDetail(barterId: string): Promise<BarterTransfer> {
+        const { data, error } = await supabase
+            .from('barter_transfers')
+            .select(`
+                *,
+                from:branches!from_branch_id (name),
+                to:branches!to_branch_id (name),
+                given:barter_given_items (
+                    *,
+                    product:products ( name, sku, image )
+                ),
+                received:barter_received_items (
+                    *,
+                    product:products ( name, sku, image )
+                )
+            `)
+            .eq('id', barterId)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            ...data,
+            fromBranchName: (data.from as any)?.name,
+            toBranchName: (data.to as any)?.name,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            givenItems: (data.given || []).map((i: any) => ({
+                id: i.id,
+                barterId: i.barter_id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                productName: i.product?.name,
+                productSku: i.product?.sku,
+                productImage: i.product?.image
+            })),
+            receivedItems: (data.received || []).map((i: any) => ({
+                id: i.id,
+                barterId: i.barter_id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                productName: i.product?.name,
+                productSku: i.product?.sku,
+                productImage: i.product?.image
+            }))
+        };
+    },
+
+    async createBarterTransfer(params: { 
+        fromBranchId: string, 
+        toBranchId: string, 
+        requestedBy: string, 
+        notes: string, 
+        givenItems: { productId: string, quantity: number }[],
+        receivedItems: { productId: string, quantity: number }[]
+    }): Promise<void> {
+        // Get next folio
+        const { data: folio } = await supabase.rpc('get_next_folio', {
+            p_branch_id: params.fromBranchId,
+            p_folio_type: 'barter'
+        });
+
+        const { data: barter, error: bError } = await supabase
+            .from('barter_transfers')
+            .insert({
+                from_branch_id: params.fromBranchId,
+                to_branch_id: params.toBranchId,
+                folio: folio || 1,
+                notes: params.notes,
+                requested_by: params.requestedBy,
+                status: 'pending'
+            })
+            .select()
+            .single();
+
+        if (bError) throw bError;
+
+        const givenRows = params.givenItems.map(i => ({
+            barter_id: barter.id,
+            product_id: i.productId,
+            quantity: i.quantity
+        }));
+
+        const receivedRows = params.receivedItems.map(i => ({
+            barter_id: barter.id,
+            product_id: i.productId,
+            quantity: i.quantity
+        }));
+
+        const [gRes, rRes] = await Promise.all([
+            supabase.from('barter_given_items').insert(givenRows),
+            supabase.from('barter_received_items').insert(receivedRows)
+        ]);
+
+        if (gRes.error) throw gRes.error;
+        if (rRes.error) throw rRes.error;
+
+        // Notification to admins
+        try {
+            const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', params.fromBranchId).single();
+            const { data: toBranch } = await supabase.from('branches').select('name').eq('id', params.toBranchId).single();
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nuevo Trueque Solicitado',
+                message: `${fromBranch?.name || params.fromBranchId} solicitó un trueque con ${toBranch?.name || params.toBranchId}. Folio #B-${barter.folio.toString().padStart(4, '0')}`,
+                actionUrl: '/transfers?tab=barter_history'
+            });
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async approveBarterTransfer(barterId: string, adminId: string): Promise<void> {
+        // First update status to approved
+        const { error: updateError } = await supabase
+            .from('barter_transfers')
+            .update({ 
+                status: 'approved', 
+                authorized_by: adminId, 
+                authorized_at: new Date().toISOString() 
+            })
+            .eq('id', barterId);
+        
+        if (updateError) throw updateError;
+
+        // Then execute logic to adjust inventory
+        const { error: processError } = await supabase.rpc('process_barter_transfer', {
+            p_barter_id: barterId
+        });
+
+        if (processError) throw processError;
+
+        // Notification to requesting branch
+        try {
+            const { data: barter } = await supabase.from('barter_transfers').select('from_branch_id, to_branch_id, folio').eq('id', barterId).single();
+            if (barter) {
+                const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', barter.from_branch_id).single();
+                const { data: toBranch } = await supabase.from('branches').select('name').eq('id', barter.to_branch_id).single();
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Trueque Aprobado',
+                    message: `Trueque #B-${barter.folio.toString().padStart(4, '0')} entre ${fromBranch?.name || barter.from_branch_id} y ${toBranch?.name || barter.to_branch_id} ha sido aprobado y procesado.`,
+                    actionUrl: '/transfers?tab=barter_history'
+                });
+            }
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async rejectBarterTransfer(barterId: string): Promise<void> {
+        const { error } = await supabase
+            .from('barter_transfers')
+            .update({ status: 'rejected' })
+            .eq('id', barterId);
+        if (error) throw error;
+
+        // Notification to requesting branch
+        try {
+            const { data: barter } = await supabase.from('barter_transfers').select('from_branch_id, to_branch_id, folio').eq('id', barterId).single();
+            if (barter) {
+                const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', barter.from_branch_id).single();
+                const { data: toBranch } = await supabase.from('branches').select('name').eq('id', barter.to_branch_id).single();
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Trueque Rechazado',
+                    message: `Trueque #B-${barter.folio.toString().padStart(4, '0')} entre ${fromBranch?.name || barter.from_branch_id} y ${toBranch?.name || barter.to_branch_id} ha sido rechazado.`,
+                    actionUrl: '/transfers?tab=barter_history'
+                });
+            }
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
     }
 };

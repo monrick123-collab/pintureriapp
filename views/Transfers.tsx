@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Branch, StockTransfer, UserRole, CartItem } from '../types';
+import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem } from '../types';
 import { InventoryService } from '../services/inventoryService';
 
 interface TransfersProps {
@@ -11,14 +11,18 @@ interface TransfersProps {
 
 const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+    const [barters, setBarters] = useState<BarterTransfer[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
+    const [receivedCart, setReceivedCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [isBarterDetailOpen, setIsBarterDetailOpen] = useState(false);
     const [selectedTransfer, setSelectedTransfer] = useState<StockTransfer | null>(null);
-    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [selectedBarter, setSelectedBarter] = useState<BarterTransfer | null>(null);
+    const [activeTab, setActiveTab] = useState<'new' | 'history' | 'barter_new' | 'barter_history'>('new');
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
     const [notes, setNotes] = useState('');
@@ -40,16 +44,25 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const loadData = async (sd = startDate, ed = endDate) => {
         try {
             setLoading(true);
-            const [t, p, b] = await Promise.all([
+            const [t, b_trans, p, b] = await Promise.all([
                 InventoryService.getStockTransfers(
                     isAdmin ? undefined : branchId,
                     sd || undefined,
                     ed || undefined
                 ),
+                InventoryService.getBarterTransfers(
+                    isAdmin ? undefined : branchId,
+                    sd || undefined,
+                    ed || undefined
+                ).catch(err => {
+                    console.error("No se pudieron cargar los trueques:", err);
+                    return [] as BarterTransfer[];
+                }),
                 InventoryService.getProductsByBranch(branchId),
                 InventoryService.getBranches()
             ]);
             setTransfers(t);
+            setBarters(b_trans);
             setProducts(p);
             setBranches(b.filter(branch => branch.id !== branchId));
         } catch (e) {
@@ -60,7 +73,13 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     };
 
     const addToCart = (p: Product) => {
+        const available = p.inventory[branchId] || 0;
         const existing = cart.find(item => item.id === p.id);
+        const currentQty = existing ? existing.quantity : 0;
+        if (currentQty + 1 > available) {
+            alert(`No hay suficiente stock disponible. Stock actual: ${available}`);
+            return;
+        }
         if (existing) {
             setCart(cart.map(item => item.id === p.id ? { ...item, quantity: item.quantity + 1 } : item));
         } else {
@@ -73,7 +92,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     };
 
     const updateQty = (id: string, qty: number) => {
-        setCart(cart.map(item => item.id === id ? { ...item, quantity: Math.max(0, qty) } : item));
+        const product = products.find(p => p.id === id);
+        const available = product ? product.inventory[branchId] || 0 : Infinity;
+        const clamped = Math.max(0, Math.min(qty, available));
+        setCart(cart.map(item => item.id === id ? { ...item, quantity: clamped } : item));
     };
 
     const handleSubmit = async () => {
@@ -114,6 +136,99 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
     };
 
+    const addToReceivedCart = (p: Product) => {
+        const existing = receivedCart.find(item => item.id === p.id);
+        if (existing) {
+            setReceivedCart(receivedCart.map(item => item.id === p.id ? { ...item, quantity: item.quantity + 1 } : item));
+        } else {
+            setReceivedCart([...receivedCart, { ...p, quantity: 1 }]);
+        }
+    };
+
+    const removeFromReceivedCart = (id: string) => {
+        setReceivedCart(receivedCart.filter(item => item.id !== id));
+    };
+
+    const updateReceivedQty = (id: string, qty: number) => {
+        setReceivedCart(receivedCart.map(item => item.id === id ? { ...item, quantity: Math.max(0, qty) } : item));
+    };
+
+    const handleViewBarter = async (barter: BarterTransfer) => {
+        try {
+            setLoading(true);
+            const detail = await InventoryService.getBarterDetail(barter.id);
+            setSelectedBarter(detail);
+            setIsBarterDetailOpen(true);
+        } catch (e: any) {
+            console.error("Error al cargar detalles del trueque:", e);
+            alert("Error al obtener los detalles del trueque: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBarterSubmit = async () => {
+        if (cart.length === 0 || receivedCart.length === 0 || !toBranchId) {
+            alert("Completa ambos carritos y selecciona una sucursal.");
+            return;
+        }
+        try {
+            setLoading(true);
+            await InventoryService.createBarterTransfer({
+                fromBranchId: branchId,
+                toBranchId: toBranchId,
+                requestedBy: user.id,
+                notes: notes,
+                givenItems: cart.map(c => ({ productId: c.id, quantity: c.quantity })),
+                receivedItems: receivedCart.map(r => ({ productId: r.id, quantity: r.quantity }))
+            });
+            setActiveTab('barter_history');
+            setCart([]);
+            setReceivedCart([]);
+            setToBranchId('');
+            setNotes('');
+            loadData();
+            alert("Solicitud de trueque enviada correctamente.");
+        } catch (e: any) {
+            console.error("Error en createBarterTransfer:", e);
+            alert("Error al crear trueque: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleApproveBarter = async (id: string) => {
+        if (!isAdmin) return;
+        if (!confirm("¿Estás seguro de aprobar este trueque? El inventario se ajustará automáticamente.")) return;
+        try {
+            setLoading(true);
+            await InventoryService.approveBarterTransfer(id, user.id);
+            setIsBarterDetailOpen(false);
+            loadData();
+            alert("Trueque aprobado y procesado correctamente.");
+        } catch (e: any) {
+            console.error("Error al aprobar trueque:", e);
+            alert("Error al aprobar: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRejectBarter = async (id: string) => {
+        if (!isAdmin) return;
+        if (!confirm("¿Estás seguro de rechazar este trueque?")) return;
+        try {
+            setLoading(true);
+            await InventoryService.rejectBarterTransfer(id);
+            setIsBarterDetailOpen(false);
+            loadData();
+        } catch (e: any) {
+            console.error("Error al rechazar trueque:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
@@ -133,9 +248,11 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
                             {([
                                 { key: 'new', label: 'Nuevo Traspaso', icon: 'add_circle' },
-                                { key: 'history', label: 'Historial', icon: 'list' }
+                                { key: 'history', label: 'Historial', icon: 'list' },
+                                { key: 'barter_new', label: 'Nuevo Trueque', icon: 'swap_horiz' },
+                                { key: 'barter_history', label: 'Historial Trueques', icon: 'history_edu' }
                             ] as const).map(tab => (
-                                <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
+                                <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
                                     className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
                                 </button>
@@ -146,8 +263,9 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
                 {activeTab === 'history' ? (
                     <>
-                        {/* Filtro por fechas */}
+                        {/* Historial de Traspasos (Existente) */}
                         <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            {/* ... (Contenido de filtros existente) */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -157,9 +275,6 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
                             <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
-                            {(startDate || endDate) && (
-                                <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>
-                            )}
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{transfers.length} traspaso{transfers.length !== 1 ? 's' : ''}</span>
                         </div>
 
@@ -172,7 +287,6 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                 <th className="px-8 py-5">Folio</th>
                                                 <th className="px-8 py-5">Origen</th>
                                                 <th className="px-8 py-5">Destino</th>
-                                                <th className="px-8 py-5">Fecha</th>
                                                 <th className="px-8 py-5 text-center">Estado</th>
                                                 <th className="px-8 py-5 text-right">Acciones</th>
                                             </tr>
@@ -183,36 +297,69 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                     <td className="px-8 py-5 font-black text-primary">#T-{t.folio.toString().padStart(4, '0')}</td>
                                                     <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{t.fromBranchName}</td>
                                                     <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{t.toBranchName}</td>
-                                                    <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(t.createdAt).toLocaleDateString()}</td>
                                                     <td className="px-8 py-5 text-center">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                                                            t.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                                'bg-amber-500/10 text-amber-500'
-                                                            }`}>
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'completed' ? 'bg-green-500/10 text-green-500' : t.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
                                                             {t.status === 'pending' ? 'Pendiente' : t.status === 'in_transit' ? 'En Tránsito' : t.status === 'completed' ? 'Completado' : 'Cancelado'}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
-                                                        <button
-                                                            onClick={() => handleViewTransfer(t)}
-                                                            className="p-2 text-slate-400 hover:text-primary transition-colors"
-                                                        >
+                                                        <button onClick={() => handleViewTransfer(t)} className="p-2 text-slate-400 hover:text-primary transition-colors">
                                                             <span className="material-symbols-outlined">visibility</span>
                                                         </button>
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {transfers.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={6} className="py-20 text-center">
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">local_shipping</span>
-                                                            <p className="font-black text-base text-slate-400">Sin traspasos</p>
-                                                            <p className="text-xs text-slate-400">Filtra por fechas o crea el primer traspaso de inventario.</p>
-                                                        </div>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : activeTab === 'barter_history' ? (
+                    <>
+                        {/* Historial de Trueques */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            <span className="text-[10px] text-slate-400 font-bold ml-auto">{barters.length} trueque{barters.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-7xl mx-auto space-y-6">
+                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                <th className="px-8 py-5">Folio</th>
+                                                <th className="px-8 py-5">Sucursal</th>
+                                                <th className="px-8 py-5 text-center">Estado</th>
+                                                <th className="px-8 py-5 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-700">
+                                            {barters.map(b => (
+                                                <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                                    <td className="px-8 py-5 font-black text-primary">#B-{b.folio.toString().padStart(4, '0')}</td>
+                                                    <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">
+                                                        {b.fromBranchId === branchId ? b.toBranchName : b.fromBranchName}
+                                                        <span className="ml-2 px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[9px] text-slate-400 uppercase">
+                                                            {b.fromBranchId === branchId ? 'Solicitado' : 'Recibido'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-center">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                                                            b.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                                                            b.status === 'rejected' || b.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                            b.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
+                                                            'bg-amber-500/10 text-amber-500'
+                                                        }`}>
+                                                            {b.status === 'pending' ? 'Pendiente' : b.status === 'approved' ? 'Aprobado' : b.status === 'completed' ? 'Completado' : b.status === 'rejected' ? 'Rechazado' : 'Cancelado'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <button onClick={() => handleViewBarter(b)} className="p-2 text-slate-400 hover:text-primary transition-colors">
+                                                            <span className="material-symbols-outlined">visibility</span>
+                                                        </button>
                                                     </td>
                                                 </tr>
-                                            )}
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -220,7 +367,6 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                         </div>
                     </>
                 ) : (
-
                     <div className="flex-1 flex overflow-hidden">
                         <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 mx-8 my-4 rounded-3xl shadow-sm border dark:border-slate-800 overflow-hidden">
                             {/* Selector de Productos */}
@@ -241,7 +387,6 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Buscar Producto</label>
                                             <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
                                                 <input
                                                     className="w-full pl-12 pr-6 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
                                                     placeholder="Nombre o SKU..."
@@ -252,96 +397,83 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-6 pt-0 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto p-6 pt-0 grid grid-cols-2 lg:grid-cols-3 gap-6 custom-scrollbar">
                                     {filteredProducts.map(p => (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => addToCart(p)}
-                                            className="p-4 bg-white dark:bg-slate-800 rounded-3xl text-left border border-slate-200 dark:border-slate-700 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group active:scale-95 flex flex-col h-[200px]"
-                                        >
+                                        <div key={p.id} className="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-[280px]">
                                             <div className="size-16 w-full flex-shrink-0 bg-slate-100 dark:bg-slate-700 rounded-2xl p-2 mb-3 group-hover:scale-105 transition-transform duration-300 mx-auto">
                                                 <img src={p.image} className="w-full h-full object-contain" alt={p.name} />
                                             </div>
                                             <div className="flex-1 flex flex-col w-full min-w-0">
-                                                <p className="font-black text-slate-800 dark:text-white text-sm line-clamp-2 leading-tight mb-1">{p.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-auto">{p.sku}</p>
-                                                <div className="flex justify-between items-end shrink-0">
-                                                    <span className="text-xs font-black text-slate-400">Existencia: <span className="text-primary">{p.inventory[branchId] || 0}</span></span>
-                                                    <span className="material-symbols-outlined text-primary">add_circle</span>
+                                                <p className="font-black text-slate-800 dark:text-white text-xs line-clamp-1 mb-1">{p.name}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-tight">{p.sku}</p>
+                                                <p className="text-[10px] font-black text-slate-400 mb-3">Existencia: <span className="text-primary">{p.inventory[branchId] || 0}</span></p>
+                                                <div className="mt-auto space-y-2">
+                                                    <button onClick={() => addToCart(p)} className="w-full py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-primary hover:text-white transition-all active:scale-95">
+                                                        Yo Doy
+                                                    </button>
+                                                    {activeTab === 'barter_new' && (
+                                                        <button onClick={() => addToReceivedCart(p)} className="w-full py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all active:scale-95">
+                                                            Yo Recibo
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </button>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Carrito / Traspaso */}
+                            {/* Carritos Sidebar */}
                             <div className="w-full md:w-96 lg:w-[400px] flex flex-col bg-white dark:bg-slate-800 shrink-0">
-                                <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30">
-                                    <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Materiales a Traspasar</h4>
-                                </div>
-                                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                                    {cart.map(item => (
-                                        <div key={item.id} className="flex gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 group">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm text-slate-800 dark:text-white truncate">{item.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase">{item.sku}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <button onClick={() => item.quantity <= 1 ? removeFromCart(item.id) : updateQty(item.id, item.quantity - 1)} className="size-8 rounded-lg bg-white dark:bg-slate-800 border dark:border-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                                                        <span className="material-symbols-outlined text-sm">remove</span>
-                                                    </button>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        className="w-12 text-center text-xs font-black bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none p-0 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        value={item.quantity === 0 ? '' : item.quantity}
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value) || 0;
-                                                            updateQty(item.id, val);
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            if (!e.target.value || parseInt(e.target.value) === 0) {
-                                                                removeFromCart(item.id);
-                                                            }
-                                                        }}
-                                                    />
-                                                    <button onClick={() => updateQty(item.id, item.quantity + 1)} className="size-8 rounded-lg bg-primary text-white shadow-lg flex items-center justify-center hover:scale-110">
-                                                        <span className="material-symbols-outlined text-sm">add</span>
-                                                    </button>
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                                    {/* Carrito de Salida */}
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-4">Lo que entrego</h4>
+                                        <div className="space-y-3">
+                                            {cart.map(item => (
+                                                <div key={item.id} className="flex items-center justify-between p-3 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20">
+                                                    <span className="text-xs font-bold truncate pr-2">{item.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-black">x{item.quantity}</span>
+                                                        <button onClick={() => removeFromCart(item.id)} className="text-red-500"><span className="material-symbols-outlined text-sm">close</span></button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex flex-col items-end justify-between">
-                                                <button onClick={() => removeFromCart(item.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                                                    <span className="material-symbols-outlined text-sm">delete</span>
-                                                </button>
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                    {cart.length === 0 && (
-                                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                                            <div className="size-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 text-slate-300 opacity-50">
-                                                <span className="material-symbols-outlined text-4xl">inventory_2</span>
+                                    </div>
+
+                                    {/* Carrito de Entrada (Solo para Trueques) */}
+                                    {activeTab === 'barter_new' && (
+                                        <div>
+                                            <h4 className="text-[10px] font-black uppercase text-blue-500 tracking-widest mb-4">Lo que recibo</h4>
+                                            <div className="space-y-3">
+                                                {receivedCart.map(item => (
+                                                    <div key={item.id} className="flex items-center justify-between p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                                                        <span className="text-xs font-bold truncate pr-2">{item.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-black">x{item.quantity}</span>
+                                                            <button onClick={() => removeFromReceivedCart(item.id)} className="text-red-500"><span className="material-symbols-outlined text-sm">close</span></button>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <p className="text-slate-400 font-bold text-sm">Selecciona productos para traspasar</p>
                                         </div>
                                     )}
                                 </div>
+
                                 <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-4">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Notas / Observaciones</label>
-                                        <textarea
-                                            className="w-full p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm text-xs font-medium resize-none h-20"
-                                            placeholder="Ej: Traspaso por falta de stock..."
-                                            value={notes}
-                                            onChange={e => setNotes(e.target.value)}
-                                        />
-                                    </div>
+                                    <textarea
+                                        className="w-full p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm text-xs font-medium resize-none h-20"
+                                        placeholder="Notas..."
+                                        value={notes}
+                                        onChange={e => setNotes(e.target.value)}
+                                    />
                                     <button
-                                        onClick={handleSubmit}
-                                        disabled={cart.length === 0 || !toBranchId || loading}
-                                        className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 uppercase text-sm tracking-wide hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                        onClick={activeTab === 'barter_new' ? handleBarterSubmit : handleSubmit}
+                                        disabled={loading || !toBranchId || (activeTab === 'new' ? cart.length === 0 : (cart.length === 0 || receivedCart.length === 0))}
+                                        className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl uppercase text-xs tracking-wide hover:scale-[1.02] transition-all disabled:opacity-50"
                                     >
-                                        Confirmar Traspaso
+                                        {activeTab === 'barter_new' ? 'Enviar Trueque' : 'Confirmar Traspaso'}
                                     </button>
                                 </div>
                             </div>
@@ -427,6 +559,102 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Detalles del Trueque */}
+                {isBarterDetailOpen && selectedBarter && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col scale-in-95 animate-in">
+                            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">swap_horiz</span>
+                                        Detalle de Trueque #B-{selectedBarter.folio.toString().padStart(4, '0')}
+                                    </h3>
+                                    <p className="text-slate-500 text-sm font-medium mt-1">
+                                        Estado: <span className="font-bold uppercase tracking-widest">{selectedBarter.status}</span>
+                                    </p>
+                                </div>
+                                <button onClick={() => setIsBarterDetailOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="p-8 overflow-y-auto max-h-[70vh] space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Lo que Entrega */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">arrow_upward</span>
+                                            {selectedBarter.fromBranchName} Entrega
+                                        </h4>
+                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-800 overflow-hidden text-xs">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-slate-100 dark:bg-slate-900">
+                                                    <tr className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                                                        <th className="px-4 py-3">Producto</th>
+                                                        <th className="px-4 py-3 text-right">Cant.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y dark:divide-slate-800">
+                                                    {selectedBarter.givenItems?.map((item: any) => (
+                                                        <tr key={item.id}>
+                                                            <td className="px-4 py-3 font-bold">{item.productName}</td>
+                                                            <td className="px-4 py-3 text-right font-black">{item.quantity}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Lo que Recibe */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">arrow_downward</span>
+                                            {selectedBarter.fromBranchName} Recibe de {selectedBarter.toBranchName}
+                                        </h4>
+                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-800 overflow-hidden text-xs">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-slate-100 dark:bg-slate-900">
+                                                    <tr className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                                                        <th className="px-4 py-3">Producto</th>
+                                                        <th className="px-4 py-3 text-right">Cant.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y dark:divide-slate-800">
+                                                    {selectedBarter.receivedItems?.map((item: any) => (
+                                                        <tr key={item.id}>
+                                                            <td className="px-4 py-3 font-bold">{item.productName}</td>
+                                                            <td className="px-4 py-3 text-right font-black">{item.quantity}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {selectedBarter.notes && (
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-800">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Notas / Observaciones</p>
+                                        <p className="text-sm font-medium">{selectedBarter.notes}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {isAdmin && selectedBarter.status === 'pending' && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
+                                    <button onClick={() => handleRejectBarter(selectedBarter.id)} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/30 text-red-500 font-black rounded-2xl text-[10px] uppercase hover:bg-red-50 transition-colors">
+                                        Rechazar
+                                    </button>
+                                    <button onClick={() => handleApproveBarter(selectedBarter.id)} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl text-[10px] uppercase shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                                        Aprobar y Procesar
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -18,12 +18,14 @@ export const ClientService = {
             phone: c.phone || '',
             taxId: c.tax_id || '',
             address: c.address || '',
-            type: c.type as 'Individual' | 'Empresa',
+            type: c.type as 'Individual' | 'Empresa' | 'Municipio',
             municipality: c.municipality,
             locality: c.locality,
             creditLimit: c.credit_limit,
             creditDays: c.credit_days,
-            isActiveCredit: c.is_active_credit
+            isActiveCredit: c.is_active_credit,
+            isMunicipality: c.is_municipality || false,
+            extraPercentage: c.extra_percentage || 0
         }));
     },
 
@@ -41,7 +43,9 @@ export const ClientService = {
                 locality: client.locality,
                 credit_limit: client.creditLimit,
                 credit_days: client.creditDays,
-                is_active_credit: client.isActiveCredit
+                is_active_credit: client.isActiveCredit,
+                is_municipality: client.isMunicipality || false,
+                extra_percentage: client.extraPercentage || 0
             }])
             .select()
             .single();
@@ -60,7 +64,9 @@ export const ClientService = {
             locality: data.locality,
             creditLimit: data.credit_limit,
             creditDays: data.credit_days,
-            isActiveCredit: data.is_active_credit
+            isActiveCredit: data.is_active_credit,
+            isMunicipality: data.is_municipality || false,
+            extraPercentage: data.extra_percentage || 0
         };
     },
 
@@ -77,6 +83,8 @@ export const ClientService = {
         if (client.creditLimit !== undefined) updates.credit_limit = client.creditLimit;
         if (client.creditDays !== undefined) updates.credit_days = client.creditDays;
         if (client.isActiveCredit !== undefined) updates.is_active_credit = client.isActiveCredit;
+        if (client.isMunicipality !== undefined) updates.is_municipality = client.isMunicipality;
+        if (client.extraPercentage !== undefined) updates.extra_percentage = client.extraPercentage;
         updates.updated_at = new Date().toISOString();
 
         const { error } = await supabase

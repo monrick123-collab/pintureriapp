@@ -448,7 +448,9 @@ export const SalesService = {
         }
 
         if (endDate) {
-            query = query.lte('created_at', endDate);
+            // Si la fecha es YYYY-MM-DD, la expandimos al final del día
+            const finalEndDate = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
+            query = query.lte('created_at', finalEndDate);
         }
 
         const { data, error } = await query;
@@ -731,7 +733,7 @@ export const SalesService = {
                 clients (name)
             `)
             .gte('created_at', startDate)
-            .lte('created_at', endDate)
+            .lte('created_at', endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`)
             .order('created_at', { ascending: false });
 
         if (branchId && branchId !== 'ALL') {

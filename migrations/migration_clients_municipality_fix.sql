@@ -1,29 +1,24 @@
--- MIGRACIÓN PARA CORREGIR REGISTRO DE CLIENTES MUNICIPIO
--- 1. Asegurar columnas necesarias
-ALTER TABLE public.clients 
-ADD COLUMN IF NOT EXISTS is_municipality BOOLEAN DEFAULT false,
-ADD COLUMN IF NOT EXISTS extra_percentage DECIMAL(5,2) DEFAULT 0.00;
+-- MIGRACIÓN PARA ACTUALIZAR TABLA DE CLIENTES Y SOPORTAR MUNICIPIOS
+-- Agrega columnas necesarias para el porcentaje extra y actualiza las restricciones de tipo
 
--- 2. Actualizar restricción de tipo de cuenta
--- Primero eliminamos la anterior (si tiene un nombre estándar o la buscamos)
--- Intentamos encontrar el nombre de la restricción de tipo
 DO $$ 
-DECLARE 
-    constr_name TEXT;
-BEGIN 
-    SELECT constraint_name INTO constr_name
-    FROM information_schema.table_constraints 
-    WHERE table_name='clients' AND constraint_type='CHECK' AND constraint_name LIKE '%type%';
-    
-    IF constr_name IS NOT NULL THEN
-        EXECUTE format('ALTER TABLE public.clients DROP CONSTRAINT %I', constr_name);
+BEGIN
+    -- 1. Agregar columna is_municipality si no existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='is_municipality') THEN
+        ALTER TABLE public.clients ADD COLUMN is_municipality BOOLEAN DEFAULT FALSE;
     END IF;
+
+    -- 2. Agregar columna extra_percentage si no existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='extra_percentage') THEN
+        ALTER TABLE public.clients ADD COLUMN extra_percentage DECIMAL(5,2) DEFAULT 0;
+    END IF;
+
+    -- 3. Actualizar la restricción CHECK de la columna type
+    -- Primero eliminamos la anterior si existe (el nombre suele ser clients_type_check)
+    ALTER TABLE public.clients DROP CONSTRAINT IF EXISTS clients_type_check;
+    
+    -- Agregamos la nueva restricción que permite 'Municipio'
+    ALTER TABLE public.clients ADD CONSTRAINT clients_type_check 
+    CHECK (type IN ('Individual', 'Empresa', 'Municipio'));
+
 END $$;
-
--- 3. Crear nueva restricción que incluya 'Municipio'
-ALTER TABLE public.clients 
-ADD CONSTRAINT clients_type_check 
-CHECK (type IN ('Individual', 'Empresa', 'Municipio'));
-
--- 4. Comentarios descriptivos
-COMMENT ON COLUMN public.clients.type IS 'Tipo de cliente: Individual, Empresa o Municipio';

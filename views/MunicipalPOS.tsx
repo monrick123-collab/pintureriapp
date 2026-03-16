@@ -477,8 +477,12 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 xl:grid-cols-3 gap-4 custom-scrollbar">
                                 {filtered.map(p => (
                                     <button key={p.id} onClick={() => addToCart(p)} className="p-4 bg-white dark:bg-slate-800 rounded-3xl text-left border border-transparent hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group active:scale-95">
-                                        <div className="size-20 bg-slate-100 dark:bg-slate-700 rounded-2xl p-2 mb-3 group-hover:scale-105 transition-transform mx-auto">
-                                            <img src={p.image || null} className="w-full h-full object-contain" alt={p.name} />
+                                        <div className="size-20 bg-slate-100 dark:bg-slate-700 rounded-2xl p-2 mb-3 group-hover:scale-105 transition-transform mx-auto flex items-center justify-center overflow-hidden">
+                                            {p.image ? (
+                                                <img src={p.image} className="w-full h-full object-contain" alt={p.name} />
+                                            ) : (
+                                                <span className="material-symbols-outlined text-slate-300 text-4xl">image</span>
+                                            )}
                                         </div>
                                         <p className="font-black text-slate-800 dark:text-white text-sm line-clamp-2 leading-tight mb-1">{p.name}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{p.sku}</p>

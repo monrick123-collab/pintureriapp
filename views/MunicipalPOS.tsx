@@ -61,6 +61,10 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const firstDay = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
     const [startDate, setStartDate] = useState(firstDay);
     const [endDate, setEndDate] = useState(localDate);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
+        (isAdmin || user.role === UserRole.WAREHOUSE) ? 'ALL' : branchId
+    );
 
     // Accounts / credit
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -73,7 +77,21 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [showBlockForm, setShowBlockForm] = useState(false);
     const [limitAmount, setLimitAmount] = useState('');
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { 
+        loadData(); 
+        if (isAdmin || user.role === UserRole.WAREHOUSE) {
+            loadBranches();
+        }
+    }, []);
+
+    const loadBranches = async () => {
+        try {
+            const data = await InventoryService.getBranches();
+            setBranches(data);
+        } catch (e) {
+            console.error('Error al cargar sucursales:', e);
+        }
+    };
 
     const loadData = async (sd = startDate, ed = endDate) => {
         try {
@@ -93,7 +111,8 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 setAdmins(admins);
                 
                 // 2. Cargar historial de ventas municipales
-                const historyData = await SalesService.getMunicipalSales(branchId, sd, ed).catch(() => []);
+                const hBranch = (isAdmin || user.role === UserRole.WAREHOUSE) ? selectedHistoryBranch : branchId;
+                const historyData = await SalesService.getMunicipalSales(hBranch, sd, ed).catch(() => []);
                 setHistory(historyData);
                 
                 // 3. Cargar cuentas municipales  
@@ -560,10 +579,27 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
                             </div>
-                            <div className="flex flex-col gap-1">
+                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
+
+                            {(isAdmin || user.role === UserRole.WAREHOUSE) && (
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
+                                    <select 
+                                        className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none min-w-[150px]"
+                                        value={selectedHistoryBranch}
+                                        onChange={e => setSelectedHistoryBranch(e.target.value)}
+                                    >
+                                        <option value="ALL">Todas las sucursales</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
                             {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>}
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{history.length} venta{history.length !== 1 ? 's' : ''}</span>

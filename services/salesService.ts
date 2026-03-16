@@ -448,9 +448,11 @@ export const SalesService = {
         }
 
         if (endDate) {
-            // Si la fecha es YYYY-MM-DD, la expandimos al final del día
-            const finalEndDate = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
-            query = query.lte('created_at', finalEndDate);
+            // Para incluir todo el día de endDate, buscamos menores que el día siguiente
+            const date = new Date(endDate);
+            date.setDate(date.getDate() + 1);
+            const nextDay = date.toISOString().split('T')[0];
+            query = query.lt('created_at', nextDay);
         }
 
         const { data, error } = await query;
@@ -733,7 +735,11 @@ export const SalesService = {
                 clients (name)
             `)
             .gte('created_at', startDate)
-            .lte('created_at', endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`)
+            .lt('created_at', (() => {
+                const d = new Date(endDate);
+                d.setDate(d.getDate() + 1);
+                return d.toISOString().split('T')[0];
+            })())
             .order('created_at', { ascending: false });
 
         if (branchId && branchId !== 'ALL') {

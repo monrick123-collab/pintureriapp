@@ -14,6 +14,7 @@ interface MunicipalPOSProps {
 const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const branchId = user.branchId || 'BR-MAIN';
     const isAdmin = user.role === UserRole.ADMIN;
+    const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
 
     // Products & admins
     const [products, setProducts] = useState<Product[]>([]);
@@ -63,7 +64,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [endDate, setEndDate] = useState(localDate);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
-        (isAdmin || user.role === UserRole.WAREHOUSE) ? 'ALL' : branchId
+        (isAdmin || isWarehouse) ? 'ALL' : branchId
     );
 
     // Accounts / credit
@@ -79,7 +80,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
 
     useEffect(() => { 
         loadData(); 
-        if (isAdmin || user.role === UserRole.WAREHOUSE) {
+        if (isAdmin || isWarehouse) {
             loadBranches();
         }
     }, []);
@@ -111,7 +112,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 setAdmins(admins);
                 
                 // 2. Cargar historial de ventas municipales
-                const hBranch = (isAdmin || user.role === UserRole.WAREHOUSE) ? selectedHistoryBranch : branchId;
+                const hBranch = (isAdmin || isWarehouse) ? selectedHistoryBranch : branchId;
                 const historyData = await SalesService.getMunicipalSales(hBranch, sd, ed).catch(() => []);
                 setHistory(historyData);
                 
@@ -584,7 +585,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
 
-                            {(isAdmin || user.role === UserRole.WAREHOUSE) && (
+                            {(isAdmin || isWarehouse) && (
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
                                     <select 

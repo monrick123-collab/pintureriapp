@@ -200,6 +200,7 @@ export interface Sale {
   pendingSince?: string;
   rejectionReason?: string;
   createdAt: string;
+  folio?: number;
   items: SaleItem[];
   isWholesale: boolean;
   paymentType: 'contado' | 'credito';

@@ -590,8 +590,8 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                 <span className="text-2xl font-black text-primary">${selectedSheet.totalAmount.toLocaleString()}</span>
                             </div>
 
-                            {/* Admin Actions */}
-                            {isAdmin && selectedSheet.status === 'shipped' && (
+                            {/* Admin/StoreManager Actions - Confirm Reception */}
+                            {(isAdmin || user.role === UserRole.STORE_MANAGER) && selectedSheet.status === 'shipped' && (
                                 <div className="p-6 border-t dark:border-slate-700 bg-amber-50 dark:bg-amber-900/10 flex gap-3">
                                     <button
                                         onClick={handleOpenDifferencesModal}
@@ -599,11 +599,17 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                     >
                                         Confirmar Recepción
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Admin/Warehouse Actions - Register Shipping */}
+                            {(isAdmin || isWarehouse) && selectedSheet.status === 'pending' && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10">
                                     <button
                                         onClick={() => setIsShippingModalOpen(true)}
-                                        className="flex-1 py-3 bg-blue-500 text-white font-black rounded-2xl text-[10px] uppercase"
+                                        className="w-full py-3 bg-blue-500 text-white font-black rounded-2xl text-[10px] uppercase"
                                     >
-                                        Registrar Envío
+                                        Registrar Envío / Marcar como Enviado
                                     </button>
                                 </div>
                             )}

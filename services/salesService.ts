@@ -101,8 +101,7 @@ export const SalesService = {
             .select(`
                 *,
                 sale_items (*),
-                clients (name),
-                admin:profiles!departure_admin_id(id, full_name)
+                clients (name)
             `)
             .eq('branch_id', branchId)
             .order('created_at', { ascending: false });
@@ -125,6 +124,7 @@ export const SalesService = {
             pendingSince: s.pending_since,
             rejectionReason: s.rejection_reason,
             createdAt: s.created_at,
+            folio: s.folio,
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
@@ -150,8 +150,7 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name),
-                admin:profiles!departure_admin_id(id, full_name)
+                clients (name)
             `)
             .eq('id', id)
             .single();
@@ -180,6 +179,7 @@ export const SalesService = {
             pendingSince: data.pending_since,
             rejectionReason: data.rejection_reason,
             createdAt: data.created_at,
+            folio: data.folio,
             isWholesale: data.is_wholesale,
             paymentType: data.payment_type,
             departureAdminId: data.departure_admin_id,
@@ -428,8 +428,7 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name),
-                admin:profiles!departure_admin_id(id, full_name)
+                clients (name)
             `)
             .eq('payment_status', 'pending')
             .order('pending_since', { ascending: true });
@@ -458,6 +457,7 @@ export const SalesService = {
             pendingSince: s.pending_since,
             rejectionReason: s.rejection_reason,
             createdAt: s.created_at,
+            folio: s.folio,
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
@@ -794,8 +794,7 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name),
-                admin:profiles!departure_admin_id(id, full_name)
+                clients (name)
             `)
             .gte('created_at', startDate)
             .lt('created_at', (() => {
@@ -829,6 +828,7 @@ export const SalesService = {
             pendingSince: s.pending_since,
             rejectionReason: s.rejection_reason,
             createdAt: s.created_at,
+            folio: s.folio,
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,

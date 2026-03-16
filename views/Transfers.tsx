@@ -75,7 +75,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             ]);
             
             // Cargar ofertas pendientes si el usuario puede verlas
-            if (user.role === UserRole.WAREHOUSE || user.role === UserRole.STORE_MANAGER || isAdmin) {
+            if (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB || user.role === UserRole.STORE_MANAGER || isAdmin) {
                 try {
                     const pending = await InventoryService.getPendingBarterOffers(branchId);
                     setPendingBarters(pending);

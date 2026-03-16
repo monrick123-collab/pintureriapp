@@ -20,6 +20,7 @@ type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState<TabType>('pos');
     const currentBranchId = user.branchId || 'BR-MAIN';
+    const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
 
     const [products, setProducts] = useState<Product[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -287,7 +288,8 @@ useEffect(() => {
         setHistoryLoading(true);
         try {
             const data = await SalesService.getSalesWithFilters(range.start, range.end, selectedHistoryBranch);
-            setHistorySales(data.filter(s => s.isWholesale));
+            // Filtramos solo ventas de mayoreo (o nulas si son legadas)
+            setHistorySales(data.filter(s => s.isWholesale !== false));
         } catch (e) {
             console.error(e);
         } finally {
@@ -609,7 +611,7 @@ const addToCart = (product: Product) => {
                                                     {filteredProducts.map(p => (
                                                         <div key={p.id} className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md" onClick={() => addToCart(p)}>
                                                             <div className="aspect-square bg-slate-50 dark:bg-slate-900/50 p-4 relative">
-                                                                <img src={p.image} className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                                                <img src={p.image || undefined} className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
                                                                 <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded text-[9px] font-black text-slate-500 uppercase">{p.brand}</div>
                                                             </div>
                                                             <div className="p-4">
@@ -648,7 +650,7 @@ const addToCart = (product: Product) => {
                                             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                                                 {cart.map(item => (
                                                     <div key={item.id} className="flex gap-4 animate-in slide-in-from-right-2">
-                                                        <div className="size-12 rounded-xl bg-slate-100 p-2 shrink-0"><img src={item.image} className="w-full h-full object-contain" /></div>
+                                                        <div className="size-12 rounded-xl bg-slate-100 p-2 shrink-0"><img src={item.image || undefined} className="w-full h-full object-contain" /></div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</p>
                                                             <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.name}</p>
@@ -798,30 +800,32 @@ const addToCart = (product: Product) => {
                     
                                                     {/* AI & Discount Section */}
                                                     <div className="py-2 border-t dark:border-slate-800 space-y-2">
-                                                         {/* Promotion Display */}
-                                                         {applicablePromotion && (
-                                                            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-200 dark:border-green-800">
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="material-symbols-outlined text-green-600 text-sm">local_offer</span>
-                                                                        <span className="text-xs font-black text-green-700 dark:text-green-300">{applicablePromotion.name}</span>
-                                                                    </div>
-                                                                    <span className="text-xs font-black text-green-600">-{applicablePromotion.discountPercent}%</span>
-                                                                </div>
-                                                                {applicablePromotion.autoApply && (
+                                                          {/* Promotion Display */}
+                                                          {applicablePromotion && (
+                                                             <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-200 dark:border-green-800">
+                                                                 <div className="flex items-center justify-between">
+                                                                     <div className="flex items-center gap-2">
+                                                                         <span className="material-symbols-outlined text-green-600 text-sm">local_offer</span>
+                                                                         <span className="text-xs font-black text-green-700 dark:text-green-300">{applicablePromotion.name}</span>
+                                                                     </div>
+                                                                     <span className="text-xs font-black text-green-600">-{applicablePromotion.discountPercent}%</span>
+                                                                 </div>
+                                                                 {applicablePromotion.autoApply && (
                                                                     <p className="text-[10px] text-green-600 mt-1">Se aplicará automáticamente</p>
-                                                                )}
-                                                            </div>
-                                                         )}
+                                                                 )}
+                                                             </div>
+                                                          )}
 
-                                                         {/* Request Special Promotion Button */}
-                                                         <button
-                                                            onClick={() => setShowPromotionRequest(true)}
-                                                            className="w-full py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 text-[10px] font-black uppercase tracking-wider rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
-                                                         >
-                                                            <span className="material-symbols-outlined text-sm">add_circle</span>
-                                                            Solicitar Promoción Especial
-                                                         </button>
+                                                          {/* Request Special Promotion Button - Only for non-Admin users */}
+                                                          {user.role !== UserRole.ADMIN && (
+                                                             <button
+                                                                onClick={() => setShowPromotionRequest(true)}
+                                                                className="w-full py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 text-[10px] font-black uppercase tracking-wider rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                                                             >
+                                                                <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                                Solicitar Promoción Especial
+                                                             </button>
+                                                          )}
 
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
@@ -895,137 +899,146 @@ const addToCart = (product: Product) => {
                                 
                 )}
                 {activeTab === 'history' && (
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
-                                            {/* Controls Bar */}
-                                            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end bg-white dark:bg-slate-900 p-6 rounded-2xl border dark:border-slate-800 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/10">
-                                                {/* Period Selector */}
-                                                <div className="w-full space-y-1 md:w-auto">
-                                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Periodo</label>
-                                                    <select
-                                                        className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold"
-                                                        value={historyPeriod}
-                                                        onChange={e => setHistoryPeriod(e.target.value as Period)}
-                                                    >
-                                                        <option value="today">Hoy</option>
-                                                        <option value="week">Esta Semana</option>
-                                                        <option value="fortnight">Quincena</option>
-                                                        <option value="month">Este Mes</option>
-                                                        <option value="custom">Personalizado</option>
-                                                    </select>
-                                                </div>
-                        
-                                                {(user.role === UserRole.ADMIN || user.role === UserRole.WAREHOUSE) && (
-                                                    <div className="space-y-1 w-full md:w-auto">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Sucursal</label>
-                                                        <select
-                                                            className="block w-full md:w-48 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"
-                                                            value={selectedHistoryBranch}
-                                                            onChange={e => setSelectedHistoryBranch(e.target.value)}
-                                                        >
-                                                            <option value="ALL">Todas</option>
-                                                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                                        </select>
-                                                    </div>
-                                                )}
-                        
-                                                {historyPeriod === 'custom' && (
-                                                    <div className="flex gap-4 w-full md:w-auto">
-                                                        <div className="flex-1 space-y-1">
-                                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
-                                                            <input type="date" className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold" value={customStart} onChange={e => setCustomStart(e.target.value)} />
-                                                        </div>
-                                                        <div className="flex-1 space-y-1">
-                                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
-                                                            <input type="date" className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-                                                        </div>
-                                                    </div>
-                                                )}
-                        
-                                                <div className="flex gap-4 ml-auto">
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase">Total Periodo</p>
-                                                        <p className="text-xl font-black text-primary">${historySales.reduce((acc, s) => acc + s.total, 0).toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                        
-                                            <div className="bg-white dark:bg-slate-900 rounded-3xl border dark:border-slate-800 shadow-sm overflow-hidden">
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-left">
-                                                        <thead className="bg-slate-50 dark:bg-slate-950/50 border-b dark:border-slate-800">
-                                                            <tr className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                                                                <th className="px-6 py-5">Folio / Fecha</th>
-                                                                <th className="px-6 py-5">Cliente / Pago</th>
-                                                                <th className="px-6 py-5">Atiende / Despacha</th>
-                                                                <th className="px-6 py-5 text-right">Total</th>
-                                                                <th className="px-8 py-5 text-right">Acciones</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                            {historyLoading ? (
-                                                                <tr><td colSpan={5} className="px-6 py-20 text-center text-slate-400 font-bold">Cargando historial...</td></tr>
-                                                            ) : historySales.length === 0 ? (
-                                                                <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay registros de ventas al mayoreo</td></tr>
-                                                            ) : (
-                                                                historySales.map(sale => (
-                                                                    <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                                                        <td className="px-6 py-5">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-xs font-black text-primary font-mono tracking-tighter">#{sale.id.slice(0, 8).toUpperCase()}</span>
-                                                                                <span className="text-[10px] text-slate-400 font-bold mt-1">
-                                                                                    {new Date(sale.createdAt).toLocaleDateString()}
-                                                                                </span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-6 py-5">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{sale.clientName || 'Cliente General'}</span>
-                                                                                <span className={`w-fit mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase ${sale.paymentType === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                                                    {translateStatus(sale.paymentType || 'contado')}
-                                                                                </span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-6 py-5">
-                                                                            <div className="flex flex-col gap-1">
-                                                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                                                                                    <span className="material-symbols-outlined text-xs">person</span>
-                                                                                    Despacha: <span className="text-slate-900 dark:text-slate-200">{sale.departureAdminName || 'No reg.'}</span>
-                                                                                </div>
-                                                                                {sale.branchName && (
-                                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{sale.branchName}</span>
-                                                                                )}
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-6 py-5 text-right font-black text-lg text-slate-900 dark:text-white">
-                                                                            ${sale.total.toLocaleString()}
-                                                                        </td>
-                                                                        <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
-                                                                            <button
-                                                                                onClick={() => setSelectedHistorySale(sale)}
-                                                                                className="size-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
-                                                                                title="Ver Detalles"
-                                                                            >
-                                                                                <span className="material-symbols-outlined">visibility</span>
-                                                                            </button>
-                                                                            <Link
-                                                                                to={`/wholesale-note/${sale.id}`}
-                                                                                className="size-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-all inline-flex"
-                                                                            >
-                                                                                <span className="material-symbols-outlined">print</span>
-                                                                            </Link>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))
-                                                            )}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                        
-                                        {/* Details Modal */}
-                                        {selectedHistorySale && (
+                    <>
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Filter Bar matching Municipal Style */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Periodo</label>
+                                <select
+                                    className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none min-w-[140px]"
+                                    value={historyPeriod}
+                                    onChange={e => setHistoryPeriod(e.target.value as Period)}
+                                >
+                                    <option value="today">Hoy</option>
+                                    <option value="week">Esta Semana</option>
+                                    <option value="fortnight">Quincena</option>
+                                    <option value="month">Este Mes</option>
+                                    <option value="custom">Personalizado</option>
+                                </select>
+                            </div>
+
+                            {historyPeriod === 'custom' && (
+                                <>
+                                    <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-left-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
+                                        <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={customStart} onChange={e => setCustomStart(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-left-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
+                                        <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+                                    </div>
+                                </>
+                            )}
+
+                            {(user.role === UserRole.ADMIN || isWarehouse) && (
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
+                                    <select
+                                        className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none min-w-[150px]"
+                                        value={selectedHistoryBranch}
+                                        onChange={e => setSelectedHistoryBranch(e.target.value)}
+                                    >
+                                        <option value="ALL">Todas las sucursales</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <button onClick={fetchHistorySales} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            
+                            <div className="ml-auto text-right">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ventas: {historySales.length}</p>
+                                <p className="text-xl font-black text-primary">${historySales.reduce((acc, s) => acc + s.total, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                            </div>
+                        </div>
+
+                        {/* Table matching Municipal Style */}
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">
+                                            <tr>
+                                                <th className="px-6 py-4">Folio</th>
+                                                <th className="px-6 py-4">Cliente</th>
+                                                <th className="px-6 py-4">Pago</th>
+                                                <th className="px-6 py-4">Total</th>
+                                                <th className="px-6 py-4">Estado</th>
+                                                <th className="px-6 py-4">Fecha</th>
+                                                <th className="px-6 py-4 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-700">
+                                            {historyLoading ? (
+                                                <tr><td colSpan={7} className="px-6 py-20 text-center text-slate-400 font-bold">Cargando historial...</td></tr>
+                                            ) : historySales.length === 0 ? (
+                                                <tr><td colSpan={7} className="px-8 py-12 text-center text-slate-400 italic">No hay registros de ventas al mayoreo en este período.</td></tr>
+                                            ) : (
+                                                historySales.map(sale => (
+                                                    <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                                        <td className="px-6 py-4 font-black text-primary">
+                                                            {sale.folio ? `#W-${String(sale.folio).padStart(4, '0')}` : `#${sale.id.slice(0, 8).toUpperCase()}`}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold">{sale.clientName || 'Cliente General'}</span>
+                                                                {sale.branchName && <span className="text-[10px] text-slate-400 font-black uppercase">{sale.branchName}</span>}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${sale.paymentType === 'credito' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                                {sale.paymentType === 'credito' ? 'Crédito' : 'Contado'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 font-black text-slate-900 dark:text-white">
+                                                            ${sale.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                                sale.paymentStatus === 'approved' ? 'bg-green-100 text-green-600' : 
+                                                                sale.paymentStatus === 'rejected' ? 'bg-red-100 text-red-600' :
+                                                                'bg-orange-100 text-orange-600' // pending
+                                                            }`}>
+                                                                {sale.paymentStatus === 'approved' ? 'Aprobado' : 
+                                                                 sale.paymentStatus === 'rejected' ? 'Rechazado' :
+                                                                 'Pendiente'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-slate-500">
+                                                            {new Date(sale.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => setSelectedHistorySale(sale)}
+                                                                    className="p-1 text-slate-400 hover:text-primary transition-colors"
+                                                                    title="Ver Detalles"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                                                </button>
+                                                                <Link
+                                                                    to={`/wholesale-note/${sale.id}`}
+                                                                    className="p-1 text-slate-400 hover:text-primary transition-colors"
+                                                                    title="Imprimir"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-lg">print</span>
+                                                                </Link>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Details Modal */}
+                        {selectedHistorySale && (
                                             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedHistorySale(null)}>
                                                 <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                                                     <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
@@ -1147,7 +1160,8 @@ const addToCart = (product: Product) => {
                                             </div>
                                         )}
                                      
-                    </div>
+                        </div>
+                    </>
                 )}
 
                 {/* ======================== ACCOUNTS TAB ======================== */}

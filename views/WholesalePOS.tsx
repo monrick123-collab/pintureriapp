@@ -394,6 +394,9 @@ const addToCart = (product: Product) => {
                 if (activeTab === 'history') {
                     await fetchHistorySales();
                 }
+                if (selectedHistorySale?.id === sale.id) {
+                    setSelectedHistorySale({ ...selectedHistorySale, billingInvoiceNumber: invoiceNumber });
+                }
             } catch (e) {
                 console.error(e);
                 alert('Error al actualizar factura');

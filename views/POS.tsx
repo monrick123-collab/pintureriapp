@@ -132,6 +132,23 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleEditInvoice = async (sale: Sale) => {
+    const newInvoice = window.prompt('Ingrese el número de factura:', sale.billingInvoiceNumber || '');
+    if (newInvoice !== null) {
+        try {
+            await SalesService.updateInvoiceNumber(sale.id, newInvoice);
+            alert('Factura actualizada correctamente');
+            fetchHistorySales(); // Recargar para ver el cambio
+            if (selectedHistorySale?.id === sale.id) {
+                setSelectedHistorySale({ ...selectedHistorySale, billingInvoiceNumber: newInvoice });
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error al actualizar la factura');
+        }
+    }
+  };
+
   const totalSales = historySales.reduce((acc, s) => acc + s.total, 0);
   const totalCash = historySales.filter(s => s.paymentMethod === 'cash').reduce((acc, s) => acc + s.total, 0);
   const totalCard = historySales.filter(s => s.paymentMethod === 'card').reduce((acc, s) => acc + s.total, 0);
@@ -858,6 +875,17 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                                                     `}>
                           Método: {selectedHistorySale.paymentMethod === 'cash' ? 'Efectivo' : selectedHistorySale.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
                         </span>
+                      </div>
+
+                      {/* Botón para agregar/editar factura */}
+                      <div className="pt-4 border-t dark:border-slate-800">
+                          <button 
+                              onClick={() => handleEditInvoice(selectedHistorySale)}
+                              className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                              <span className="material-symbols-outlined text-sm">receipt_long</span>
+                              {selectedHistorySale.billingInvoiceNumber ? 'Editar Factura' : 'Agregar Factura'}
+                          </button>
                       </div>
                     </div>
                   </div>

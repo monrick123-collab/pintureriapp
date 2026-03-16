@@ -126,6 +126,20 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         finally { setLoading(false); }
     };
 
+    const handleEditInvoice = async (sale: any) => {
+        const newInvoice = window.prompt('Ingrese el número de factura:', sale.invoice_number || '');
+        if (newInvoice !== null) {
+            try {
+                await SalesService.updateMunicipalInvoiceNumber(sale.id, newInvoice);
+                alert('Factura actualizada correctamente');
+                loadData(); // Recargar el historial
+            } catch (e) {
+                console.error(e);
+                alert('Error al actualizar la factura');
+            }
+        }
+    };
+
     // Check block when municipality changes and paymentType is credito
     useEffect(() => {
         if (!municipality || paymentType !== 'credito') { 
@@ -618,6 +632,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 <th className="px-6 py-4">Total</th>
                                                 <th className="px-6 py-4">Estado</th>
                                                 <th className="px-6 py-4">Fecha</th>
+                                                <th className="px-6 py-4 text-center">Factura</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
@@ -644,9 +659,17 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                          </span>
                                                      </td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{fmtDate(s.created_at)}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button 
+                                                            onClick={() => handleEditInvoice(s)}
+                                                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 mx-auto transition-colors focus:ring-2 focus:ring-primary/20"
+                                                        >
+                                                            {s.invoice_number ? s.invoice_number : 'Agregar'}
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
-                                            {history.length === 0 && <tr><td colSpan={7} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
+                                            {history.length === 0 && <tr><td colSpan={8} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>

@@ -495,7 +495,7 @@ export const SalesService = {
             throw folioError;
         }
         
-        const folio = folioData || 1;
+        const folio = folioData ?? 1;
 
         // 2. Crear la venta municipal
         const { data: sale, error: saleError } = await supabase

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem } from '../types';
+import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection } from '../types';
 import { InventoryService } from '../services/inventoryService';
 
 interface TransfersProps {
@@ -12,17 +12,21 @@ interface TransfersProps {
 const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
     const [barters, setBarters] = useState<BarterTransfer[]>([]);
+    const [pendingBarters, setPendingBarters] = useState<BarterTransfer[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [receivedCart, setReceivedCart] = useState<CartItem[]>([]);
+    const [selectionCart, setSelectionCart] = useState<{ productId: string; productName: string; quantity: number }[]>([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isBarterDetailOpen, setIsBarterDetailOpen] = useState(false);
+    const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
     const [selectedTransfer, setSelectedTransfer] = useState<StockTransfer | null>(null);
     const [selectedBarter, setSelectedBarter] = useState<BarterTransfer | null>(null);
-    const [activeTab, setActiveTab] = useState<'new' | 'history' | 'barter_new' | 'barter_history'>('new');
+    const [barterWithInventory, setBarterWithInventory] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<'new' | 'history' | 'barter_new' | 'barter_history' | 'barter_pending'>('new');
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
     const [notes, setNotes] = useState('');
@@ -61,6 +65,17 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                 InventoryService.getProductsByBranch(branchId),
                 InventoryService.getBranches()
             ]);
+            
+            // Cargar ofertas pendientes si el usuario puede verlas
+            if (user.role === UserRole.WAREHOUSE || user.role === UserRole.STORE_MANAGER || isAdmin) {
+                try {
+                    const pending = await InventoryService.getPendingBarterOffers(branchId);
+                    setPendingBarters(pending);
+                } catch (e) {
+                    console.error("No se pudieron cargar ofertas pendientes:", e);
+                }
+            }
+            
             setTransfers(t);
             setBarters(b_trans);
             setProducts(p);
@@ -167,20 +182,34 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleViewPendingBarter = async (barter: BarterTransfer) => {
+        try {
+            setLoading(true);
+            const detail = await InventoryService.getBarterOfferWithInventory(barter.id);
+            setBarterWithInventory(detail);
+            setSelectedBarter(barter);
+            setIsSelectionModalOpen(true);
+        } catch (e: any) {
+            console.error("Error al cargar detalles del trueque:", e);
+            alert("Error al obtener los detalles del trueque: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleBarterSubmit = async () => {
-        if (cart.length === 0 || receivedCart.length === 0 || !toBranchId) {
-            alert("Completa ambos carritos y selecciona una sucursal.");
+        if (cart.length === 0 || !toBranchId) {
+            alert("Agrega productos a dar y selecciona una sucursal destino.");
             return;
         }
         try {
             setLoading(true);
-            await InventoryService.createBarterTransfer({
+            await InventoryService.createBarterOffer({
                 fromBranchId: branchId,
                 toBranchId: toBranchId,
                 requestedBy: user.id,
                 notes: notes,
-                givenItems: cart.map(c => ({ productId: c.id, quantity: c.quantity })),
-                receivedItems: receivedCart.map(r => ({ productId: r.id, quantity: r.quantity }))
+                givenItems: cart.map(c => ({ productId: c.id, quantity: c.quantity }))
             });
             setActiveTab('barter_history');
             setCart([]);
@@ -188,12 +217,92 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setToBranchId('');
             setNotes('');
             loadData();
-            alert("Solicitud de trueque enviada correctamente.");
+            alert("Oferta de trueque enviada correctamente. La sucursal destino seleccionará qué productos desea recibir.");
         } catch (e: any) {
-            console.error("Error en createBarterTransfer:", e);
-            alert("Error al crear trueque: " + (e.message || e.toString()));
+            console.error("Error en createBarterOffer:", e);
+            alert("Error al crear oferta de trueque: " + (e.message || e.toString()));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSelectBarterItems = async () => {
+        if (!selectedBarter || selectionCart.length === 0) {
+            alert("Selecciona al menos un producto del inventario del solicitante.");
+            return;
+        }
+        try {
+            setLoading(true);
+            await InventoryService.selectBarterItems(
+                selectedBarter.id,
+                user.id,
+                selectionCart.map(s => ({ productId: s.productId, quantity: s.quantity }))
+            );
+            setIsSelectionModalOpen(false);
+            setSelectionCart([]);
+            loadData();
+            alert("Selección enviada. El administrador revisará la solicitud.");
+        } catch (e: any) {
+            console.error("Error al seleccionar items:", e);
+            alert("Error al enviar selección: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCounterOffer = async () => {
+        if (!selectedBarter || selectionCart.length === 0) {
+            alert("Agrega productos a tu contra-oferta.");
+            return;
+        }
+        try {
+            setLoading(true);
+            await InventoryService.proposeCounterOffer(
+                selectedBarter.id,
+                user.id,
+                notes,
+                selectionCart.map(s => ({ productId: s.productId, quantity: s.quantity }))
+            );
+            setIsSelectionModalOpen(false);
+            setSelectionCart([]);
+            setNotes('');
+            loadData();
+            alert("Contra-oferta enviada correctamente.");
+        } catch (e: any) {
+            console.error("Error al enviar contra-oferta:", e);
+            alert("Error al enviar contra-oferta: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addToSelectionCart = (productId: string, productName: string, maxQty: number) => {
+        const existing = selectionCart.find(s => s.productId === productId);
+        if (existing) {
+            if (existing.quantity + 1 > maxQty) {
+                alert(`No puedes seleccionar más de ${maxQty} unidades.`);
+                return;
+            }
+            setSelectionCart(selectionCart.map(s => 
+                s.productId === productId ? { ...s, quantity: s.quantity + 1 } : s
+            ));
+        } else {
+            setSelectionCart([...selectionCart, { productId, productName, quantity: 1 }]);
+        }
+    };
+
+    const removeFromSelectionCart = (productId: string) => {
+        setSelectionCart(selectionCart.filter(s => s.productId !== productId));
+    };
+
+    const updateSelectionQty = (productId: string, qty: number, maxQty: number) => {
+        const clamped = Math.max(0, Math.min(qty, maxQty));
+        if (clamped === 0) {
+            removeFromSelectionCart(productId);
+        } else {
+            setSelectionCart(selectionCart.map(s => 
+                s.productId === productId ? { ...s, quantity: clamped } : s
+            ));
         }
     };
 
@@ -250,11 +359,15 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 { key: 'new', label: 'Nuevo Traspaso', icon: 'add_circle' },
                                 { key: 'history', label: 'Historial', icon: 'list' },
                                 { key: 'barter_new', label: 'Nuevo Trueque', icon: 'swap_horiz' },
+                                { key: 'barter_pending', label: 'Ofertas Pendientes', icon: 'inbox', badge: pendingBarters.length },
                                 { key: 'barter_history', label: 'Historial Trueques', icon: 'history_edu' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all relative ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                    {'badge' in tab && tab.badge > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">{tab.badge}</span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -348,9 +461,17 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                             b.status === 'completed' ? 'bg-green-500/10 text-green-500' :
                                                             b.status === 'rejected' || b.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
                                                             b.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
+                                                            b.status === 'pending_approval' ? 'bg-purple-500/10 text-purple-500' :
+                                                            b.status === 'counter_proposed' ? 'bg-orange-500/10 text-orange-500' :
                                                             'bg-amber-500/10 text-amber-500'
                                                         }`}>
-                                                            {b.status === 'pending' ? 'Pendiente' : b.status === 'approved' ? 'Aprobado' : b.status === 'completed' ? 'Completado' : b.status === 'rejected' ? 'Rechazado' : 'Cancelado'}
+                                                            {b.status === 'pending_offer' ? 'Oferta Enviada' : 
+                                                             b.status === 'pending_selection' ? 'Pendiente Selección' :
+                                                             b.status === 'pending_approval' ? 'Pendiente Aprobación' :
+                                                             b.status === 'counter_proposed' ? 'Contra-Oferta' :
+                                                             b.status === 'approved' ? 'Aprobado' : 
+                                                             b.status === 'completed' ? 'Completado' : 
+                                                             b.status === 'rejected' ? 'Rechazado' : 'Cancelado'}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
@@ -363,6 +484,56 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+                    </>
+                ) : activeTab === 'barter_pending' ? (
+                    <>
+                        {/* Ofertas de Trueque Pendientes */}
+                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                            <span className="text-[10px] text-slate-400 font-bold ml-auto">{pendingBarters.length} oferta{pendingBarters.length !== 1 ? 's' : ''} pendiente{pendingBarters.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-7xl mx-auto space-y-6">
+                                {pendingBarters.length === 0 ? (
+                                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-12 text-center">
+                                        <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">inbox</span>
+                                        <p className="text-slate-400 font-bold">No hay ofertas de trueque pendientes</p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                                                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <th className="px-8 py-5">Folio</th>
+                                                    <th className="px-8 py-5">Sucursal Origen</th>
+                                                    <th className="px-8 py-5 text-center">Estado</th>
+                                                    <th className="px-8 py-5 text-right">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y dark:divide-slate-700">
+                                                {pendingBarters.map(b => (
+                                                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                                        <td className="px-8 py-5 font-black text-primary">#B-{b.folio.toString().padStart(4, '0')}</td>
+                                                        <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{b.fromBranchName}</td>
+                                                        <td className="px-8 py-5 text-center">
+                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                                                                b.status === 'counter_proposed' ? 'bg-orange-500/10 text-orange-500' : 'bg-amber-500/10 text-amber-500'
+                                                            }`}>
+                                                                {b.status === 'counter_proposed' ? 'Contra-Oferta' : 'Esperando Selección'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right">
+                                                            <button onClick={() => handleViewPendingBarter(b)} className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-all">
+                                                                Ver Inventario
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </>
@@ -645,7 +816,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 )}
                             </div>
 
-                            {isAdmin && selectedBarter.status === 'pending' && (
+                            {isAdmin && selectedBarter.status === 'pending_approval' && (
                                 <div className="p-6 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
                                     <button onClick={() => handleRejectBarter(selectedBarter.id)} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/30 text-red-500 font-black rounded-2xl text-[10px] uppercase hover:bg-red-50 transition-colors">
                                         Rechazar
@@ -655,6 +826,129 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     </button>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal de Selección de Trueque Bidireccional */}
+                {isSelectionModalOpen && barterWithInventory && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col scale-in-95 animate-in max-h-[90vh]">
+                            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 shrink-0">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">swap_horiz</span>
+                                        Seleccionar Productos del Trueque #B-{barterWithInventory.folio?.toString().padStart(4, '0')}
+                                    </h3>
+                                    <p className="text-slate-500 text-sm font-medium mt-1">
+                                        {barterWithInventory.fromBranchName} ofrece productos. Selecciona qué deseas recibir de su inventario.
+                                    </p>
+                                </div>
+                                <button onClick={() => { setIsSelectionModalOpen(false); setSelectionCart([]); }} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 flex overflow-hidden">
+                                {/* Productos ofrecidos */}
+                                <div className="flex-1 overflow-y-auto p-6 border-r dark:border-slate-700">
+                                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4">
+                                        Productos que {barterWithInventory.fromBranchName} Ofrece
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {barterWithInventory.givenItems?.map((item: any) => (
+                                            <div key={item.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20">
+                                                <span className="text-xs font-bold">{item.productName}</span>
+                                                <span className="text-xs font-black text-amber-600">x{item.quantity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-8">
+                                        Inventario Disponible de {barterWithInventory.fromBranchName}
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {barterWithInventory.offeredProducts?.filter((p: any) => p.stock > 0).map((p: any) => (
+                                            <div key={p.productId} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border dark:border-slate-800">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-bold truncate pr-2">{p.productName}</span>
+                                                    <span className="text-[10px] font-black text-primary bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Stock: {p.stock}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => addToSelectionCart(p.productId, p.productName, p.stock)}
+                                                    className="w-full py-2 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase hover:bg-primary hover:text-white transition-all"
+                                                >
+                                                    Agregar a Selección
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Carrito de selección */}
+                                <div className="w-80 flex flex-col bg-slate-50 dark:bg-slate-900/50 shrink-0">
+                                    <div className="flex-1 overflow-y-auto p-6">
+                                        <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">
+                                            Tu Selección (lo que recibirás)
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {selectionCart.length === 0 ? (
+                                                <p className="text-xs text-slate-400 text-center py-4">No has seleccionado productos</p>
+                                            ) : (
+                                                selectionCart.map(s => (
+                                                    <div key={s.productId} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                                                        <span className="text-xs font-bold truncate pr-2">{s.productName}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <input 
+                                                                type="number" 
+                                                                value={s.quantity} 
+                                                                onChange={(e) => {
+                                                                    const product = barterWithInventory.offeredProducts?.find((p: any) => p.productId === s.productId);
+                                                                    if (product) {
+                                                                        updateSelectionQty(s.productId, parseInt(e.target.value) || 0, product.stock);
+                                                                    }
+                                                                }}
+                                                                className="w-14 px-2 py-1 text-center text-xs font-bold bg-white dark:bg-slate-800 rounded border dark:border-slate-700"
+                                                                min="1"
+                                                            />
+                                                            <button onClick={() => removeFromSelectionCart(s.productId)} className="text-red-500">
+                                                                <span className="material-symbols-outlined text-sm">close</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Notas (opcional)</label>
+                                            <textarea
+                                                className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl border dark:border-slate-700 text-xs resize-none h-20"
+                                                placeholder="Agregar notas..."
+                                                value={notes}
+                                                onChange={e => setNotes(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 border-t dark:border-slate-700 bg-white dark:bg-slate-800 space-y-3 shrink-0">
+                                        <button
+                                            onClick={handleSelectBarterItems}
+                                            disabled={loading || selectionCart.length === 0}
+                                            className="w-full py-3 bg-primary text-white font-black rounded-2xl text-[10px] uppercase shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50"
+                                        >
+                                            Enviar Selección
+                                        </button>
+                                        <button
+                                            onClick={handleCounterOffer}
+                                            disabled={loading}
+                                            className="w-full py-3 bg-orange-500 text-white font-black rounded-2xl text-[10px] uppercase hover:bg-orange-600 transition-all disabled:opacity-50"
+                                        >
+                                            Enviar como Contra-Oferta
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

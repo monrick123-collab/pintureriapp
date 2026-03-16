@@ -101,7 +101,8 @@ export const SalesService = {
             .select(`
                 *,
                 sale_items (*),
-                clients (name)
+                clients (name),
+                admin:profiles!departure_admin_id(id, full_name)
             `)
             .eq('branch_id', branchId)
             .order('created_at', { ascending: false });
@@ -127,6 +128,7 @@ export const SalesService = {
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
+            departureAdminName: s.admin?.full_name,
             billingBank: s.billing_bank,
             billingSocialReason: s.billing_social_reason,
             billingInvoiceNumber: s.billing_invoice_number,
@@ -139,6 +141,61 @@ export const SalesService = {
                 total: i.quantity * i.unit_price
             }))
         }));
+    },
+
+    async getSaleDetail(id: string): Promise<Sale | null> {
+        const { data, error } = await supabase
+            .from('sales')
+            .select(`
+                *,
+                branch:branches(name),
+                sale_items (*),
+                clients (name),
+                admin:profiles!departure_admin_id(id, full_name)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching sale detail:', error);
+            return null;
+        }
+
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            branchId: data.branch_id,
+            branchName: data.branch?.name,
+            clientId: data.client_id,
+            clientName: data.clients?.name,
+            subtotal: data.subtotal || 0,
+            discountAmount: data.discount_amount || 0,
+            iva: data.iva || 0,
+            total: data.total,
+            status: data.status,
+            paymentMethod: data.payment_method,
+            paymentStatus: data.payment_status || 'approved',
+            transferReference: data.transfer_reference,
+            pendingSince: data.pending_since,
+            rejectionReason: data.rejection_reason,
+            createdAt: data.created_at,
+            isWholesale: data.is_wholesale,
+            paymentType: data.payment_type,
+            departureAdminId: data.departure_admin_id,
+            departureAdminName: data.admin?.full_name,
+            billingBank: data.billing_bank,
+            billingSocialReason: data.billing_social_reason,
+            billingInvoiceNumber: data.billing_invoice_number,
+            deliveryReceiverName: data.delivery_receiver_name,
+            items: (data.sale_items || []).map((i: any) => ({
+                productId: i.product_id,
+                productName: i.product_name,
+                quantity: i.quantity,
+                price: i.unit_price,
+                total: i.quantity * i.unit_price
+            }))
+        };
     },
     
     async getAdmins(): Promise<{ id: string; name: string }[]> {
@@ -257,11 +314,11 @@ export const SalesService = {
             throw fetchError;
         }
         
-        // 2. Actualizar estado de pago (usar 'paid' en lugar de 'approved' para coincidir con la tabla existente)
+        // 2. Actualizar estado de pago
         const updateData: any = { 
-            payment_status: 'paid',
-            // Nota: La tabla municipal_sales no tiene pending_since ni rejection_reason
-            // según la estructura existente
+            payment_status: 'approved',
+            pending_since: null,
+            rejection_reason: null
         };
         
         // Solo agregar updated_at si la columna existe
@@ -345,20 +402,11 @@ export const SalesService = {
     async rejectMunicipalPayment(saleId: string, reason: string): Promise<void> {
         console.log(`Rejecting municipal sale payment: saleId=${saleId}, reason=${reason}`);
         
-        // Preparar datos de actualización
-        // Nota: La tabla municipal_sales no tiene rejection_reason según la estructura existente
-        // Mantener payment_status como 'pending' o cambiar a algo diferente
         const updateData: any = { 
-            payment_status: 'pending', // Mantener como pendiente pero con nota
-            notes: `RECHAZADO: ${reason} - ${new Date().toLocaleString()}`
+            payment_status: 'rejected',
+            rejection_reason: reason,
+            updated_at: new Date().toISOString()
         };
-        
-        // Solo agregar updated_at si la columna existe
-        try {
-            updateData.updated_at = new Date().toISOString();
-        } catch (e) {
-            console.log('Not adding updated_at to municipal_sales (column might not exist yet)');
-        }
         
         const { error } = await supabase
             .from('municipal_sales')
@@ -380,7 +428,8 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name)
+                clients (name),
+                admin:profiles!departure_admin_id(id, full_name)
             `)
             .eq('payment_status', 'pending')
             .order('pending_since', { ascending: true });
@@ -412,6 +461,7 @@ export const SalesService = {
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
+            departureAdminName: s.admin?.full_name,
             billingBank: s.billing_bank,
             billingSocialReason: s.billing_social_reason,
             billingInvoiceNumber: s.billing_invoice_number,
@@ -486,18 +536,32 @@ export const SalesService = {
             transferReference?: string;
         }
     ): Promise<string> {
-        // 1. Obtener el siguiente folio municipal
-        const { data: folioData, error: folioError } = await supabase.rpc('get_next_folio', {
-            p_branch_id: branchId,
-            p_folio_type: 'municipal'
-        });
-        
-        if (folioError) {
-            console.error('Error getting municipal folio:', folioError);
-            throw folioError;
+        // 1. Obtener el siguiente folio municipal con fallback robusto
+        let folio = 1;
+        try {
+            const { data: folioData, error: folioError } = await supabase.rpc('get_next_folio', {
+                p_branch_id: branchId,
+                p_folio_type: 'municipal'
+            });
+            
+            if (folioError) {
+                console.warn('RPC get_next_folio error, using fallback:', folioError.message);
+                // Fallback: obtener el máximo folio actual + 1
+                const { data: maxFolio } = await supabase
+                    .from('municipal_sales')
+                    .select('folio')
+                    .eq('branch_id', branchId)
+                    .order('folio', { ascending: false })
+                    .limit(1)
+                    .single();
+                folio = (maxFolio?.folio ?? 0) + 1;
+            } else {
+                folio = folioData ?? 1;
+            }
+        } catch (e) {
+            console.warn('Folio generation failed, using timestamp fallback');
+            folio = Math.floor(Date.now() / 1000) % 100000; // últimos 5 dígitos del timestamp
         }
-        
-        const folio = folioData ?? 1;
 
         // 2. Crear la venta municipal
         const { data: sale, error: saleError } = await supabase
@@ -511,7 +575,7 @@ export const SalesService = {
                 social_reason: saleData.socialReason || null,
                 rfc: saleData.rfc || null,
                 invoice_number: saleData.invoiceNumber || null,
-                authorized_exit_by: saleData.authorizedExitBy,
+                authorized_exit_by: saleData.authorizedExitBy || null,
                 delivery_receiver: saleData.deliveryReceiver,
                 payment_type: saleData.paymentType,
                 payment_method: saleData.paymentMethod,
@@ -520,11 +584,9 @@ export const SalesService = {
                 iva: saleData.iva,
                 total: saleData.total,
                 notes: saleData.notes || null,
-                // Si es transferencia o efectivo, marcar como pendiente de aprobación
-                payment_status: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? 'pending' : 'paid',
-                // Nota: La tabla usa 'pending', 'invoiced', 'paid' en lugar de 'pending', 'approved', 'rejected'
-                // Agregar transfer_reference si existe
-                ...(saleData.transferReference ? { transfer_reference: saleData.transferReference } : {})
+                payment_status: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? 'pending' : 'approved',
+                pending_since: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? new Date().toISOString() : null,
+                transfer_reference: saleData.transferReference || null
             })
             .select()
             .single();
@@ -732,7 +794,8 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name)
+                clients (name),
+                admin:profiles!departure_admin_id(id, full_name)
             `)
             .gte('created_at', startDate)
             .lt('created_at', (() => {
@@ -769,6 +832,7 @@ export const SalesService = {
             isWholesale: s.is_wholesale,
             paymentType: s.payment_type,
             departureAdminId: s.departure_admin_id,
+            departureAdminName: s.admin?.full_name,
             billingBank: s.billing_bank,
             billingSocialReason: s.billing_social_reason,
             billingInvoiceNumber: s.billing_invoice_number,
@@ -781,6 +845,228 @@ export const SalesService = {
                 total: i.quantity * i.unit_price
             }))
         }));
+    },
+
+    /**
+     * Obtiene cuentas de crédito de mayoreo
+     */
+    async getWholesaleAccounts(branchId?: string): Promise<any[]> {
+        let query = supabase
+            .from('wholesale_accounts')
+            .select(`
+                *,
+                branch:branches(name),
+                payments:wholesale_payments(*)
+            `)
+            .order('client_name', { ascending: true });
+
+        if (branchId && branchId !== 'ALL') {
+            query = query.eq('branch_id', branchId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return data || [];
+    },
+
+    /**
+     * Crea una cuenta de crédito para un cliente de mayoreo
+     */
+    async createWholesaleAccount(branchId: string, clientId: string, clientName: string, creditLimit: number = 10000): Promise<string> {
+        const { data, error } = await supabase
+            .from('wholesale_accounts')
+            .insert({
+                branch_id: branchId,
+                client_id: clientId,
+                client_name: clientName,
+                credit_limit: creditLimit,
+                balance: 0
+            })
+            .select()
+            .single();
+
+        if (error) {
+            // Si ya existe, devolver el ID existente
+            if (error.code === '23505') { // unique violation
+                const { data: existing } = await supabase
+                    .from('wholesale_accounts')
+                    .select('id')
+                    .eq('client_id', clientId)
+                    .eq('branch_id', branchId)
+                    .single();
+                return existing?.id;
+            }
+            throw error;
+        }
+
+        return data?.id;
+    },
+
+    /**
+     * Agrega un cargo (venta a crédito) a una cuenta de mayoreo
+     */
+    async addWholesaleCharge(accountId: string, amount: number, saleId: string, notes?: string, userId?: string): Promise<void> {
+        // 1. Obtener cuenta actual
+        const { data: account, error: fetchError } = await supabase
+            .from('wholesale_accounts')
+            .select('balance, credit_limit')
+            .eq('id', accountId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const newBalance = (account.balance || 0) + amount;
+
+        // 2. Verificar que no exceda el límite
+        if (newBalance > account.credit_limit) {
+            throw new Error(`El cargo excede el límite de crédito. Límite: ${account.credit_limit}, Saldo actual: ${account.balance}, Cargo: ${amount}`);
+        }
+
+        // 3. Actualizar balance
+        const { error: updateError } = await supabase
+            .from('wholesale_accounts')
+            .update({
+                balance: newBalance,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+
+        if (updateError) throw updateError;
+
+        // 4. Registrar movimiento
+        const { error: historyError } = await supabase
+            .from('wholesale_payments')
+            .insert({
+                wholesale_account_id: accountId,
+                amount,
+                payment_type: 'cargo',
+                sale_id: saleId,
+                notes,
+                registered_by: userId || 'system'
+            });
+
+        if (historyError) throw historyError;
+    },
+
+    /**
+     * Agrega un pago/abono a una cuenta de mayoreo
+     */
+    async addWholesalePayment(
+        accountId: string,
+        paymentType: 'abono' | 'pago_completo',
+        amount: number,
+        notes: string,
+        userId: string
+    ): Promise<void> {
+        // 1. Obtener cuenta actual
+        const { data: account, error: fetchError } = await supabase
+            .from('wholesale_accounts')
+            .select('balance')
+            .eq('id', accountId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const newBalance = paymentType === 'pago_completo' 
+            ? 0 
+            : Math.max(0, (account.balance || 0) - amount);
+
+        // 2. Actualizar balance
+        const { error: updateError } = await supabase
+            .from('wholesale_accounts')
+            .update({
+                balance: newBalance,
+                last_payment_date: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+
+        if (updateError) throw updateError;
+
+        // 3. Registrar movimiento
+        const { error: historyError } = await supabase
+            .from('wholesale_payments')
+            .insert({
+                wholesale_account_id: accountId,
+                amount,
+                payment_type: paymentType,
+                notes,
+                registered_by: userId
+            });
+
+        if (historyError) throw historyError;
+    },
+
+    /**
+     * Bloquea una cuenta de mayoreo
+     */
+    async blockWholesaleAccount(accountId: string, reason: string): Promise<void> {
+        const { error } = await supabase
+            .from('wholesale_accounts')
+            .update({
+                is_blocked: true,
+                block_reason: reason,
+                blocked_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+
+        if (error) throw error;
+    },
+
+    /**
+     * Desbloquea una cuenta de mayoreo
+     */
+    async unblockWholesaleAccount(accountId: string): Promise<void> {
+        const { error } = await supabase
+            .from('wholesale_accounts')
+            .update({
+                is_blocked: false,
+                block_reason: null,
+                blocked_at: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+
+        if (error) throw error;
+    },
+
+    /**
+     * Establece el límite de crédito
+     */
+    async setWholesaleCreditLimit(accountId: string, limit: number): Promise<void> {
+        const { error } = await supabase
+            .from('wholesale_accounts')
+            .update({
+                credit_limit: limit,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+
+        if (error) throw error;
+    },
+
+    /**
+     * Obtiene cuenta de un cliente específico
+     */
+    async getWholesaleAccountByClient(clientId: string, branchId?: string): Promise<any | null> {
+        let query = supabase
+            .from('wholesale_accounts')
+            .select('*')
+            .eq('client_id', clientId);
+
+        if (branchId && branchId !== 'ALL') {
+            query = query.eq('branch_id', branchId);
+        }
+
+        const { data, error } = await query.single();
+        if (error) {
+            if (error.code === 'PGRST116') return null; // No found
+            throw error;
+        }
+
+        return data;
     },
 };
 

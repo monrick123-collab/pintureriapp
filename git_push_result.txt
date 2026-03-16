@@ -1,0 +1,31 @@
+[1;33m🔄 Actualizando código en GitHub...[0m
+
+[1;33m📋 Verificando estado del repositorio...[0m
+En la rama main
+Tu rama está actualizada con 'origin/main'.
+
+Cambios no rastreados para el commit:
+  (usa "git add <archivo>..." para actualizar lo que será confirmado)
+  (usa "git restore <archivo>..." para descartar los cambios en el directorio de trabajo)
+	modificados:     dist/index.html
+	modificados:     services/inventoryService.ts
+	modificados:     services/salesService.ts
+	modificados:     types.ts
+	modificados:     views/Transfers.tsx
+	modificados:     views/WholesalePOS.tsx
+
+Archivos sin seguimiento:
+  (usa "git add <archivo>..." para incluirlo a lo que será confirmado)
+	echo_test.txt
+	git_push_result.txt
+	git_status_4.txt
+	migrations/migration_barter_bidirectional.sql
+	migrations/migration_barter_full_system.sql
+	migrations/migration_fix_all_issues.sql
+	migrations/migration_wholesale_credit_system.sql
+	tsc_out.txt
+	tsc_out_2.txt
+
+sin cambios agregados al commit (usa "git add" y/o "git commit -a")
+
+[1;33m➕ Añadiendo archivos al staging...[0m

@@ -124,6 +124,101 @@ useEffect(() => {
         }
     }, [activeTab, historyPeriod, customStart, customEnd, selectedHistoryBranch]);
 
+    // --- ACCOUNTS EFFECTS & METHODS ---
+    useEffect(() => {
+        if (activeTab === 'accounts') {
+            loadWholesaleAccounts();
+        }
+    }, [activeTab]);
+
+    const loadWholesaleAccounts = async () => {
+        try {
+            const data = await SalesService.getWholesaleAccounts(
+                user.role === UserRole.ADMIN ? undefined : currentBranchId
+            );
+            setAccounts(data);
+        } catch (e) {
+            console.error('Error loading wholesale accounts:', e);
+            setAccounts([]);
+        }
+    };
+
+    const handleAddWholesalePayment = async () => {
+        if (!selectedAccount) return;
+        const amount = parseFloat(paymentAmount);
+        if (isNaN(amount) || amount <= 0) { alert('Monto inválido'); return; }
+        try {
+            setLoading(true);
+            await SalesService.addWholesalePayment(
+                selectedAccount.id,
+                paymentFormType,
+                paymentFormType === 'pago_completo' ? selectedAccount.balance : amount,
+                paymentNotes,
+                user.id
+            );
+            setPaymentAmount('');
+            setPaymentNotes('');
+            await loadWholesaleAccounts();
+            const updated = await SalesService.getWholesaleAccounts(user.role === UserRole.ADMIN ? undefined : currentBranchId);
+            setAccounts(updated);
+            setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
+        } catch (e: any) {
+            alert('Error: ' + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBlockWholesaleAccount = async () => {
+        if (!selectedAccount || !blockReason.trim()) return;
+        try {
+            setLoading(true);
+            await SalesService.blockWholesaleAccount(selectedAccount.id, blockReason);
+            setShowBlockForm(false);
+            setBlockReason('');
+            await loadWholesaleAccounts();
+            const updated = await SalesService.getWholesaleAccounts(user.role === UserRole.ADMIN ? undefined : currentBranchId);
+            setAccounts(updated);
+            setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
+        } catch (e: any) {
+            alert('Error: ' + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUnblockWholesaleAccount = async () => {
+        if (!selectedAccount) return;
+        try {
+            setLoading(true);
+            await SalesService.unblockWholesaleAccount(selectedAccount.id);
+            await loadWholesaleAccounts();
+            const updated = await SalesService.getWholesaleAccounts(user.role === UserRole.ADMIN ? undefined : currentBranchId);
+            setAccounts(updated);
+            setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
+        } catch (e: any) {
+            alert('Error: ' + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSetWholesaleLimit = async () => {
+        if (!selectedAccount) return;
+        const limit = parseFloat(limitAmount);
+        if (isNaN(limit) || limit < 0) { alert('Límite inválido'); return; }
+        try {
+            await SalesService.setWholesaleCreditLimit(selectedAccount.id, limit);
+            setLimitAmount('');
+            await loadWholesaleAccounts();
+            const updated = await SalesService.getWholesaleAccounts(user.role === UserRole.ADMIN ? undefined : currentBranchId);
+            setAccounts(updated);
+            setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
+        } catch (e: any) {
+            alert('Error: ' + (e.message || e.toString()));
+        }
+    };
+
     const loadBranches = async () => {
         try {
             const data = await InventoryService.getBranches();
@@ -403,7 +498,8 @@ const addToCart = (product: Product) => {
                     <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl lg:rounded-2xl p-1 gap-1">
                         {([
                             { key: 'pos', label: 'Nueva Venta' },
-                            { key: 'history', label: 'Historial' }
+                            { key: 'history', label: 'Historial' },
+                            { key: 'accounts', label: 'Cuentas' }
                         ] as const).map(tab => (
                             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                                 className={`px-3 lg:px-5 py-2 rounded-lg lg:rounded-xl font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -967,7 +1063,178 @@ const addToCart = (product: Product) => {
                                                 </div>
                                             </div>
                                         )}
-                                    
+                                     
+                    </div>
+                )}
+
+                {/* ======================== ACCOUNTS TAB ======================== */}
+                {activeTab === 'accounts' && (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-black">Cuentas de Crédito</h2>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Clientes con crédito autorizado</p>
+                                </div>
+                            </div>
+
+                            {/* Accounts Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {accounts.length === 0 && (
+                                    <div className="col-span-full py-12 text-center">
+                                        <span className="material-symbols-outlined text-5xl text-slate-300">account_balance_wallet</span>
+                                        <p className="text-slate-400 font-bold mt-4">No hay cuentas de crédito registradas</p>
+                                        <p className="text-xs text-slate-500">Las cuentas se crean automáticamente cuando se vende a crédito</p>
+                                    </div>
+                                )}
+                                {accounts.map((acc: any) => {
+                                    const pctUsed = acc.credit_limit > 0 ? ((acc.balance || 0) / acc.credit_limit) * 100 : 0;
+                                    return (
+                                        <button
+                                            key={acc.id}
+                                            onClick={() => { setSelectedAccount(acc); setIsAccountModalOpen(true); }}
+                                            className="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 text-left hover:border-primary transition-all shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="font-black text-lg">{acc.client_name}</h3>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">{acc.branch?.name || 'Sucursal'}</p>
+                                                </div>
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
+                                                    acc.is_blocked ? 'bg-red-100 text-red-600' : 
+                                                    acc.balance > 0 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                                                }`}>
+                                                    {acc.is_blocked ? 'Bloqueado' : acc.balance > 0 ? 'Pendiente' : 'Al día'}
+                                                </span>
+                                            </div>
+                                            <div className="mb-3">
+                                                <p className="text-2xl font-black text-primary">${(acc.balance || 0).toLocaleString()}</p>
+                                                <p className="text-[10px] text-slate-400">de ${acc.credit_limit?.toLocaleString()}</p>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2">
+                                                <div 
+                                                    className={`h-2 rounded-full ${pctUsed > 90 ? 'bg-red-500' : pctUsed > 70 ? 'bg-amber-500' : 'bg-primary'}`} 
+                                                    style={{ width: `${Math.min(pctUsed, 100)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 font-bold">{pctUsed.toFixed(0)}% usado</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ======================== ACCOUNT DETAIL MODAL ======================== */}
+                {isAccountModalOpen && selectedAccount && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[40px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+                            {/* Header */}
+                            <div className={`p-8 flex items-center justify-between ${selectedAccount.is_blocked ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-50 dark:bg-slate-900/50'}`}>
+                                <div>
+                                    <h3 className="text-xl font-black">{selectedAccount.client_name}</h3>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mt-1 ${selectedAccount.is_blocked ? 'text-red-500' : selectedAccount.balance > 0 ? 'text-amber-500' : 'text-green-500'}`}>
+                                        {selectedAccount.is_blocked ? '⛔ Bloqueado' : selectedAccount.balance > 0 ? '⚠ Saldo Pendiente' : '✅ Al Día'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold uppercase text-slate-400">Saldo</p>
+                                    <p className={`text-3xl font-black ${selectedAccount.balance > 0 ? 'text-amber-600' : 'text-green-500'}`}>${selectedAccount.balance?.toLocaleString() || 0}</p>
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
+                                {/* Registrar abono */}
+                                <div className="border dark:border-slate-700 rounded-3xl p-6 space-y-4">
+                                    <h4 className="font-black text-sm uppercase text-slate-500 tracking-widest">Registrar Pago / Abono</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {([{ key: 'abono', label: 'Abono Parcial' }, { key: 'pago_completo', label: 'Pago Completo' }] as const).map(t => (
+                                            <button key={t.key} onClick={() => setPaymentFormType(t.key)} className={`py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${paymentFormType === t.key ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>{t.label}</button>
+                                        ))}
+                                    </div>
+                                    {paymentFormType === 'abono' && (
+                                        <input type="number" min={1} className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black outline-none focus:ring-2 focus:ring-primary/20" placeholder="Monto del abono" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
+                                    )}
+                                    {paymentFormType === 'pago_completo' && (
+                                        <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 text-center">
+                                            <p className="text-sm font-bold text-slate-500">Se liquidará el total:</p>
+                                            <p className="text-2xl font-black text-green-600">${selectedAccount.balance?.toLocaleString() || 0}</p>
+                                        </div>
+                                    )}
+                                    <input className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20" placeholder="Referencia / Notas (opcional)" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} />
+                                    <button onClick={handleAddWholesalePayment} disabled={loading || selectedAccount.balance === 0} className="w-full py-3 bg-primary text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                                        {loading ? 'Guardando...' : paymentFormType === 'pago_completo' ? 'Liquidar Deuda' : 'Registrar Abono'}
+                                    </button>
+                                </div>
+
+                                {/* Admin — configurar cuenta */}
+                                {user.role === UserRole.ADMIN && (
+                                    <div className="border dark:border-slate-700 rounded-3xl p-6 space-y-4">
+                                        <h4 className="font-black text-sm uppercase text-slate-500 tracking-widest">Configuración de Cuenta (Admin)</h4>
+                                        {/* Límite */}
+                                        <div className="flex gap-2">
+                                            <input type="number" min={0} className="flex-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black outline-none focus:ring-2 focus:ring-primary/20" placeholder={`Límite (actual: $${selectedAccount.credit_limit?.toLocaleString() || 0})`} value={limitAmount} onChange={e => setLimitAmount(e.target.value)} />
+                                            <button onClick={handleSetWholesaleLimit} className="px-4 py-3 bg-slate-100 dark:bg-slate-700 rounded-2xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Guardar</button>
+                                        </div>
+                                        {/* Bloquear / Desbloquear */}
+                                        {selectedAccount.is_blocked ? (
+                                            <button onClick={handleUnblockWholesaleAccount} disabled={loading} className="w-full py-3 bg-green-500 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50">
+                                                ✅ Desbloquear Cuenta
+                                            </button>
+                                        ) : (
+                                            showBlockForm ? (
+                                                <div className="space-y-2">
+                                                    <input className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-red-200" placeholder="Razón del bloqueo..." value={blockReason} onChange={e => setBlockReason(e.target.value)} />
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => setShowBlockForm(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-500 font-black rounded-2xl uppercase text-xs">Cancelar</button>
+                                                        <button onClick={handleBlockWholesaleAccount} disabled={loading || !blockReason.trim()} className="flex-1 py-3 bg-red-500 text-white font-black rounded-2xl uppercase text-xs disabled:opacity-50">Confirmar Bloqueo</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => setShowBlockForm(true)} className="w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-500 font-black rounded-2xl uppercase text-xs tracking-widest border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors">
+                                                    ⛔ Bloquear Cuenta
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Movimientos */}
+                                <div className="border dark:border-slate-700 rounded-3xl overflow-hidden">
+                                    <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                                        <h4 className="font-black text-sm uppercase text-slate-500 tracking-widest">Historial de Movimientos</h4>
+                                    </div>
+                                    <div className="divide-y dark:divide-slate-700 max-h-64 overflow-y-auto custom-scrollbar">
+                                        {(selectedAccount.payments || []).length === 0 && (
+                                            <p className="px-6 py-8 text-center text-slate-400 italic text-sm">Sin movimientos registrados.</p>
+                                        )}
+                                        {(selectedAccount.payments || []).map((p: any) => (
+                                            <div key={p.id} className="px-6 py-4 flex items-center gap-4">
+                                                <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 ${p.payment_type === 'cargo' ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20'}`}>
+                                                    <span className={`material-symbols-outlined text-lg ${p.payment_type === 'cargo' ? 'text-red-500' : 'text-green-500'}`}>{p.payment_type === 'cargo' ? 'arrow_upward' : 'arrow_downward'}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`font-black text-sm ${p.payment_type === 'cargo' ? 'text-red-600' : 'text-green-600'}`}>
+                                                        {p.payment_type === 'cargo' ? '+ Cargo' : p.payment_type === 'pago_completo' ? '✓ Pago Completo' : '- Abono'} — ${p.amount?.toLocaleString()}
+                                                    </p>
+                                                    {p.notes && <p className="text-[11px] text-slate-400 font-medium truncate">{p.notes}</p>}
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 font-bold shrink-0">{new Date(p.created_at).toLocaleDateString('es-MX')}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t dark:border-slate-800 flex justify-end">
+                                <button onClick={() => { setIsAccountModalOpen(false); setSelectedAccount(null); setShowBlockForm(false); setPaymentAmount(''); setPaymentNotes(''); setLimitAmount(''); }}
+                                    className="px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs hover:bg-slate-200 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </main>

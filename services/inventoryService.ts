@@ -1350,10 +1350,21 @@ export const InventoryService = {
         
         if (updateError) throw updateError;
 
-        // Then execute logic to adjust inventory
-        const { error: processError } = await supabase.rpc('process_barter_transfer', {
-            p_barter_id: barterId
-        });
+        // Then execute logic to adjust inventory (try bidirectional first, fallback to original)
+        let processError: any = null;
+        
+        try {
+            const result = await supabase.rpc('process_barter_transfer_bidirectional', {
+                p_barter_id: barterId
+            });
+            processError = result.error;
+        } catch (e) {
+            // Fallback to original function if bidirectional doesn't exist
+            const result = await supabase.rpc('process_barter_transfer', {
+                p_barter_id: barterId
+            });
+            processError = result.error;
+        }
 
         if (processError) throw processError;
 
@@ -1398,5 +1409,258 @@ export const InventoryService = {
         } catch (e) {
             console.error('Failed to send notification', e);
         }
+    },
+
+    // --- BARTER BIDIRECTIONAL SYSTEM ---
+
+    async createBarterOffer(params: {
+        fromBranchId: string,
+        toBranchId: string,
+        requestedBy: string,
+        notes?: string,
+        givenItems: { productId: string, quantity: number }[]
+    }): Promise<string> {
+        const { data: barterId, error } = await supabase.rpc('create_barter_offer', {
+            p_from_branch_id: params.fromBranchId,
+            p_to_branch_id: params.toBranchId,
+            p_requested_by: params.requestedBy,
+            p_notes: params.notes || null,
+            p_given_items: params.givenItems
+        });
+
+        if (error) throw error;
+
+        // Notify destination branch (WAREHOUSE and STORE_MANAGER)
+        try {
+            const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', params.fromBranchId).single();
+            const { data: toBranch } = await supabase.from('branches').select('name').eq('id', params.toBranchId).single();
+            
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Nueva Oferta de Trueque',
+                message: `${fromBranch?.name} solicita hacer trueque con ustedes. Revisar productos ofrecidos.`,
+                actionUrl: '/transfers?tab=barter_pending'
+            });
+            
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nueva Oferta de Trueque',
+                message: `${fromBranch?.name} ofrece trueque a ${toBranch?.name}. Pendiente de selección.`,
+                actionUrl: '/transfers?tab=barter_history'
+            });
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+
+        return barterId;
+    },
+
+    async getPendingBarterOffers(branchId: string): Promise<BarterTransfer[]> {
+        const { data, error } = await supabase.rpc('get_pending_barter_offers', {
+            p_branch_id: branchId
+        });
+
+        if (error) throw error;
+
+        return (data || []).map((t: any) => ({
+            id: t.id,
+            fromBranchId: t.from_branch_id,
+            fromBranchName: t.from_branch_name,
+            toBranchId: t.to_branch_id,
+            toBranchName: t.to_branch_name,
+            folio: t.folio,
+            status: t.status,
+            notes: t.notes,
+            requestedBy: t.requested_by,
+            createdAt: t.created_at,
+            updatedAt: t.created_at
+        }));
+    },
+
+    async getBarterOfferWithInventory(barterId: string): Promise<BarterTransfer & { offeredProducts: any[] }> {
+        // Get barter detail
+        const { data: barter, error: barterError } = await supabase
+            .from('barter_transfers')
+            .select(`
+                *,
+                from_branch:branches!from_branch_id (name),
+                to_branch:branches!to_branch_id (name),
+                given:barter_given_items (
+                    *,
+                    product:products (id, name, sku, image)
+                ),
+                selections:barter_selections (
+                    *,
+                    product:products (id, name, sku, image)
+                )
+            `)
+            .eq('id', barterId)
+            .single();
+
+        if (barterError) throw barterError;
+
+        // Get inventory of the offering branch (from_branch)
+        const { data: inventory, error: invError } = await supabase
+            .from('inventory')
+            .select(`
+                product_id,
+                stock,
+                product:products (id, name, sku, image, price)
+            `)
+            .eq('branch_id', barter.from_branch_id);
+
+        if (invError) throw invError;
+
+        // Map inventory with product details
+        const offeredProducts = (inventory || []).map((inv: any) => ({
+            productId: inv.product_id,
+            productName: inv.product?.name,
+            productSku: inv.product?.sku,
+            productImage: inv.product?.image,
+            price: inv.product?.price,
+            stock: inv.stock
+        }));
+
+        return {
+            id: barter.id,
+            fromBranchId: barter.from_branch_id,
+            fromBranchName: (barter.from_branch as any)?.name,
+            toBranchId: barter.to_branch_id,
+            toBranchName: (barter.to_branch as any)?.name,
+            folio: barter.folio,
+            status: barter.status,
+            notes: barter.notes,
+            requestedBy: barter.requested_by,
+            selectedBy: barter.selected_by,
+            selectedAt: barter.selected_at,
+            counterProposalBy: barter.counter_proposal_by,
+            counterProposalAt: barter.counter_proposal_at,
+            createdAt: barter.created_at,
+            updatedAt: barter.updated_at,
+            givenItems: (barter.given || []).map((i: any) => ({
+                id: i.id,
+                barterId: i.barter_id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                productName: i.product?.name,
+                productSku: i.product?.sku,
+                productImage: i.product?.image
+            })),
+            selections: (barter.selections || []).map((s: any) => ({
+                id: s.id,
+                barterId: s.barter_id,
+                productId: s.product_id,
+                quantity: s.quantity,
+                selectedBy: s.selected_by,
+                productName: s.product?.name,
+                productSku: s.product?.sku,
+                productImage: s.product?.image,
+                createdAt: s.created_at
+            })),
+            offeredProducts
+        } as any;
+    },
+
+    async selectBarterItems(barterId: string, selectedBy: string, selections: { productId: string, quantity: number }[]): Promise<void> {
+        const { error } = await supabase.rpc('select_barter_items', {
+            p_barter_id: barterId,
+            p_selected_by: selectedBy,
+            p_selections: selections
+        });
+
+        if (error) throw error;
+
+        // Notify admins
+        try {
+            const { data: barter } = await supabase
+                .from('barter_transfers')
+                .select(`
+                    folio,
+                    from_branch:branches!from_branch_id (name),
+                    to_branch:branches!to_branch_id (name)
+                `)
+                .eq('id', barterId)
+                .single();
+
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Trueque Listo para Acreditación',
+                message: `Trueque #B-${String(barter?.folio || 0).padStart(4, '0')} entre ${(barter?.from_branch as any)?.name} y ${(barter?.to_branch as any)?.name} está listo para aprobación.`,
+                actionUrl: '/transfers?tab=barter_history'
+            });
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async proposeCounterOffer(barterId: string, proposedBy: string, notes: string, counterItems: { productId: string, quantity: number }[]): Promise<void> {
+        const { error } = await supabase.rpc('propose_barter_counter_offer', {
+            p_barter_id: barterId,
+            p_proposed_by: proposedBy,
+            p_notes: notes || null,
+            p_counter_items: counterItems
+        });
+
+        if (error) throw error;
+
+        // Notify original requester
+        try {
+            const { data: barter } = await supabase
+                .from('barter_transfers')
+                .select(`
+                    folio,
+                    from_branch_id,
+                    to_branch:branches!to_branch_id (name)
+                `)
+                .eq('id', barterId)
+                .single();
+
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Contra-Oferta Recibida',
+                message: `${(barter?.to_branch as any)?.name} ha enviado una contra-oferta para el trueque #B-${String(barter?.folio || 0).padStart(4, '0')}.`,
+                actionUrl: '/transfers?tab=barter_history'
+            });
+
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Contra-Oferta de Trueque',
+                message: `Nueva contra-oferta en trueque #B-${String(barter?.folio || 0).padStart(4, '0')}. Pendiente de resolución.`,
+                actionUrl: '/transfers?tab=barter_history'
+            });
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async acceptCounterOffer(barterId: string): Promise<void> {
+        // Move counter offer items to received items and set to pending_approval
+        const { data: counterItems } = await supabase
+            .from('barter_counter_offers')
+            .select('*')
+            .eq('barter_id', barterId);
+
+        if (counterItems && counterItems.length > 0) {
+            const receivedRows = counterItems.map((i: any) => ({
+                barter_id: i.barter_id,
+                product_id: i.product_id,
+                quantity: i.quantity
+            }));
+
+            await supabase.from('barter_received_items').insert(receivedRows);
+        }
+
+        await supabase
+            .from('barter_transfers')
+            .update({ status: 'pending_approval', updated_at: new Date().toISOString() })
+            .eq('id', barterId);
+    },
+
+    async cancelBarterTransfer(barterId: string): Promise<void> {
+        const { error } = await supabase.rpc('cancel_barter_transfer', {
+            p_barter_id: barterId
+        });
+
+        if (error) throw error;
     }
 };

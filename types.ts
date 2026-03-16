@@ -430,10 +430,16 @@ export interface BarterTransfer {
   toBranchId: string;
   toBranchName?: string;
   folio: number;
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+  status: 'pending_offer' | 'pending_selection' | 'pending_approval' | 'approved' | 'completed' | 'rejected' | 'cancelled' | 'counter_proposed';
   notes?: string;
   requestedBy: string;
   requestedByName?: string;
+  selectedBy?: string;
+  selectedByName?: string;
+  selectedAt?: string;
+  counterProposalBy?: string;
+  counterProposalByName?: string;
+  counterProposalAt?: string;
   authorizedBy?: string;
   authorizedByName?: string;
   authorizedAt?: string;
@@ -441,6 +447,8 @@ export interface BarterTransfer {
   updatedAt: string;
   givenItems?: BarterItem[];
   receivedItems?: BarterItem[];
+  selections?: BarterSelection[];
+  counterOffers?: BarterCounterOffer[];
 }
 
 export interface BarterItem {
@@ -451,6 +459,31 @@ export interface BarterItem {
   productSku?: string;
   productImage?: string;
   quantity: number;
+}
+
+export interface BarterSelection {
+  id: string;
+  barterId: string;
+  productId: string;
+  productName?: string;
+  productSku?: string;
+  productImage?: string;
+  quantity: number;
+  selectedBy: string;
+  createdAt: string;
+}
+
+export interface BarterCounterOffer {
+  id: string;
+  barterId: string;
+  productId: string;
+  productName?: string;
+  productSku?: string;
+  productImage?: string;
+  quantity: number;
+  proposedBy: string;
+  notes?: string;
+  createdAt: string;
 }
 
 export interface Notification {

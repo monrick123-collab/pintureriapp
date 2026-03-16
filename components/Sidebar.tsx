@@ -97,6 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         ...(isAdmin ? [
           { label: 'Aprobación Cortes', path: '/admin-cash-cuts', icon: 'price_check' },
           { label: 'Pagos Pendientes', path: '/admin/pending-payments', icon: 'pending_actions' },
+          { label: 'Promociones', path: '/admin/promotions', icon: 'local_offer' },
           { label: 'Sucursales', path: '/branches', icon: 'location_on' },
           { label: 'Usuarios y Roles', path: '/users', icon: 'manage_accounts' },
           { label: 'Contabilidad', path: '/finance', icon: 'payments' },

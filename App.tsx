@@ -32,6 +32,7 @@ import Transfers from './views/Transfers';
 import CoinChange from './views/CoinChange';
 import CashCut from './views/CashCut';
 import AdminCashCuts from './views/AdminCashCuts';
+import AdminPromotionRequests from './views/AdminPromotionRequests';
 import RestockNote from './views/RestockNote';
 import AdminHistory from './views/AdminHistory';
 import AdminPendingPayments from './views/AdminPendingPayments';
@@ -102,6 +103,7 @@ const App: React.FC = () => {
           <Route path="/municipal-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalPOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/history" element={user?.role === UserRole.ADMIN ? <AdminHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/pending-payments" element={user?.role === UserRole.ADMIN ? <AdminPendingPayments user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/admin/promotions" element={user?.role === UserRole.ADMIN ? <AdminPromotionRequests user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           {/* Finance Routes */}
           <Route path="/finance-dashboard" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <FinanceDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

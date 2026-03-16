@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, RestockSheet, UserRole, CartItem, Branch } from '../types';
+import { User, Product, RestockSheet, UserRole, CartItem, Branch, RestockItemWithReceived } from '../types';
 import { InventoryService } from '../services/inventoryService';
+import { ShippingService, CARRIER_OPTIONS } from '../services/shippingService';
 
 interface RestocksProps {
     user: User;
@@ -20,6 +21,15 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const [selectedSheet, setSelectedSheet] = useState<RestockSheet | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+
+    // Diferences Modal States
+    const [isDifferencesModalOpen, setIsDifferencesModalOpen] = useState(false);
+    const [receivedItems, setReceivedItems] = useState<{ productId: string; productName: string; expectedQuantity: number; receivedQuantity: number; reason: string }[]>([]);
+
+    // Shipping States
+    const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+    const [shippingCarrier, setShippingCarrier] = useState('');
+    const [shippingTrackingNumber, setShippingTrackingNumber] = useState('');
 
     // Fechas por defecto (mes actual)
     const today = new Date();
@@ -126,6 +136,88 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
         } catch (e) {
             console.error(e);
             alert("Error al cargar los detalles de la solicitud.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOpenDifferencesModal = () => {
+        if (!selectedSheet || !selectedSheet.items) return;
+        
+        setReceivedItems(selectedSheet.items.map((item: any) => ({
+            productId: item.productId,
+            productName: item.product?.name || 'Producto',
+            expectedQuantity: item.quantity,
+            receivedQuantity: item.quantity,
+            reason: ''
+        })));
+        setIsDifferencesModalOpen(true);
+    };
+
+    const handleConfirmWithDifferences = async () => {
+        if (!selectedSheet) return;
+        
+        try {
+            setLoading(true);
+            
+            await InventoryService.confirmRestockWithDifferences(
+                selectedSheet.id,
+                receivedItems.map(item => ({
+                    productId: item.productId,
+                    productName: item.productName,
+                    expectedQuantity: item.expectedQuantity,
+                    receivedQuantity: item.receivedQuantity,
+                    reason: item.reason
+                })),
+                user.id
+            );
+            
+            setIsDifferencesModalOpen(false);
+            setIsDetailModalOpen(false);
+            loadData();
+            alert("Recepción confirmada. Las diferencias han sido registradas.");
+        } catch (e: any) {
+            console.error(e);
+            alert("Error al confirmar recepción: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateShipping = async () => {
+        if (!selectedSheet || !shippingCarrier || !shippingTrackingNumber) {
+            alert("Complete los datos de envío");
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            
+            const shippingId = await ShippingService.createShippingOrder({
+                entityType: 'restock_sheet',
+                entityId: selectedSheet.id,
+                originBranchId: 'BR-MAIN',
+                destinationBranchId: selectedSheet.branchId,
+                createdBy: user.id,
+                carrier: shippingCarrier,
+                trackingNumber: shippingTrackingNumber
+            });
+            
+            await ShippingService.updateShippingStatus({
+                shippingId,
+                newStatus: 'shipped',
+                carrier: shippingCarrier,
+                trackingNumber: shippingTrackingNumber,
+                notes: 'Envío registrado desde resurtido'
+            });
+            
+            setIsShippingModalOpen(false);
+            setShippingCarrier('');
+            setShippingTrackingNumber('');
+            alert("Envío registrado correctamente");
+        } catch (e: any) {
+            console.error(e);
+            alert("Error al crear envío: " + (e.message || e.toString()));
         } finally {
             setLoading(false);
         }
@@ -496,6 +588,158 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                             <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-800">
                                 <span className="text-slate-400 font-black uppercase text-xs tracking-widest">Total Estimado de la Orden</span>
                                 <span className="text-2xl font-black text-primary">${selectedSheet.totalAmount.toLocaleString()}</span>
+                            </div>
+
+                            {/* Admin Actions */}
+                            {isAdmin && selectedSheet.status === 'shipped' && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-amber-50 dark:bg-amber-900/10 flex gap-3">
+                                    <button
+                                        onClick={handleOpenDifferencesModal}
+                                        className="flex-1 py-3 bg-primary text-white font-black rounded-2xl text-[10px] uppercase"
+                                    >
+                                        Confirmar Recepción
+                                    </button>
+                                    <button
+                                        onClick={() => setIsShippingModalOpen(true)}
+                                        className="flex-1 py-3 bg-blue-500 text-white font-black rounded-2xl text-[10px] uppercase"
+                                    >
+                                        Registrar Envío
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Differences Modal */}
+                {isDifferencesModalOpen && selectedSheet && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+                            <div className="p-6 border-b dark:border-slate-700 bg-amber-50 dark:bg-amber-900/20">
+                                <h3 className="text-lg font-black text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">fact_check</span>
+                                    Confirmar Recepción - Ingresar Cantidades Recibidas
+                                </h3>
+                                <p className="text-xs text-amber-600 mt-1">
+                                    Resurtido #R-{selectedSheet.folio.toString().padStart(4, '0')}
+                                </p>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                                <div className="text-[10px] font-black uppercase text-slate-400 mb-4">
+                                    Modifica las cantidades recibidas si hay diferencias
+                                </div>
+                                {receivedItems.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-700">
+                                        <div className="flex-1">
+                                            <p className="font-bold text-sm">{item.productName}</p>
+                                            <p className="text-[10px] text-slate-400">Esperado: {item.expectedQuantity}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-[10px] font-bold text-slate-400">Recibido:</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-20 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold border dark:border-slate-700 text-center"
+                                                value={item.receivedQuantity}
+                                                onChange={e => {
+                                                    const newItems = [...receivedItems];
+                                                    newItems[idx].receivedQuantity = parseInt(e.target.value) || 0;
+                                                    setReceivedItems(newItems);
+                                                }}
+                                            />
+                                        </div>
+                                        {item.receivedQuantity !== item.expectedQuantity && (
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xs font-black ${item.receivedQuantity < item.expectedQuantity ? 'text-red-500' : 'text-green-500'}`}>
+                                                    {item.receivedQuantity < item.expectedQuantity ? '-' : '+'}{Math.abs(item.receivedQuantity - item.expectedQuantity)}
+                                                </span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Razón..."
+                                                    className="w-32 px-2 py-1 text-xs bg-white dark:bg-slate-800 rounded border dark:border-slate-700"
+                                                    value={item.reason}
+                                                    onChange={e => {
+                                                        const newItems = [...receivedItems];
+                                                        newItems[idx].reason = e.target.value;
+                                                        setReceivedItems(newItems);
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-700 flex gap-3">
+                                <button
+                                    onClick={() => setIsDifferencesModalOpen(false)}
+                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleConfirmWithDifferences}
+                                    disabled={loading}
+                                    className="flex-1 py-3 bg-primary text-white font-black rounded-2xl uppercase text-xs shadow-lg disabled:opacity-50"
+                                >
+                                    {loading ? 'Guardando...' : 'Confirmar Recepción'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Shipping Modal */}
+                {isShippingModalOpen && selectedSheet && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+                            <div className="p-6 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
+                                <h3 className="text-lg font-black text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">local_shipping</span>
+                                    Registrar Envío
+                                </h3>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    Resurtido #R-{selectedSheet.folio.toString().padStart(4, '0')}
+                                </p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Paquetería</label>
+                                    <select
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm font-bold border dark:border-slate-700"
+                                        value={shippingCarrier}
+                                        onChange={e => setShippingCarrier(e.target.value)}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {CARRIER_OPTIONS.map(c => (
+                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Número de Guía</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm font-bold border dark:border-slate-700"
+                                        value={shippingTrackingNumber}
+                                        onChange={e => setShippingTrackingNumber(e.target.value)}
+                                        placeholder="Ej: 1234567890"
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-700 flex gap-3">
+                                <button
+                                    onClick={() => { setIsShippingModalOpen(false); setShippingCarrier(''); setShippingTrackingNumber(''); }}
+                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleCreateShipping}
+                                    disabled={loading || !shippingCarrier || !shippingTrackingNumber}
+                                    className="flex-1 py-3 bg-primary text-white font-black rounded-2xl uppercase text-xs shadow-lg disabled:opacity-50"
+                                >
+                                    {loading ? 'Guardando...' : 'Registrar Envío'}
+                                </button>
                             </div>
                         </div>
                     </div>

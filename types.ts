@@ -496,3 +496,97 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+// --- Promotion System Types ---
+
+export interface WholesalePromotion {
+  id: string;
+  name: string;
+  description?: string;
+  minQuantity: number;
+  maxQuantity?: number;
+  discountPercent: number;
+  isActive: boolean;
+  autoApply: boolean;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PromotionRequest {
+  id: string;
+  saleId?: string;
+  promotionId?: string;
+  branchId: string;
+  clientId?: string;
+  clientName?: string;
+  totalItems: number;
+  subtotal: number;
+  requestedDiscountPercent: number;
+  requestedDiscountAmount: number;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedBy: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  createdAt: string;
+}
+
+// --- Shipping System Types ---
+
+export type ShippingEntityType = 'stock_transfer' | 'barter_transfer' | 'restock_sheet';
+export type ShippingStatus = 'pending' | 'shipped' | 'in_transit' | 'delivered' | 'cancelled';
+
+export interface ShippingOrder {
+  id: string;
+  entityType: ShippingEntityType;
+  entityId: string;
+  originBranchId: string;
+  destinationBranchId: string;
+  carrier?: string;
+  trackingNumber?: string;
+  status: ShippingStatus;
+  estimatedDeliveryDate?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShippingTrackingHistory {
+  id: string;
+  shippingOrderId: string;
+  status: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+// --- Restock Incident Types ---
+
+export interface RestockIncident {
+  id: string;
+  restockSheetId: string;
+  productId: string;
+  productName?: string;
+  expectedQuantity: number;
+  receivedQuantity: number;
+  difference: number;
+  incidentType: 'missing' | 'damaged' | 'extra' | 'wrong_product' | 'other';
+  notes?: string;
+  status: 'pending' | 'resolved' | 'credited';
+  createdBy: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  creditAmount?: number;
+  createdAt: string;
+}
+
+export interface RestockItemWithReceived extends RestockItem {
+  receivedQuantity?: number;
+  differenceReason?: string;
+}

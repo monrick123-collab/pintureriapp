@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, CartItem, SaleItem, Client, Branch, Sale, UserRole } from '../types';
+import { User, Product, CartItem, SaleItem, Client, Branch, Sale, UserRole, WholesalePromotion } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { ClientService } from '../services/clientService';
 import { AiService } from '../services/aiService';
+import { PromotionService } from '../services/promotionService';
 import { translateStatus } from '../utils/formatters';
 import { Link } from 'react-router-dom';
 
@@ -39,6 +40,13 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [loadingAi, setLoadingAi] = useState(false);
     const [appliedDiscount, setAppliedDiscount] = useState(0); // Extra discount percentage
     const [isConfigExpanded, setIsConfigExpanded] = useState(true);
+
+    // Promotion States
+    const [promotions, setPromotions] = useState<WholesalePromotion[]>([]);
+    const [applicablePromotion, setApplicablePromotion] = useState<WholesalePromotion | null>(null);
+    const [showPromotionRequest, setShowPromotionRequest] = useState(false);
+    const [promotionRequestReason, setPromotionRequestReason] = useState('');
+    const [promotionRequestDiscount, setPromotionRequestDiscount] = useState(0);
 
     // New States for Validations
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
@@ -95,14 +103,16 @@ useEffect(() => {
     const loadInitialData = async () => {
         try {
             setLoading(true);
-            const [prodData, clientData, adminData] = await Promise.all([
+            const [prodData, clientData, adminData, promoData] = await Promise.all([
                 InventoryService.getProductsByBranch(currentBranchId),
                 ClientService.getClients(),
-                SalesService.getAdmins()
+                SalesService.getAdmins(),
+                PromotionService.getActivePromotions().catch(() => [])
             ]);
             setProducts(prodData);
             setClients(clientData);
             setAdmins(adminData);
+            setPromotions(promoData);
 
             // Load Branch Config
             const branches = await InventoryService.getBranches();
@@ -115,6 +125,20 @@ useEffect(() => {
             setLoading(false);
         }
     };
+
+    // Check for applicable promotion when cart changes
+    useEffect(() => {
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        if (totalItems > 0 && promotions.length > 0) {
+            const promo = promotions.find(p => 
+                p.minQuantity <= totalItems && 
+                (!p.maxQuantity || p.maxQuantity >= totalItems)
+            );
+            setApplicablePromotion(promo || null);
+        } else {
+            setApplicablePromotion(null);
+        }
+    }, [cart, promotions]);
 
     // --- HISTORY EFFECTS & METHODS ---
     useEffect(() => {
@@ -325,6 +349,38 @@ const addToCart = (product: Product) => {
         }
     };
 
+    const handleRequestPromotion = async () => {
+        if (!selectedClient || cart.length === 0 || promotionRequestDiscount <= 0) {
+            alert("Seleccione cliente y especifique el descuento solicitado");
+            return;
+        }
+
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+        try {
+            setLoading(true);
+            await PromotionService.createRequest({
+                branchId: currentBranchId,
+                clientId: selectedClient.id,
+                clientName: selectedClient.name,
+                totalItems,
+                subtotal,
+                discountPercent: promotionRequestDiscount,
+                discountAmount: subtotal * (promotionRequestDiscount / 100),
+                reason: promotionRequestReason,
+                requestedBy: user.id
+            });
+            setShowPromotionRequest(false);
+            setPromotionRequestReason('');
+            setPromotionRequestDiscount(0);
+            alert("Solicitud de promoción enviada al administrador para aprobación.");
+        } catch (e: any) {
+            alert("Error al enviar solicitud: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleEditInvoice = async (sale: Sale) => {
         const invoiceNumber = prompt('Ingrese el número de factura:', sale.billingInvoiceNumber || '');
         if (invoiceNumber !== null) {
@@ -422,6 +478,8 @@ const addToCart = (product: Product) => {
                     paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved'
                 }
             );
+
+            await loadInitialData(); // Reload inventory
 
             setShowSuccess(true);
             setTimeout(() => {
@@ -740,6 +798,31 @@ const addToCart = (product: Product) => {
                     
                                                     {/* AI & Discount Section */}
                                                     <div className="py-2 border-t dark:border-slate-800 space-y-2">
+                                                         {/* Promotion Display */}
+                                                         {applicablePromotion && (
+                                                            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-200 dark:border-green-800">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="material-symbols-outlined text-green-600 text-sm">local_offer</span>
+                                                                        <span className="text-xs font-black text-green-700 dark:text-green-300">{applicablePromotion.name}</span>
+                                                                    </div>
+                                                                    <span className="text-xs font-black text-green-600">-{applicablePromotion.discountPercent}%</span>
+                                                                </div>
+                                                                {applicablePromotion.autoApply && (
+                                                                    <p className="text-[10px] text-green-600 mt-1">Se aplicará automáticamente</p>
+                                                                )}
+                                                            </div>
+                                                         )}
+
+                                                         {/* Request Special Promotion Button */}
+                                                         <button
+                                                            onClick={() => setShowPromotionRequest(true)}
+                                                            className="w-full py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 text-[10px] font-black uppercase tracking-wider rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                                                         >
+                                                            <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                            Solicitar Promoción Especial
+                                                         </button>
+
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
                                                             <input
@@ -816,8 +899,8 @@ const addToCart = (product: Product) => {
                         <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
                                             {/* Controls Bar */}
                                             <div className="flex flex-col md:flex-row gap-4 items-start md:items-end bg-white dark:bg-slate-900 p-6 rounded-2xl border dark:border-slate-800 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/10">
-                                                {/* Period Selector (Mobile only) */}
-                                                <div className="lg:hidden w-full space-y-1">
+                                                {/* Period Selector */}
+                                                <div className="w-full space-y-1 md:w-auto">
                                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Periodo</label>
                                                     <select
                                                         className="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold"
@@ -1232,6 +1315,79 @@ const addToCart = (product: Product) => {
                                 <button onClick={() => { setIsAccountModalOpen(false); setSelectedAccount(null); setShowBlockForm(false); setPaymentAmount(''); setPaymentNotes(''); setLimitAmount(''); }}
                                     className="px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs hover:bg-slate-200 transition-colors">
                                     Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Promotion Request Modal */}
+                {showPromotionRequest && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+                            <div className="p-6 border-b dark:border-slate-700 bg-purple-50 dark:bg-purple-900/20">
+                                <h3 className="text-lg font-black text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">local_offer</span>
+                                    Solicitar Promoción Especial
+                                </h3>
+                                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                    Enviar solicitud al administrador para aprobación
+                                </p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                        Porcentaje de Descuento Solicitado (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm font-bold border dark:border-slate-700"
+                                        value={promotionRequestDiscount}
+                                        onChange={e => setPromotionRequestDiscount(parseFloat(e.target.value) || 0)}
+                                        placeholder="Ej: 15"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                        Justificación (opcional)
+                                    </label>
+                                    <textarea
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm border dark:border-slate-700 h-24 resize-none"
+                                        value={promotionRequestReason}
+                                        onChange={e => setPromotionRequestReason(e.target.value)}
+                                        placeholder="Explica el motivo de la solicitud..."
+                                    />
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4">
+                                    <div className="flex justify-between text-xs mb-1">
+                                        <span className="text-slate-400">Subtotal:</span>
+                                        <span className="font-bold">${subtotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs mb-1">
+                                        <span className="text-slate-400">Descuento solicitado:</span>
+                                        <span className="font-bold text-purple-600">-{promotionRequestDiscount}%</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm font-black pt-2 border-t dark:border-slate-700">
+                                        <span>Ahorro:</span>
+                                        <span className="text-purple-600">${(subtotal * promotionRequestDiscount / 100).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-700 flex gap-3">
+                                <button
+                                    onClick={() => { setShowPromotionRequest(false); setPromotionRequestReason(''); setPromotionRequestDiscount(0); }}
+                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleRequestPromotion}
+                                    disabled={loading || promotionRequestDiscount <= 0}
+                                    className="flex-1 py-3 bg-purple-600 text-white font-black rounded-2xl uppercase text-xs shadow-lg disabled:opacity-50"
+                                >
+                                    {loading ? 'Enviando...' : 'Enviar Solicitud'}
                                 </button>
                             </div>
                         </div>

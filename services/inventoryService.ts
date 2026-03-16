@@ -1662,5 +1662,51 @@ export const InventoryService = {
         });
 
         if (error) throw error;
+    },
+
+    async confirmRestockWithDifferences(
+        restockSheetId: string,
+        items: { productId: string; productName: string; expectedQuantity: number; receivedQuantity: number; reason: string }[],
+        confirmedBy: string
+    ): Promise<void> {
+        const { error } = await supabase.rpc('confirm_restock_with_differences', {
+            p_restock_sheet_id: restockSheetId,
+            p_items: items.map(item => ({
+                productId: item.productId,
+                productName: item.productName,
+                expectedQuantity: item.expectedQuantity,
+                receivedQuantity: item.receivedQuantity,
+                reason: item.reason
+            })),
+            p_confirmed_by: confirmedBy
+        });
+
+        if (error) throw error;
+    },
+
+    async getRestockIncidents(restockSheetId?: string): Promise<any[]> {
+        let query = supabase
+            .from('restock_incidents')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (restockSheetId) {
+            query = query.eq('restock_sheet_id', restockSheetId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
+    async resolveRestockIncident(incidentId: string, resolvedBy: string, creditAmount?: number, notes?: string): Promise<void> {
+        const { error } = await supabase.rpc('resolve_restock_incident', {
+            p_incident_id: incidentId,
+            p_resolved_by: resolvedBy,
+            p_credit_amount: creditAmount || null,
+            p_notes: notes || null
+        });
+
+        if (error) throw error;
     }
 };

@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection } from '../types';
+import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection, ShippingOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
+import { ShippingService, CARRIER_OPTIONS, SHIPPING_STATUS_LABELS } from '../services/shippingService';
 
 interface TransfersProps {
     user: User;
@@ -30,6 +31,13 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
     const [notes, setNotes] = useState('');
+
+    // Shipping States
+    const [shippingOrder, setShippingOrder] = useState<ShippingOrder | null>(null);
+    const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+    const [shippingCarrier, setShippingCarrier] = useState('');
+    const [shippingTrackingNumber, setShippingTrackingNumber] = useState('');
+    const [shippingNotes, setShippingNotes] = useState('');
 
     const isAdmin = user.role === UserRole.ADMIN;
     const branchId = user.branchId || 'BR-MAIN';
@@ -333,6 +341,71 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             loadData();
         } catch (e: any) {
             console.error("Error al rechazar trueque:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Shipping Functions
+    const handleViewShipping = async (entityType: 'stock_transfer' | 'barter_transfer' | 'restock_sheet', entityId: string) => {
+        try {
+            const shipping = await ShippingService.getShippingByEntity(entityType, entityId);
+            setShippingOrder(shipping);
+        } catch (e) {
+            console.error("Error al obtener shipping:", e);
+            setShippingOrder(null);
+        }
+    };
+
+    const handleCreateShipping = async (entityType: 'stock_transfer' | 'barter_transfer', entityId: string, originId: string, destId: string) => {
+        if (!shippingCarrier || !shippingTrackingNumber) {
+            alert("Ingrese paquetería y número de guía");
+            return;
+        }
+        try {
+            setLoading(true);
+            const shippingId = await ShippingService.createShippingOrder({
+                entityType,
+                entityId,
+                originBranchId: originId,
+                destinationBranchId: destId,
+                createdBy: user.id,
+                carrier: shippingCarrier,
+                trackingNumber: shippingTrackingNumber,
+                notes: shippingNotes
+            });
+            await ShippingService.updateShippingStatus({
+                shippingId,
+                newStatus: 'shipped',
+                carrier: shippingCarrier,
+                trackingNumber: shippingTrackingNumber,
+                notes: shippingNotes
+            });
+            setIsShippingModalOpen(false);
+            setShippingCarrier('');
+            setShippingTrackingNumber('');
+            setShippingNotes('');
+            loadData();
+            alert("Envío registrado correctamente");
+        } catch (e: any) {
+            alert("Error al crear envío: " + (e.message || e.toString()));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateShippingStatus = async (shippingId: string, newStatus: 'in_transit' | 'delivered') => {
+        try {
+            setLoading(true);
+            await ShippingService.updateShippingStatus({
+                shippingId,
+                newStatus,
+                notes: newStatus === 'delivered' ? 'Entregado al destinatario' : 'En tránsito'
+            });
+            setShippingOrder(null);
+            loadData();
+        } catch (e: any) {
+            alert("Error al actualizar envío: " + (e.message || e.toString()));
         } finally {
             setLoading(false);
         }
@@ -948,6 +1021,78 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Shipping Modal */}
+                {isShippingModalOpen && selectedTransfer && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+                            <div className="p-6 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
+                                <h3 className="text-lg font-black text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">local_shipping</span>
+                                    Registrar Envío
+                                </h3>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    Traspaso #T-{selectedTransfer.folio.toString().padStart(4, '0')}
+                                </p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                        Paquetería
+                                    </label>
+                                    <select
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm font-bold border dark:border-slate-700"
+                                        value={shippingCarrier}
+                                        onChange={e => setShippingCarrier(e.target.value)}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {CARRIER_OPTIONS.map(c => (
+                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                        Número de Guía
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm font-bold border dark:border-slate-700"
+                                        value={shippingTrackingNumber}
+                                        onChange={e => setShippingTrackingNumber(e.target.value)}
+                                        placeholder="Ej: 1234567890"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                        Notas (opcional)
+                                    </label>
+                                    <textarea
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-sm border dark:border-slate-700 h-20 resize-none"
+                                        value={shippingNotes}
+                                        onChange={e => setShippingNotes(e.target.value)}
+                                        placeholder="Observaciones del envío..."
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-700 flex gap-3">
+                                <button
+                                    onClick={() => { setIsShippingModalOpen(false); setShippingCarrier(''); setShippingTrackingNumber(''); setShippingNotes(''); }}
+                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => handleCreateShipping('stock_transfer', selectedTransfer.id, selectedTransfer.fromBranchId, selectedTransfer.toBranchId)}
+                                    disabled={loading || !shippingCarrier || !shippingTrackingNumber}
+                                    className="flex-1 py-3 bg-primary text-white font-black rounded-2xl uppercase text-xs shadow-lg disabled:opacity-50"
+                                >
+                                    {loading ? 'Guardando...' : 'Registrar Envío'}
+                                </button>
                             </div>
                         </div>
                     </div>

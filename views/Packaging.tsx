@@ -18,9 +18,12 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
     const [bulkId, setBulkId] = useState('');
     const [targetType, setTargetType] = useState<'cuarto_litro' | 'medio_litro' | 'litro' | 'galon'>('cuarto_litro');
+    const [targetProductId, setTargetProductId] = useState('');
     const [drumQty, setDrumQty] = useState(1);
+    const [litersRequested, setLitersRequested] = useState(200);
     const [branchId, setBranchId] = useState('');
     const [branches, setBranches] = useState<any[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
@@ -98,6 +101,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
             const drumProds = prods.filter(p => (p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L'));
             setBulkProducts(drumProds);
             setDrumProducts(drumProds);
+            setAllProducts(prods);
             setRequests(requestsData as unknown as PackagingRequest[]);
             setBranches(branchesData);
             
@@ -132,16 +136,25 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const maxLiters = drumQty * 200;
+        if (litersRequested <= 0 || litersRequested > maxLiters) {
+            alert(`Los litros a envasar deben estar entre 1 y ${maxLiters}.`);
+            return;
+        }
         try {
             await InventoryService.createPackagingRequest({
-                bulkProductId: bulkId,
+                bulkProductId:    bulkId,
                 targetPackageType: targetType,
-                quantityDrum: drumQty,
-                branchId: branchId || user.branchId
+                targetProductId:  targetProductId || undefined,
+                quantityDrum:     drumQty,
+                litersRequested,
+                branchId:         branchId || user.branchId
             });
             setActiveTab('history');
             setBulkId('');
+            setTargetProductId('');
             setDrumQty(1);
+            setLitersRequested(200);
             loadData();
         } catch (e: any) {
             alert("Error: " + e.message);
@@ -373,7 +386,18 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                  <td className="px-6 py-5">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-black uppercase text-xs">{formatPackageType(r.target_package_type)}</span>
-                                                        <span className="text-[10px] text-slate-400 font-bold">{r.quantity_drum} tambo{r.quantity_drum !== 1 ? 's' : ''} • {Math.floor((r.quantity_drum * 200) / getLitersPerPackage(r.target_package_type)).toLocaleString()} envases</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold">
+                                                            {r.liters_requested ?? r.quantity_drum * 200} L envasados
+                                                            {r.quantity_drum * 200 - (r.liters_requested ?? r.quantity_drum * 200) > 0 &&
+                                                                <span className="text-amber-500"> · {r.quantity_drum * 200 - (r.liters_requested ?? r.quantity_drum * 200)} L restantes</span>
+                                                            }
+                                                        </span>
+                                                        <span className="text-[10px] text-green-600 font-black">
+                                                            {r.packages_produced != null
+                                                                ? `${r.packages_produced.toLocaleString()} envases producidos`
+                                                                : `~${Math.floor((r.liters_requested ?? r.quantity_drum * 200) / getLitersPerPackage(r.target_package_type)).toLocaleString()} envases estimados`
+                                                            }
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 {/* Columna de fechas */}
@@ -501,12 +525,34 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                             <h3 className="text-2xl font-black mb-8">Nueva Solicitud</h3>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-500">Tambo (200L)</label>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Tambo (producto granel)</label>
                                     <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={bulkId} onChange={e => setBulkId(e.target.value)}>
                                         <option value="">Selecciona...</option>
                                         {bulkProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                 </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Sucursal que envasa</label>
+                                    <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={branchId} onChange={e => setBranchId(e.target.value)}>
+                                        <option value="">Selecciona sucursal...</option>
+                                        {branches.filter(b => b.type === 'store').map(b => {
+                                            const available = (bulkId && b.id) ? (drumInventory[bulkId]?.[b.id] ?? 0) : null;
+                                            return <option key={b.id} value={b.id}>{b.name}{available !== null ? ` — ${available.toLocaleString()} L disponibles` : ''}</option>;
+                                        })}
+                                    </select>
+                                    {bulkId && branchId && (
+                                        <p className="text-xs font-black mt-1 px-1">
+                                            {(() => {
+                                                const avail = drumInventory[bulkId]?.[branchId] ?? 0;
+                                                return <span className={avail === 0 ? 'text-red-500' : 'text-green-600'}>
+                                                    Disponible en sucursal: {avail.toLocaleString()} L
+                                                </span>;
+                                            })()}
+                                        </p>
+                                    )}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Envase Destino</label>
@@ -518,36 +564,61 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-slate-500">Cantidad Tambos</label>
-                                        <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={drumQty} onChange={e => setDrumQty(parseInt(e.target.value) || 0)} />
+                                        <label className="text-[10px] font-black uppercase text-slate-500">Tambos a enviar</label>
+                                        <input type="number" min={1} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black" value={drumQty}
+                                            onChange={e => {
+                                                const qty = parseInt(e.target.value) || 1;
+                                                setDrumQty(qty);
+                                                setLitersRequested(qty * 200);
+                                            }} />
                                     </div>
                                 </div>
-                                
-                                {/* Información de cálculo */}
-                                {drumQty > 0 && (
-                                    <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mt-2">
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase text-slate-400">Total Litros</span>
-                                                <p className="font-bold text-lg">{(drumQty * 200).toLocaleString()} L</p>
+
+                                {/* Litros a envasar (puede ser parcial) */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">
+                                        Litros a envasar <span className="text-slate-400 normal-case font-medium">(máx. {drumQty * 200} L · deja el resto en la sucursal)</span>
+                                    </label>
+                                    <input
+                                        type="number" min={1} max={drumQty * 200} required
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black"
+                                        value={litersRequested}
+                                        onChange={e => setLitersRequested(Math.min(parseInt(e.target.value) || 0, drumQty * 200))}
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Producto resultado (botella en inventario)</label>
+                                    <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={targetProductId} onChange={e => setTargetProductId(e.target.value)}>
+                                        <option value="">Selecciona producto botella...</option>
+                                        {allProducts
+                                            .filter(p => !((p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L')))
+                                            .map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                                    </select>
+                                </div>
+
+                                {/* Resumen de cálculo */}
+                                {litersRequested > 0 && (
+                                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 space-y-2">
+                                        <div className="grid grid-cols-3 gap-3 text-center">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400">A envasar</p>
+                                                <p className="font-black text-lg text-primary">{litersRequested.toLocaleString()} L</p>
                                             </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase text-slate-400">Envases a producir</span>
-                                                <p className="font-bold text-lg">{calculatePackagesPerDrum(drumQty, targetType).toLocaleString()} {formatPackageType(targetType).split(' ')[0]}</p>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400">Envases</p>
+                                                <p className="font-black text-lg text-green-600">{Math.floor(litersRequested / getLitersPerPackage(targetType)).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400">Restante</p>
+                                                <p className="font-black text-lg text-amber-500">{(drumQty * 200 - litersRequested).toLocaleString()} L</p>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-slate-400 mt-2">
-                                            Cada tambo de 200L produce aproximadamente {Math.floor(200 / getLitersPerPackage(targetType)).toLocaleString()} envases de {formatPackageType(targetType).toLowerCase()}
+                                        <p className="text-[10px] text-slate-400 text-center">
+                                            {formatPackageType(targetType)} · {litersRequested} L ÷ {getLitersPerPackage(targetType)} L/env
                                         </p>
                                     </div>
                                 )}
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-500">Sucursal que envasa</label>
-                                    <select required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={branchId} onChange={e => setBranchId(e.target.value)}>
-                                        <option value="">Selecciona sucursal...</option>
-                                        {branches.filter(b => b.type === 'store').map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                    </select>
-                                </div>
                                 <div className="flex gap-4 pt-4">
                                     <button type="button" onClick={() => setActiveTab('history')} className="flex-1 py-4 font-black text-slate-400 uppercase text-xs flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all">
                                         Cancelar

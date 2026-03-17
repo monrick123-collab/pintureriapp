@@ -41,6 +41,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
     const [showAuth, setShowAuth] = useState(false);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [approvingReturnId, setApprovingReturnId] = useState<string | null>(null);
+    const [approvalDestBranchId, setApprovalDestBranchId] = useState('');
 
     // Fechas
     const today = new Date();
@@ -131,9 +133,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         }
     };
 
-    const handleAuthorize = async (id: string, approved: boolean) => {
+    const handleAuthorize = async (id: string, approved: boolean, destinationBranchId?: string) => {
         try {
-            await InventoryService.authorizeReturn(id, user.id, approved);
+            await InventoryService.authorizeReturn(id, user.id, approved, destinationBranchId);
+            setApprovingReturnId(null);
+            setApprovalDestBranchId('');
             loadData();
         } catch (e: any) {
             alert("Error: " + e.message);
@@ -282,10 +286,36 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
                                                         {isAdmin && r.status === 'pending_authorization' && (
-                                                            <div className="flex justify-end gap-2">
-                                                                <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
-                                                                <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
-                                                            </div>
+                                                            approvingReturnId === r.id ? (
+                                                                <div className="flex flex-col items-end gap-2 min-w-[200px]">
+                                                                    <label className="text-[10px] font-black uppercase text-slate-400">Sucursal/Bodega destino</label>
+                                                                    <select
+                                                                        autoFocus
+                                                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary/20"
+                                                                        value={approvalDestBranchId}
+                                                                        onChange={e => setApprovalDestBranchId(e.target.value)}
+                                                                    >
+                                                                        <option value="">Selecciona destino...</option>
+                                                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                                                    </select>
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            disabled={!approvalDestBranchId}
+                                                                            onClick={() => handleAuthorize(r.id, true, approvalDestBranchId)}
+                                                                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                        >Confirmar</button>
+                                                                        <button
+                                                                            onClick={() => { setApprovingReturnId(null); setApprovalDestBranchId(''); }}
+                                                                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                        >Cancelar</button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex justify-end gap-2">
+                                                                    <button onClick={() => { setApprovingReturnId(r.id); setApprovalDestBranchId(''); }} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg" title="Aprobar"><span className="material-symbols-outlined">check_circle</span></button>
+                                                                    <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" title="Rechazar"><span className="material-symbols-outlined">cancel</span></button>
+                                                                </div>
+                                                            )
                                                         )}
                                                         {isWarehouse && r.status === 'approved' && (
                                                             <button

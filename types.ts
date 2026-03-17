@@ -259,7 +259,10 @@ export interface PackagingRequest {
   id: string;
   bulkProductId: string;
   targetPackageType: 'cuarto_litro' | 'medio_litro' | 'litro' | 'galon';
+  targetProductId?: string;   // producto resultado (botella) que se agrega al inventario
   quantityDrum: number;
+  litersRequested?: number;   // litros a envasar (puede ser < quantityDrum * 200)
+  packagesProduced?: number;  // calculado al completar
   status: 'sent_to_branch' | 'received_at_branch' | 'processing' | 'completed' | 'cancelled';
   stockReleased?: boolean;
   branchId: string;

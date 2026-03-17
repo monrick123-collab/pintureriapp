@@ -5,6 +5,7 @@ import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { DiscountService } from '../services/discountService';
 import { DiscountRequest } from '../types';
+import { exportToCSV } from '../utils/csvExport';
 
 interface POSProps {
   user: User;
@@ -38,6 +39,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // --- HISTORY STATES ---
+  const PAGE_SIZE = 25;
   const [historySales, setHistorySales] = useState<Sale[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -48,6 +50,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     user.role === UserRole.ADMIN ? 'ALL' : 'BR-CENTRO'
   );
   const [selectedHistorySale, setSelectedHistorySale] = useState<Sale | null>(null);
+  const [historyPage, setHistoryPage] = useState(0);
 
 
   // --- POS EFFECTS ---
@@ -122,6 +125,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     if (!range) return;
 
     setHistoryLoading(true);
+    setHistoryPage(0);
     try {
       const data = await SalesService.getSalesWithFilters(range.start, range.end, selectedHistoryBranch);
       setHistorySales(data);
@@ -130,6 +134,30 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     } finally {
       setHistoryLoading(false);
     }
+  };
+
+  const pagedHistorySales = historySales.slice(historyPage * PAGE_SIZE, (historyPage + 1) * PAGE_SIZE);
+  const historyTotalPages = Math.ceil(historySales.length / PAGE_SIZE);
+
+  const handleExportSales = () => {
+    exportToCSV(
+      `ventas-menudeo-${new Date().toISOString().split('T')[0]}.csv`,
+      historySales.map(s => ({
+        ...s,
+        items: s.items.map(i => `${i.quantity}x ${i.productName}`).join(' | ')
+      })),
+      [
+        { key: 'folio', label: 'Folio' },
+        { key: 'createdAt', label: 'Fecha' },
+        { key: 'branchName', label: 'Sucursal' },
+        { key: 'paymentMethod', label: 'Método Pago' },
+        { key: 'subtotal', label: 'Subtotal' },
+        { key: 'discountAmount', label: 'Descuento' },
+        { key: 'iva', label: 'IVA' },
+        { key: 'total', label: 'Total' },
+        { key: 'items', label: 'Productos' }
+      ]
+    );
   };
 
   const handleEditInvoice = async (sale: Sale) => {
@@ -683,6 +711,15 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                     </div>
                   </div>
                 )}
+
+                <button
+                  onClick={handleExportSales}
+                  disabled={historySales.length === 0}
+                  className="ml-auto px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase shadow hover:scale-105 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined text-sm">download</span>
+                  Exportar CSV
+                </button>
               </div>
 
               {/* KPI Cards */}
@@ -725,7 +762,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       ) : historySales.length === 0 ? (
                         <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay registros</td></tr>
                       ) : (
-                        historySales.map(sale => (
+                        pagedHistorySales.map(sale => (
                           <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                             <td className="px-6 py-5">
                               <div className="flex flex-col">
@@ -785,6 +822,27 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                     </tbody>
                   </table>
                 </div>
+                {historySales.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t dark:border-slate-800">
+                    <button
+                      disabled={historyPage === 0}
+                      onClick={() => setHistoryPage(p => p - 1)}
+                      className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-xs font-bold text-slate-400">
+                      Página {historyPage + 1} de {historyTotalPages} · {historySales.length} ventas
+                    </span>
+                    <button
+                      disabled={(historyPage + 1) * PAGE_SIZE >= historySales.length}
+                      onClick={() => setHistoryPage(p => p + 1)}
+                      className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

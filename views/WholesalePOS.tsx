@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, CartItem, SaleItem, Client, Branch, Sale, UserRole, WholesalePromotion } from '../types';
+import { User, Product, CartItem, SaleItem, Client, Branch, Sale, UserRole, WholesalePromotion, PromotionRequest } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { ClientService } from '../services/clientService';
@@ -60,9 +60,12 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     // --- HISTORY STATES ---
     const [historySales, setHistorySales] = useState<Sale[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [historySubTab, setHistorySubTab] = useState<'sales' | 'promotions'>('sales');
+    const [promotionRequests, setPromotionRequests] = useState<PromotionRequest[]>([]);
+    const [pendingPromotionRequestId, setPendingPromotionRequestId] = useState<string | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
-        user.role === UserRole.ADMIN ? 'ALL' : (user.branchId || 'BR-CENTRO')
+        (user.role === UserRole.ADMIN || isWarehouse) ? 'ALL' : (user.branchId || 'BR-MAIN')
     );
     const [historyPeriod, setHistoryPeriod] = useState<Period>('today');
     const [customStart, setCustomStart] = useState('');
@@ -146,6 +149,7 @@ useEffect(() => {
         if (activeTab === 'history') {
             loadBranches();
             fetchHistorySales();
+            fetchPromotionRequests();
         }
     }, [activeTab, historyPeriod, customStart, customEnd, selectedHistoryBranch]);
 
@@ -297,6 +301,31 @@ useEffect(() => {
         }
     };
 
+    const fetchPromotionRequests = async () => {
+        try {
+            const data = await PromotionService.getAllRequests(
+                user.role === UserRole.ADMIN ? undefined : currentBranchId
+            );
+            setPromotionRequests(data.filter(r => r.requestedBy === user.id));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleCompleteFromPromotion = (req: PromotionRequest) => {
+        if (!req.items?.length) {
+            alert('Esta solicitud no tiene productos guardados. Agrega los productos manualmente al carrito y aplica el descuento.');
+            setAppliedDiscount(req.requestedDiscountPercent);
+            setPendingPromotionRequestId(req.id);
+            setActiveTab('pos');
+            return;
+        }
+        setAppliedDiscount(req.requestedDiscountPercent);
+        setPendingPromotionRequestId(req.id);
+        setCart(req.items.map((i: any) => ({ ...i })));
+        setActiveTab('pos');
+    };
+
 const addToCart = (product: Product) => {
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
@@ -370,7 +399,18 @@ const addToCart = (product: Product) => {
                 discountPercent: promotionRequestDiscount,
                 discountAmount: subtotal * (promotionRequestDiscount / 100),
                 reason: promotionRequestReason,
-                requestedBy: user.id
+                requestedBy: user.id,
+                items: cart.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    sku: item.sku,
+                    price: item.price,
+                    wholesalePrice: item.wholesalePrice,
+                    quantity: item.quantity,
+                    brand: item.brand,
+                    image: item.image,
+                    category: item.category
+                }))
             });
             setShowPromotionRequest(false);
             setPromotionRequestReason('');
@@ -480,7 +520,8 @@ const addToCart = (product: Product) => {
                     billingInvoiceNumber: undefined, // Se agregará manualmente después
                     deliveryReceiverName: deliveryReceiver,
                     transferReference: paymentMethod === 'transfer' ? transferReference : undefined,
-                    paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved'
+                    paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved',
+                    promotionRequestId: pendingPromotionRequestId || undefined
                 }
             );
 
@@ -495,6 +536,8 @@ const addToCart = (product: Product) => {
                 setSelectedAdminId('');
                 setBillingData({ bank: '', socialReason: '', invoiceNumber: '' });
                 setDeliveryReceiver('');
+                setAppliedDiscount(0);
+                setPendingPromotionRequestId(null);
             }, 2000);
         } catch (e) {
             console.error(e);
@@ -830,6 +873,12 @@ const addToCart = (product: Product) => {
                                                              </button>
                                                           )}
 
+                                                        {pendingPromotionRequestId && (
+                                                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                                                                <span className="material-symbols-outlined text-green-600 text-sm">verified</span>
+                                                                <span className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-wide">Descuento aprobado: {appliedDiscount}%</span>
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Descuento Extra (%)</span>
                                                             <input
@@ -950,16 +999,87 @@ const addToCart = (product: Product) => {
                                 </div>
                             )}
 
-                            <button onClick={fetchHistorySales} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
-                            
-                            <div className="ml-auto text-right">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ventas: {historySales.length}</p>
-                                <p className="text-xl font-black text-primary">${historySales.reduce((acc, s) => acc + s.total, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                            {historySubTab === 'sales' && (
+                                <button onClick={fetchHistorySales} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            )}
+
+                            <div className="ml-auto flex items-center gap-4">
+                                <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1">
+                                    <button onClick={() => setHistorySubTab('sales')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${historySubTab === 'sales' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Ventas</button>
+                                    <button onClick={() => setHistorySubTab('promotions')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${historySubTab === 'promotions' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                        Solicitudes
+                                        {promotionRequests.filter(r => r.status === 'pending').length > 0 && (
+                                            <span className="ml-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{promotionRequests.filter(r => r.status === 'pending').length}</span>
+                                        )}
+                                    </button>
+                                </div>
+                                {historySubTab === 'sales' && (
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ventas: {historySales.length}</p>
+                                        <p className="text-xl font-black text-primary">${historySales.reduce((acc, s) => acc + s.total, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Table matching Municipal Style */}
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            {historySubTab === 'promotions' ? (
+                                <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                                    <div className="overflow-x-auto custom-scrollbar">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">
+                                                <tr>
+                                                    <th className="px-6 py-4">Fecha</th>
+                                                    <th className="px-6 py-4">Cliente</th>
+                                                    <th className="px-6 py-4">Artículos</th>
+                                                    <th className="px-6 py-4">Descuento</th>
+                                                    <th className="px-6 py-4">Estado</th>
+                                                    <th className="px-6 py-4">Motivo rechazo</th>
+                                                    <th className="px-6 py-4 text-right">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y dark:divide-slate-700">
+                                                {promotionRequests.length === 0 ? (
+                                                    <tr><td colSpan={7} className="px-8 py-12 text-center text-slate-400 italic">No hay solicitudes de promoción.</td></tr>
+                                                ) : (
+                                                    promotionRequests.map(req => (
+                                                        <tr key={req.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${req.status === 'approved' && req.id === pendingPromotionRequestId ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
+                                                            <td className="px-6 py-4 text-sm text-slate-500">{new Date(req.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                                            <td className="px-6 py-4 font-bold text-sm">{req.clientName || '—'}</td>
+                                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{req.totalItems} pzas</td>
+                                                            <td className="px-6 py-4 font-black text-primary">{req.requestedDiscountPercent}%</td>
+                                                            <td className="px-6 py-4">
+                                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                                    req.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                    req.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-amber-100 text-amber-700'
+                                                                }`}>
+                                                                    {req.status === 'approved' ? 'Aprobada' : req.status === 'rejected' ? 'Rechazada' : 'Pendiente'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-xs text-slate-500 italic">{req.rejectionReason || '—'}</td>
+                                                            <td className="px-6 py-4 text-right">
+                                                                {req.status === 'approved' && req.id !== pendingPromotionRequestId && (
+                                                                    <button
+                                                                        onClick={() => handleCompleteFromPromotion(req)}
+                                                                        className="px-3 py-1.5 bg-green-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                                                                    >
+                                                                        Completar venta
+                                                                    </button>
+                                                                )}
+                                                                {req.id === pendingPromotionRequestId && (
+                                                                    <span className="text-[10px] font-black text-green-600 uppercase">En proceso</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : (
                             <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                                 <div className="overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left">
@@ -1038,6 +1158,7 @@ const addToCart = (product: Product) => {
                                     </table>
                                 </div>
                             </div>
+                            )}
                         </div>
 
                         {/* Details Modal */}

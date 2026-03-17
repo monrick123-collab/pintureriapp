@@ -123,10 +123,11 @@ export const FinanceService = {
         if (error) throw error;
     },
 
-    // --- DASHBOARD METRICS (Mock implementation until RPCs exist) ---
+    // --- DASHBOARD METRICS ---
     async getFinanceMetrics() {
-        // En futuro, llamar a un RPC que calcule todo en DB
-        // Por ahora lo hacemos en cliente (ineficiente pero funcional para prototipo)
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
         // 1. Cuentas por Pagar (Pendientes + Autorizadas)
         const { data: invoices } = await supabase
@@ -136,13 +137,24 @@ export const FinanceService = {
 
         const accountsPayable = invoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
 
-        // 2. Gastos del Mes (Pagos realizados + Rentas + Nomina simple)
-        // Mock placeholder
-        const monthlyExpenses = accountsPayable * 0.5; // Dummy logic
+        // 2. Gastos del Mes (facturas pagadas este mes)
+        const { data: paidInvoices } = await supabase
+            .from('supplier_invoices')
+            .select('amount')
+            .eq('status', 'paid')
+            .gte('due_date', monthStart.split('T')[0])
+            .lt('due_date', monthEnd.split('T')[0]);
 
-        // 3. Ventas Mes
-        // Mock placeholder
-        const monthlySales = 120000;
+        const monthlyExpenses = paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
+
+        // 3. Ventas del Mes
+        const { data: salesData } = await supabase
+            .from('sales')
+            .select('total')
+            .gte('created_at', monthStart)
+            .lt('created_at', monthEnd);
+
+        const monthlySales = salesData?.reduce((sum, s) => sum + s.total, 0) || 0;
 
         return {
             accountsPayable,
@@ -150,5 +162,56 @@ export const FinanceService = {
             monthlySales,
             netIncome: monthlySales - monthlyExpenses
         };
+    },
+
+    async getMonthlyFinancials(months = 6): Promise<{ month: string; ingresos: number; gastos: number }[]> {
+        const results: { month: string; ingresos: number; gastos: number }[] = [];
+        const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        for (let i = months - 1; i >= 0; i--) {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+            const startStr = start.toISOString();
+            const endStr = end.toISOString();
+            const startDate = startStr.split('T')[0];
+            const endDate = endStr.split('T')[0];
+
+            const [{ data: sales }, { data: expenses }] = await Promise.all([
+                supabase.from('sales').select('total').gte('created_at', startStr).lt('created_at', endStr),
+                supabase.from('supplier_invoices').select('amount').eq('status', 'paid').gte('due_date', startDate).lt('due_date', endDate)
+            ]);
+
+            results.push({
+                month: MONTH_NAMES[start.getMonth()],
+                ingresos: sales?.reduce((sum, s) => sum + s.total, 0) || 0,
+                gastos: expenses?.reduce((sum, e) => sum + e.amount, 0) || 0
+            });
+        }
+
+        return results;
+    },
+
+    async getExpenseDistribution(): Promise<{ category: string; value: number }[]> {
+        const [{ data: invoices }, { data: leasePayments }] = await Promise.all([
+            supabase.from('supplier_invoices').select('amount, suppliers(name)').eq('status', 'paid'),
+            supabase.from('lease_payments').select('amount')
+        ]);
+
+        const supplierTotals: Record<string, number> = {};
+        (invoices || []).forEach((inv: any) => {
+            const name = inv.suppliers?.name || 'Proveedor';
+            supplierTotals[name] = (supplierTotals[name] || 0) + inv.amount;
+        });
+
+        const result = Object.entries(supplierTotals)
+            .map(([category, value]) => ({ category, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 6);
+
+        const rentas = (leasePayments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+        if (rentas > 0) result.push({ category: 'Rentas', value: rentas });
+
+        return result;
     }
 };

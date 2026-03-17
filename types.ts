@@ -211,6 +211,7 @@ export interface Sale {
   billingSocialReason?: string;
   billingInvoiceNumber?: string;
   deliveryReceiverName?: string;
+  promotionRequestId?: string;
 }
 
 export interface Quotation {
@@ -533,6 +534,7 @@ export interface PromotionRequest {
   reviewedAt?: string;
   rejectionReason?: string;
   createdAt: string;
+  items?: any[];
 }
 
 // --- Shipping System Types ---

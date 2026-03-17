@@ -83,14 +83,14 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.create_promotion_request(
     p_sale_id UUID,
     p_branch_id TEXT,
-    p_client_id UUID DEFAULT NULL,
-    p_client_name TEXT DEFAULT NULL,
     p_total_items INTEGER,
     p_subtotal DECIMAL(12,2),
     p_discount_percent DECIMAL(5,2),
     p_discount_amount DECIMAL(12,2),
-    p_reason TEXT DEFAULT NULL,
     p_requested_by TEXT,
+    p_client_id UUID DEFAULT NULL,
+    p_client_name TEXT DEFAULT NULL,
+    p_reason TEXT DEFAULT NULL,
     p_promotion_id UUID DEFAULT NULL
 )
 RETURNS UUID AS $$

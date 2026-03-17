@@ -3,6 +3,8 @@ import Sidebar from '../components/Sidebar';
 import { User, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
+import { PromotionService } from '../services/promotionService';
+import { exportToCSV } from '../utils/csvExport';
 
 interface AdminHistoryProps {
   user: User;
@@ -11,7 +13,7 @@ interface AdminHistoryProps {
 
 interface HistoryEntry {
   id: string;
-  type: 'sale' | 'restock' | 'transfer' | 'envasado' | 'user_action';
+  type: 'sale' | 'restock' | 'transfer' | 'envasado' | 'user_action' | 'promocion';
   description: string;
   user: string;
   branch: string;
@@ -20,11 +22,13 @@ interface HistoryEntry {
 }
 
 const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
+  const PAGE_SIZE = 25;
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     loadHistory();
@@ -35,11 +39,12 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
       setLoading(true);
       
       // Cargar diferentes tipos de historial
-      const [sales, restocks, transfers, packaging] = await Promise.all([
+      const [sales, restocks, transfers, packaging, promotions] = await Promise.all([
         SalesService.getSalesWithFilters('2024-01-01', new Date().toISOString().split('T')[0]),
         InventoryService.getRestockRequests(),
         InventoryService.getStockTransfers(),
-        InventoryService.getPackagingRequests()
+        InventoryService.getPackagingRequests(),
+        PromotionService.getAllRequests().catch(() => [])
       ]);
 
       // Transformar datos a formato común
@@ -97,6 +102,21 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
         });
       });
 
+      // Solicitudes de promoción
+      promotions.forEach((promo: any) => {
+        const statusLabel = promo.status === 'approved' ? 'Aprobada' : promo.status === 'rejected' ? 'Rechazada' : 'Pendiente';
+        const discountAmt = promo.requestedDiscountAmount ? ` (-$${parseFloat(promo.requestedDiscountAmount).toFixed(2)})` : '';
+        historyEntries.push({
+          id: promo.id,
+          type: 'promocion',
+          description: `Solicitud promoción ${promo.requestedDiscountPercent}% para ${promo.clientName || 'cliente'} — ${statusLabel}${discountAmt}`,
+          user: promo.requestedBy || 'Sistema',
+          branch: promo.branchId,
+          timestamp: promo.createdAt,
+          details: promo
+        });
+      });
+
       // Ordenar por fecha (más reciente primero)
       historyEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
@@ -115,12 +135,30 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredHistory.length / PAGE_SIZE);
+  const pagedHistory = filteredHistory.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+  const handleExport = () => {
+    exportToCSV(
+      `historial-actividades-${new Date().toISOString().split('T')[0]}.csv`,
+      filteredHistory,
+      [
+        { key: 'type', label: 'Tipo' },
+        { key: 'description', label: 'Descripción' },
+        { key: 'user', label: 'Usuario' },
+        { key: 'branch', label: 'Sucursal' },
+        { key: 'timestamp', label: 'Fecha/Hora' }
+      ]
+    );
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'sale': return 'bg-green-100 text-green-800';
       case 'restock': return 'bg-blue-100 text-blue-800';
       case 'transfer': return 'bg-purple-100 text-purple-800';
       case 'envasado': return 'bg-amber-100 text-amber-800';
+      case 'promocion': return 'bg-rose-100 text-rose-800';
       default: return 'bg-slate-100 text-slate-800';
     }
   };
@@ -131,6 +169,7 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
       case 'restock': return '📦';
       case 'transfer': return '🚚';
       case 'envasado': return '🎨';
+      case 'promocion': return '🏷️';
       default: return '📝';
     }
   };
@@ -152,13 +191,14 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
             <select
               className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20"
               value={filterType}
-              onChange={e => setFilterType(e.target.value)}
+              onChange={e => { setFilterType(e.target.value); setCurrentPage(0); }}
             >
               <option value="all">Todos los tipos</option>
               <option value="sale">Ventas</option>
               <option value="restock">Reabastecimientos</option>
               <option value="transfer">Transferencias</option>
               <option value="envasado">Envasados</option>
+              <option value="promocion">Solicitudes de Promoción</option>
             </select>
           </div>
 
@@ -183,10 +223,19 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
           </div>
 
           <button
-            onClick={loadHistory}
+            onClick={() => { setCurrentPage(0); loadHistory(); }}
             className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all"
           >
             Actualizar
+          </button>
+
+          <button
+            onClick={handleExport}
+            disabled={filteredHistory.length === 0}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase shadow hover:scale-105 transition-all flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <span className="material-symbols-outlined text-sm">download</span>
+            Exportar CSV
           </button>
 
           <span className="text-[10px] text-slate-400 font-bold ml-auto">
@@ -212,7 +261,7 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-slate-800">
-                {filteredHistory.map((entry) => (
+                {pagedHistory.map((entry) => (
                   <tr key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                     <td className="px-8 py-5">
                       <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase ${getTypeColor(entry.type)}`}>
@@ -261,6 +310,28 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
                 )}
               </tbody>
             </table>
+          )}
+
+          {filteredHistory.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-8 py-4 border-t dark:border-slate-800">
+              <button
+                disabled={currentPage === 0}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs font-bold text-slate-400">
+                Página {currentPage + 1} de {totalPages} · {filteredHistory.length} registros
+              </span>
+              <button
+                disabled={(currentPage + 1) * PAGE_SIZE >= filteredHistory.length}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Siguiente →
+              </button>
+            </div>
           )}
         </div>
       </main>

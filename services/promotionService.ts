@@ -34,6 +34,7 @@ export interface PromotionRequest {
     reviewedAt?: string;
     rejectionReason?: string;
     createdAt: string;
+    items?: any[];
 }
 
 export const PromotionService = {
@@ -198,6 +199,7 @@ export const PromotionService = {
         reason?: string;
         requestedBy: string;
         promotionId?: string;
+        items?: any[];
     }): Promise<string> {
         const { data, error } = await supabase.rpc('create_promotion_request', {
             p_sale_id: params.saleId || null,
@@ -210,7 +212,8 @@ export const PromotionService = {
             p_discount_amount: params.discountAmount,
             p_reason: params.reason || null,
             p_requested_by: params.requestedBy,
-            p_promotion_id: params.promotionId || null
+            p_promotion_id: params.promotionId || null,
+            p_items: params.items ? JSON.stringify(params.items) : null
         });
 
         if (error) throw error;
@@ -235,13 +238,13 @@ export const PromotionService = {
 
         const { data: request } = await supabase
             .from('promotion_requests')
-            .select('branch_id, client_name')
+            .select('branch_id, client_name, requested_by')
             .eq('id', requestId)
             .single();
 
         if (request) {
             await NotificationService.createNotification({
-                targetRole: 'STORE_MANAGER',
+                userId: request.requested_by,
                 title: 'Promoción Aprobada',
                 message: `La promoción para ${request.client_name || 'cliente'} ha sido aprobada`,
                 actionUrl: '/wholesale-pos'
@@ -260,13 +263,13 @@ export const PromotionService = {
 
         const { data: request } = await supabase
             .from('promotion_requests')
-            .select('branch_id, client_name')
+            .select('branch_id, client_name, requested_by')
             .eq('id', requestId)
             .single();
 
         if (request) {
             await NotificationService.createNotification({
-                targetRole: 'STORE_MANAGER',
+                userId: request.requested_by,
                 title: 'Promoción Rechazada',
                 message: `La promoción para ${request.client_name || 'cliente'} ha sido rechazada`,
                 actionUrl: '/wholesale-pos'
@@ -292,7 +295,8 @@ export const PromotionService = {
             reviewedBy: r.reviewed_by,
             reviewedAt: r.reviewed_at,
             rejectionReason: r.rejection_reason,
-            createdAt: r.created_at
+            createdAt: r.created_at,
+            items: r.items || undefined
         };
     }
 };

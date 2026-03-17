@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection, ShippingOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { ShippingService, CARRIER_OPTIONS, SHIPPING_STATUS_LABELS } from '../services/shippingService';
+import { exportToCSV } from '../utils/csvExport';
 
 interface TransfersProps {
     user: User;
@@ -11,6 +12,8 @@ interface TransfersProps {
 }
 
 const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
+    const PAGE_SIZE = 25;
+    const [transferPage, setTransferPage] = useState(0);
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
     const [barters, setBarters] = useState<BarterTransfer[]>([]);
     const [pendingBarters, setPendingBarters] = useState<BarterTransfer[]>([]);
@@ -416,6 +419,23 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         p.sku.toLowerCase().includes(search.toLowerCase())
     );
 
+    const pagedTransfers = transfers.slice(transferPage * PAGE_SIZE, (transferPage + 1) * PAGE_SIZE);
+    const transferTotalPages = Math.ceil(transfers.length / PAGE_SIZE);
+
+    const handleExportTransfers = () => {
+        exportToCSV(
+            `traspasos-${new Date().toISOString().split('T')[0]}.csv`,
+            transfers,
+            [
+                { key: 'folio', label: 'Folio' },
+                { key: 'fromBranchName', label: 'Origen' },
+                { key: 'toBranchName', label: 'Destino' },
+                { key: 'status', label: 'Estado' },
+                { key: 'createdAt', label: 'Fecha' }
+            ]
+        );
+    };
+
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
@@ -460,7 +480,15 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
-                            <button onClick={() => loadData(startDate, endDate)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            <button onClick={() => { setTransferPage(0); loadData(startDate, endDate); }} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
+                            <button
+                                onClick={handleExportTransfers}
+                                disabled={transfers.length === 0}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase shadow hover:scale-105 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                            >
+                                <span className="material-symbols-outlined text-sm">download</span>
+                                Exportar CSV
+                            </button>
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{transfers.length} traspaso{transfers.length !== 1 ? 's' : ''}</span>
                         </div>
 
@@ -478,7 +506,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
-                                            {transfers.map(t => (
+                                            {pagedTransfers.map(t => (
                                                 <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                                                     <td className="px-8 py-5 font-black text-primary">#T-{t.folio.toString().padStart(4, '0')}</td>
                                                     <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{t.fromBranchName}</td>
@@ -497,6 +525,27 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    {transfers.length > PAGE_SIZE && (
+                                        <div className="flex items-center justify-between px-8 py-4 border-t dark:border-slate-700">
+                                            <button
+                                                disabled={transferPage === 0}
+                                                onClick={() => setTransferPage(p => p - 1)}
+                                                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                            >
+                                                ← Anterior
+                                            </button>
+                                            <span className="text-xs font-bold text-slate-400">
+                                                Página {transferPage + 1} de {transferTotalPages} · {transfers.length} traspasos
+                                            </span>
+                                            <button
+                                                disabled={(transferPage + 1) * PAGE_SIZE >= transfers.length}
+                                                onClick={() => setTransferPage(p => p + 1)}
+                                                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                            >
+                                                Siguiente →
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

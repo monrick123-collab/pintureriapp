@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { User, Product, RestockSheet, UserRole, CartItem, Branch, RestockItemWithReceived } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { ShippingService, CARRIER_OPTIONS } from '../services/shippingService';
+import { exportToCSV } from '../utils/csvExport';
 
 interface RestocksProps {
     user: User;
@@ -11,7 +12,9 @@ interface RestocksProps {
 }
 
 const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
+    const PAGE_SIZE = 25;
     const [sheets, setSheets] = useState<RestockSheet[]>([]);
+    const [currentPage, setCurrentPage] = useState(0);
     const [products, setProducts] = useState<Product[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -238,6 +241,25 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
         p.sku.toLowerCase().includes(search.toLowerCase())
     );
 
+    const pagedSheets = sheets.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+    const totalPages = Math.ceil(sheets.length / PAGE_SIZE);
+
+    const handleExport = () => {
+        exportToCSV(
+            `resurtidos-${new Date().toISOString().split('T')[0]}.csv`,
+            sheets,
+            [
+                { key: 'folio', label: 'Folio' },
+                { key: 'branchName', label: 'Sucursal' },
+                { key: 'totalAmount', label: 'Monto Estimado' },
+                { key: 'status', label: 'Estado' },
+                { key: 'createdAt', label: 'Fecha Creación' },
+                { key: 'departureTime', label: 'Salida' },
+                { key: 'arrivalTime', label: 'Llegada' }
+            ]
+        );
+    };
+
     return (
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
@@ -301,13 +323,21 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                 />
                             </div>
                             <button
-                                onClick={() => loadData(startDate, endDate)}
+                                onClick={() => { setCurrentPage(0); loadData(startDate, endDate); }}
                                 disabled={loading}
                                 className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-1 disabled:opacity-50"
                                 title="Aplicar Filtros"
                             >
                                 <span className="material-symbols-outlined text-sm">filter_alt</span>
                                 Filtrar
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                disabled={sheets.length === 0}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase shadow hover:scale-105 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                            >
+                                <span className="material-symbols-outlined text-sm">download</span>
+                                Exportar CSV
                             </button>
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{sheets.length} hoja{sheets.length !== 1 ? 's' : ''}</span>
                         </div>
@@ -329,7 +359,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
-                                            {sheets.map(s => (
+                                            {pagedSheets.map(s => (
                                                 <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                                                     <td className="px-8 py-5 font-black text-primary">#R-{s.folio.toString().padStart(4, '0')}</td>
                                                     <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{s.branchName}</td>
@@ -394,6 +424,27 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                             )}
                                         </tbody>
                                     </table>
+                                    {sheets.length > PAGE_SIZE && (
+                                        <div className="flex items-center justify-between px-8 py-4 border-t dark:border-slate-700">
+                                            <button
+                                                disabled={currentPage === 0}
+                                                onClick={() => setCurrentPage(p => p - 1)}
+                                                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                            >
+                                                ← Anterior
+                                            </button>
+                                            <span className="text-xs font-bold text-slate-400">
+                                                Página {currentPage + 1} de {totalPages} · {sheets.length} resurtidos
+                                            </span>
+                                            <button
+                                                disabled={(currentPage + 1) * PAGE_SIZE >= sheets.length}
+                                                onClick={() => setCurrentPage(p => p + 1)}
+                                                className="px-4 py-2 text-xs font-black uppercase bg-slate-100 dark:bg-slate-800 rounded-xl disabled:opacity-40 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                            >
+                                                Siguiente →
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

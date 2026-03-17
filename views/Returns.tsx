@@ -4,6 +4,7 @@ import { User, Product, Return, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 import AuthorizationModal from '../components/AuthorizationModal';
+import SmartSearch from '../components/SmartSearch';
 import { useNavigate } from 'react-router-dom';
 
 interface ReturnsProps {
@@ -29,6 +30,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     // Form States
     const [cart, setCart] = useState<ReturnItem[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedProductDisplay, setSelectedProductDisplay] = useState<{ name: string; sku: string } | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState('uso_tienda');
 
@@ -57,6 +59,21 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        if (!(isAdmin || isWarehouse)) return;
+        InventoryService.getBranches()
+            .then(data => {
+                if (data.length > 0) {
+                    setBranches(data);
+                    if (!selectedFormBranch) {
+                        setSelectedFormBranch(data[0].id);
+                        loadProductsForBranch(data[0].id);
+                    }
+                }
+            })
+            .catch(e => console.error('Error loading branches:', e));
+    }, [isAdmin, isWarehouse]);
+
     const loadData = async (sd = startDate, ed = endDate, branchFilter = selectedBranchFilter) => {
         try {
             setLoading(true);
@@ -70,7 +87,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 ? selectedFormBranch
                 : user.branchId;
 
-            const [prodData, retData, branchesData] = await Promise.all([
+            const [prodData, retData] = await Promise.all([
                 productBranch
                     ? InventoryService.getProductsByBranch(productBranch)
                     : Promise.resolve([]),
@@ -78,21 +95,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                     branchIdToFetch,
                     sd || undefined,
                     ed || undefined
-                ),
-                (isAdmin || isWarehouse) ? InventoryService.getBranches() : Promise.resolve([])
+                )
             ]);
             setProducts(prodData);
             setReturns(retData as unknown as Return[]);
-            if (branchesData.length > 0) {
-                setBranches(branchesData);
-                // Auto-select first branch for admin/warehouse if none selected and user has no branchId
-                if ((isAdmin || isWarehouse) && !selectedFormBranch && branchesData.length > 0) {
-                    const firstBranch = branchesData[0].id;
-                    setSelectedFormBranch(firstBranch);
-                    // Load products for that branch
-                    loadProductsForBranch(firstBranch);
-                }
-            }
+
         } catch (e) {
             console.error(e);
         } finally {
@@ -123,6 +130,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
 
         // Reset Item Form
         setSelectedProductId('');
+        setSelectedProductDisplay(null);
         setQuantity(1);
         setReason('uso_tienda');
     };
@@ -427,7 +435,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 <h3 className="text-xl md:text-2xl font-black mb-5">Nueva Devolución</h3>
                                 <div className="space-y-5 max-w-2xl">
                                     {/* Branch selector for admin/warehouse */}
-                                    {(isAdmin || isWarehouse) && branches.length > 0 && (
+                                    {(isAdmin || isWarehouse) && (
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-500">Sucursal origen del inventario</label>
                                             <select
@@ -436,6 +444,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 onChange={e => {
                                                     setSelectedFormBranch(e.target.value);
                                                     setSelectedProductId('');
+                                                    setSelectedProductDisplay(null);
                                                     if (e.target.value) loadProductsForBranch(e.target.value);
                                                     else setProducts([]);
                                                 }}
@@ -447,21 +456,40 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                     )}
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Producto</label>
-                                        <select
-                                            className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700"
-                                            value={selectedProductId}
-                                            onChange={e => setSelectedProductId(e.target.value)}
-                                            disabled={!selectedFormBranch && !user.branchId}
-                                        >
-                                            <option value="">
-                                                {!selectedFormBranch && !user.branchId
-                                                    ? 'Selecciona sucursal primero...'
-                                                    : products.length === 0
-                                                        ? 'Sin productos disponibles'
-                                                        : 'Selecciona producto...'}
-                                            </option>
-                                            {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock} dispon.)</option>)}
-                                        </select>
+                                        {(!selectedFormBranch && !user.branchId) ? (
+                                            <div className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-400 text-sm">
+                                                Selecciona sucursal primero...
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {selectedProductDisplay ? (
+                                                    <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/30 rounded-2xl">
+                                                        <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{selectedProductDisplay.name}</p>
+                                                            <p className="text-xs text-slate-500">SKU: {selectedProductDisplay.sku}</p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedProductId(''); setSelectedProductDisplay(null); }}
+                                                            className="text-slate-400 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">close</span>
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <SmartSearch
+                                                        products={products}
+                                                        currentBranchId={selectedFormBranch || user.branchId || ''}
+                                                        includeZeroStock={true}
+                                                        onSelectProduct={p => {
+                                                            setSelectedProductId(p.id);
+                                                            setSelectedProductDisplay({ name: p.name, sku: p.sku });
+                                                        }}
+                                                    />
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                         <div className="space-y-1">

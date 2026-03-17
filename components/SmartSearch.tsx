@@ -5,19 +5,21 @@ interface SmartSearchProps {
   products: Product[];
   onSelectProduct: (product: Product) => void;
   currentBranchId: string;
+  includeZeroStock?: boolean;
 }
 
-const SmartSearch: React.FC<SmartSearchProps> = ({ products, onSelectProduct, currentBranchId }) => {
+const SmartSearch: React.FC<SmartSearchProps> = ({ products, onSelectProduct, currentBranchId, includeZeroStock = false }) => {
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'category' | 'brand' | 'status'>('all');
 
   // Filtrar productos por sucursal actual
   const branchProducts = useMemo(() => {
+    if (includeZeroStock) return products;
     return products.filter(product => {
       const branchStock = product.inventory?.[currentBranchId] || 0;
-      return branchStock > 0; // Solo mostrar productos con stock en esta sucursal
+      return branchStock > 0;
     });
-  }, [products, currentBranchId]);
+  }, [products, currentBranchId, includeZeroStock]);
 
   const filteredProducts = useMemo(() => {
     if (!query.trim()) {

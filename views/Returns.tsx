@@ -427,7 +427,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 <h3 className="text-xl md:text-2xl font-black mb-5">Nueva Devolución</h3>
                                 <div className="space-y-5 max-w-2xl">
                                     {/* Branch selector for admin/warehouse */}
-                                    {(isAdmin || isWarehouse) && branches.length > 0 && (
+                                    {(isAdmin || isWarehouse) && (
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-500">Sucursal origen del inventario</label>
                                             <select

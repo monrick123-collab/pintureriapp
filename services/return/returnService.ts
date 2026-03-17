@@ -29,7 +29,13 @@ export const ReturnService = {
             await NotificationService.createNotification({
                 targetRole: 'ADMIN',
                 title: 'Nueva Solicitud de Devolución',
-                message: `La sucursal ${bData?.name || branchId} ha enviado productos rotos o dañados.`,
+                message: `La sucursal ${bData?.name || branchId} ha enviado productos para devolución.`,
+                actionUrl: '/returns'
+            });
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Devolución en Camino',
+                message: `La sucursal ${bData?.name || branchId} enviará productos de devolución — prepara recepción.`,
                 actionUrl: '/returns'
             });
         } catch(e) { console.error(e) }

@@ -225,6 +225,7 @@ export interface Quotation {
   iva: number;
   total: number;
   status: 'pending' | 'completed' | 'cancelled';
+  saleId?: string;
   branchId: string;
   createdBy: string;
   createdAt: string;
@@ -237,7 +238,7 @@ export interface Return {
   productId: string;
   quantity: number;
   reason: string;
-  status: 'pending_authorization' | 'approved' | 'rejected';
+  status: 'pending_authorization' | 'approved' | 'rejected' | 'received_at_warehouse' | 'closed';
   authorizedBy?: string;
   authorizedByName?: string;
   transportedBy?: string;
@@ -396,7 +397,7 @@ export interface CoinChangeRequest {
   folio: number;
   amount: number;
   breakdown?: Record<string, number>; // e.g. { "500": 2, "200": 5 }
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'coins_sent' | 'completed' | 'cancelled';
   requesterId: string;
   requesterName?: string;
   receiverId?: string;

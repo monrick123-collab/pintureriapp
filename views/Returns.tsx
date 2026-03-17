@@ -144,6 +144,22 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleCloseReturn = async (id: string) => {
+        if (!confirm('¿Confirmar recepción física y cerrar esta devolución definitivamente?')) return;
+        try {
+            const { supabase } = await import('../services/supabase');
+            const { error } = await supabase
+                .from('returns')
+                .update({ status: 'closed', updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) throw error;
+            loadData();
+            alert('Devolución cerrada correctamente.');
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        }
+    };
+
     const handleConfirmReception = async (id: string) => {
         if (!confirm('¿Confirmas que el producto fue recibido físicamente en bodega?')) return;
         try {
@@ -279,7 +295,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' :
                                                             r.status === 'rejected' ? 'bg-red-100 text-red-600' :
                                                                 r.status === 'received_at_warehouse' ? 'bg-blue-100 text-blue-600' :
-                                                                    'bg-amber-100 text-amber-600'
+                                                                    r.status === 'closed' ? 'bg-slate-100 text-slate-500' :
+                                                                        'bg-amber-100 text-amber-600'
                                                             }`}>
                                                             {translateStatus(r.status)}
                                                         </span>
@@ -326,6 +343,22 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                                 <span className="material-symbols-outlined text-sm">inventory</span>
                                                                 Recibido
                                                             </button>
+                                                        )}
+                                                        {isAdmin && r.status === 'received_at_warehouse' && (
+                                                            <button
+                                                                onClick={() => handleCloseReturn(r.id)}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-black transition-colors"
+                                                                title="Confirmar recepción física y cerrar devolución"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">lock</span>
+                                                                Cerrar
+                                                            </button>
+                                                        )}
+                                                        {r.status === 'closed' && (
+                                                            <span className="text-[10px] font-black text-green-600 uppercase flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">verified</span>
+                                                                Cerrada
+                                                            </span>
                                                         )}
                                                         <button
                                                             onClick={() => navigate(`/returns/${r.id}/print`)}
@@ -381,6 +414,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 <option value="demostracion">Demostraciones</option>
                                                 <option value="defecto">Defecto de Material</option>
                                                 <option value="traspaso_matriz">Retorno a Matriz</option>
+                                                <option value="por_envasado">Por Envasado</option>
                                                 {(isAdmin || isWarehouse) && (
                                                     <option value="devolucion_proveedor">Devolución a Proveedor</option>
                                                 )}

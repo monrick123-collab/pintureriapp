@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User, CoinChangeRequest, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
+import { CoinService } from '../services/coin/coinService';
+import { useNavigate } from 'react-router-dom';
 
 interface CoinChangeProps {
     user: User;
@@ -25,9 +27,11 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const [requests, setRequests] = useState<CoinChangeRequest[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const navigate = useNavigate();
 
     // Form State
     const [breakdown, setBreakdown] = useState<Record<string, number>>({});
+    const [collectedBy, setCollectedBy] = useState('');
 
     const totalAmount = DENOMINATIONS.reduce((acc, d) => acc + (d.value * (breakdown[d.value.toString()] || 0)), 0);
 
@@ -66,10 +70,10 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
         if (totalAmount <= 0) return;
         try {
             setLoading(true);
-            // Convert numbers to strings for JSON Record
-            await InventoryService.createCoinChangeRequest(branchId, user.id, totalAmount, breakdown);
+            await CoinService.createCoinChangeRequest(branchId, user.id, totalAmount, breakdown, collectedBy || undefined);
             setActiveTab('history');
             setBreakdown({});
+            setCollectedBy('');
             loadData();
             alert("Solicitud de cambio creada.");
         } catch (e) {
@@ -77,6 +81,22 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleConfirmCoinsSent = async (requestId: string) => {
+        if (!confirm('¿Confirmar que las monedas fueron entregadas al mensajero?')) return;
+        try {
+            await CoinService.confirmCoinsSent(requestId, user.id);
+            loadData();
+        } catch (e: any) { alert('Error: ' + e.message); }
+    };
+
+    const handleConfirmBillsReceived = async (requestId: string) => {
+        if (!confirm('¿Confirmar que recibiste los billetes a cambio?')) return;
+        try {
+            await CoinService.confirmBillsReceived(requestId, user.id);
+            loadData();
+        } catch (e: any) { alert('Error: ' + e.message); }
     };
 
     const updateQuantity = (value: number, qty: number) => {
@@ -140,9 +160,11 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                                 <th className="px-8 py-5">Folio</th>
                                                 <th className="px-8 py-5">Sucursal</th>
                                                 <th className="px-8 py-5">Monto Total</th>
+                                                <th className="px-8 py-5">Mensajero</th>
                                                 <th className="px-8 py-5">Desglose</th>
                                                 <th className="px-8 py-5">Fecha</th>
                                                 <th className="px-8 py-5 text-center">Estado</th>
+                                                <th className="px-8 py-5 text-right">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
@@ -151,6 +173,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                                     <td className="px-8 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
                                                     <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
                                                     <td className="px-8 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-sm text-slate-500">{(r as any).collectedBy || <span className="text-slate-300">—</span>}</td>
                                                     <td className="px-8 py-5">
                                                         {r.breakdown ? (
                                                             <div className="flex flex-wrap gap-1 max-w-xs">
@@ -168,10 +191,36 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                                     <td className="px-8 py-5 text-center">
                                                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.status === 'completed' ? 'bg-green-500/10 text-green-500' :
                                                             r.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                            r.status === 'coins_sent' ? 'bg-blue-500/10 text-blue-500' :
                                                                 'bg-amber-500/10 text-amber-500'
                                                             }`}>
-                                                            {r.status === 'pending' ? 'Pendiente' : r.status === 'completed' ? 'Completado' : 'Cancelado'}
+                                                            {r.status === 'pending' ? 'Pendiente' : r.status === 'completed' ? 'Completado' : r.status === 'coins_sent' ? 'Monedas Enviadas' : 'Cancelado'}
                                                         </span>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            {!isAdmin && r.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => handleConfirmCoinsSent(r.id)}
+                                                                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                    title="Confirmar que las monedas fueron entregadas"
+                                                                >Monedas Enviadas</button>
+                                                            )}
+                                                            {isAdmin && r.status === 'coins_sent' && (
+                                                                <button
+                                                                    onClick={() => handleConfirmBillsReceived(r.id)}
+                                                                    className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                    title="Confirmar recepción de billetes"
+                                                                >Billetes Recibidos</button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => navigate(`/coin-change/${r.id}/print`)}
+                                                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                                title="Imprimir comprobante"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">print</span>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -237,8 +286,19 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-6 shrink-0">
-                                    <div className="flex justify-between items-center mb-6">
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-6 shrink-0 space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">
+                                            Mensajero / Quien lleva las monedas
+                                        </label>
+                                        <input
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-amber-500/20"
+                                            value={collectedBy}
+                                            onChange={e => setCollectedBy(e.target.value)}
+                                            placeholder="Nombre del mensajero o personal"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
                                         <span className="text-slate-400 font-bold uppercase text-sm tracking-widest">Total a Solicitar</span>
                                         <span className="text-4xl font-black text-amber-500">${totalAmount.toLocaleString()}</span>
                                     </div>

@@ -36,6 +36,20 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleMarkShipped = async (id: string) => {
+        try {
+            const { supabase } = await import('../services/supabase');
+            const { error } = await supabase
+                .from('internal_supplies')
+                .update({ status: 'shipped', shipped_at: new Date().toISOString(), shipped_by: user.id })
+                .eq('id', id);
+            if (error) throw error;
+            loadData();
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -75,7 +89,9 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                         <th className="px-6 py-5">Categoría</th>
                                         <th className="px-6 py-5">Sucursal Destino</th>
                                         <th className="px-6 py-5 text-right">Valor (Solo Control)</th>
+                                        <th className="px-6 py-5">Estado</th>
                                         <th className="px-8 py-5 text-right">Fecha</th>
+                                        {isAdmin && <th className="px-6 py-5 text-right">Acción</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y dark:divide-slate-700">
@@ -89,6 +105,11 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                             </td>
                                             <td className="px-6 py-5">{s.branches?.name}</td>
                                             <td className="px-6 py-5 text-right font-black text-slate-400">${s.amount.toLocaleString()}</td>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.status === 'shipped' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    {s.status === 'shipped' ? 'Enviado' : 'Pendiente'}
+                                                </span>
+                                            </td>
                                             <td className="px-8 py-5 text-right text-xs text-slate-500">
                                                 {(s.createdAt && !isNaN(new Date(s.createdAt).getTime()))
                                                     ? new Date(s.createdAt).toLocaleDateString()
@@ -96,6 +117,21 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                                         ? new Date(s.created_at).toLocaleDateString()
                                                         : '---')}
                                             </td>
+                                            {isAdmin && (
+                                                <td className="px-6 py-5 text-right">
+                                                    {(!s.status || s.status === 'pending') && (
+                                                        <button
+                                                            onClick={() => handleMarkShipped(s.id)}
+                                                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                        >
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                                                Enviado
+                                                            </span>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

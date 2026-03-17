@@ -5,7 +5,8 @@ import { User, Product, Client, CartItem } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { ClientService } from '../services/clientService';
 import { DiscountService } from '../services/discountService';
-import { DiscountRequest } from '../types';
+import { DiscountRequest, Quotation } from '../types';
+import { quotationService } from '../services/quotationService';
 
 interface QuotationsProps {
   user: User;
@@ -27,6 +28,8 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [appliedDiscount, setAppliedDiscount] = useState<{ amount: number, type: 'percentage' | 'fixed' } | null>(null);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeView, setActiveView] = useState<'builder' | 'history'>('builder');
+  const [quotationHistory, setQuotationHistory] = useState<Quotation[]>([]);
 
   const [paymentType, setPaymentType] = useState<'contado' | 'credito'>('contado');
   const [folio, setFolio] = useState<number>(0);
@@ -94,7 +97,33 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
     setActiveDiscountRequest(null);
   };
 
-  const handlePrint = () => {
+  const loadQuotationHistory = async () => {
+    try {
+      const data = await quotationService.getQuotations();
+      setQuotationHistory(data);
+    } catch (e) {
+      console.error('Error cargando historial de cotizaciones:', e);
+    }
+  };
+
+  const handlePrint = async () => {
+    // Save quotation to DB before printing
+    try {
+      await quotationService.createQuotation({
+        clientId: selectedClient?.id,
+        clientName: selectedClient?.name || 'Consumidor Final',
+        items: items as any,
+        subtotal,
+        discountAmount,
+        iva,
+        total,
+        status: 'pending',
+        branchId: user.branchId || 'BR-MAIN',
+        createdBy: user.id
+      });
+    } catch (e) {
+      console.error('Error guardando cotización:', e);
+    }
     const wasDark = document.documentElement.classList.contains('dark');
     if (wasDark) document.documentElement.classList.remove('dark');
     setTimeout(() => {
@@ -377,26 +406,105 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
             </button>
             <div className="flex gap-3 h-10 print:hidden">
               <button
-                disabled={items.length === 0}
-                onClick={() => setIsPreviewOpen(true)}
-                className="flex h-10 px-3 md:px-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs rounded-xl hover:bg-slate-100 transition-all items-center gap-2"
+                onClick={() => { setActiveView(activeView === 'history' ? 'builder' : 'history'); if (activeView !== 'history') loadQuotationHistory(); }}
+                className={`flex h-10 px-3 md:px-5 border-2 font-black text-xs rounded-xl transition-all items-center gap-2 ${activeView === 'history' ? 'bg-primary border-primary text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'}`}
               >
-                <span className="material-symbols-outlined text-lg">visibility</span>
-                <span className="hidden md:inline">VISTA PREVIA</span>
+                <span className="material-symbols-outlined text-lg">history</span>
+                <span className="hidden md:inline">HISTORIAL</span>
               </button>
-              <button
-                disabled={items.length === 0}
-                onClick={handlePrint}
-                className="h-10 px-6 bg-primary text-white font-black text-xs rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
-              >
-                <span className="material-symbols-outlined text-lg">print</span>
-                <span className="hidden sm:inline">IMPRIMIR</span>
-              </button>
+              {activeView === 'builder' && <>
+                <button
+                  disabled={items.length === 0}
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="flex h-10 px-3 md:px-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs rounded-xl hover:bg-slate-100 transition-all items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">visibility</span>
+                  <span className="hidden md:inline">VISTA PREVIA</span>
+                </button>
+                <button
+                  disabled={items.length === 0}
+                  onClick={handlePrint}
+                  className="h-10 px-6 bg-primary text-white font-black text-xs rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-lg">print</span>
+                  <span className="hidden sm:inline">IMPRIMIR</span>
+                </button>
+              </>}
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
+        {activeView === 'history' && (
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="max-w-5xl mx-auto space-y-6">
+              {/* KPI Cards */}
+              {(() => {
+                const total_q = quotationHistory.length;
+                const converted = quotationHistory.filter(q => q.status === 'completed').length;
+                const rate = total_q > 0 ? Math.round((converted / total_q) * 100) : 0;
+                return (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border dark:border-slate-700 shadow-sm">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Generadas</p>
+                      <p className="text-4xl font-black text-slate-900 dark:text-white mt-2">{total_q}</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border dark:border-slate-700 shadow-sm">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Venta Cerrada</p>
+                      <p className="text-4xl font-black text-green-600 mt-2">{converted}</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border dark:border-slate-700 shadow-sm">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tasa Conversión</p>
+                      <p className="text-4xl font-black text-primary mt-2">{rate}%</p>
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* Table */}
+              <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <tr>
+                      <th className="px-6 py-4">Folio</th>
+                      <th className="px-6 py-4">Cliente</th>
+                      <th className="px-6 py-4">Total</th>
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4">Estado</th>
+                      <th className="px-6 py-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-slate-700">
+                    {quotationHistory.map(q => (
+                      <tr key={q.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
+                        <td className="px-6 py-4 font-black text-primary">#{q.folio.toString().padStart(4, '0')}</td>
+                        <td className="px-6 py-4 font-bold">{q.clientName || 'Consumidor Final'}</td>
+                        <td className="px-6 py-4 font-black">${(q.total || 0).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-sm text-slate-500">{new Date(q.createdAt).toLocaleDateString('es-MX')}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${q.status === 'completed' ? 'bg-green-100 text-green-600' : q.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                            {q.status === 'completed' ? 'Venta Cerrada' : q.status === 'cancelled' ? 'Cancelada' : 'Pendiente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {q.status === 'pending' && (
+                            <button
+                              onClick={async () => { await quotationService.markAsSaleClosed(q.id); loadQuotationHistory(); }}
+                              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase"
+                            >Marcar Venta</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {quotationHistory.length === 0 && (
+                      <tr><td colSpan={6} className="py-20 text-center text-slate-400 font-bold">Sin cotizaciones registradas</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 flex overflow-hidden" style={{ display: activeView === 'history' ? 'none' : undefined }}>
           <div className="flex-1 p-4 md:p-8 flex flex-col gap-6 overflow-hidden">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative group">

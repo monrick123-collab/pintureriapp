@@ -19,6 +19,7 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const isSub = user.role === UserRole.WAREHOUSE_SUB;
+  const isAdmin = user.role === UserRole.ADMIN;
   const [showAuth, setShowAuth] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
@@ -355,19 +356,39 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase">¿Habilitar Crédito?</label>
-                    <input type="checkbox" className="size-5 rounded border-slate-300 text-primary focus:ring-primary" checked={newClient.isActiveCredit} onChange={e => setNewClient({ ...newClient, isActiveCredit: e.target.checked })} />
+                    {isAdmin ? (
+                      <input type="checkbox" className="size-5 rounded border-slate-300 text-primary focus:ring-primary" checked={newClient.isActiveCredit} onChange={e => setNewClient({ ...newClient, isActiveCredit: e.target.checked })} />
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${newClient.isActiveCredit ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                        {newClient.isActiveCredit ? 'Activo' : 'Inactivo'}
+                      </span>
+                    )}
                   </div>
                   {newClient.isActiveCredit && (
                     <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite ($)</label>
-                        <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditLimit} onChange={e => setNewClient({ ...newClient, creditLimit: parseFloat(e.target.value) || 0 })} />
+                        {isAdmin ? (
+                          <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditLimit} onChange={e => setNewClient({ ...newClient, creditLimit: parseFloat(e.target.value) || 0 })} />
+                        ) : (
+                          <p className="px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-black text-slate-500">${(newClient.creditLimit || 0).toLocaleString()}</p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días Plazo</label>
-                        <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditDays} onChange={e => setNewClient({ ...newClient, creditDays: parseInt(e.target.value) || 0 })} />
+                        {isAdmin ? (
+                          <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black" value={newClient.creditDays} onChange={e => setNewClient({ ...newClient, creditDays: parseInt(e.target.value) || 0 })} />
+                        ) : (
+                          <p className="px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-black text-slate-500">{newClient.creditDays} días</p>
+                        )}
                       </div>
                     </div>
+                  )}
+                  {!isAdmin && (
+                    <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">lock</span>
+                      Solo el Administrador puede modificar los términos de crédito.
+                    </p>
                   )}
                 </div>
 

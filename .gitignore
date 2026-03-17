@@ -14,6 +14,7 @@ merge_wholesale.*
 run_migration.js
 run_sql.js
 run_test.js
+test.js
 start_app.sh
 sync-github.sh
 update-github.sh

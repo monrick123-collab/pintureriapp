@@ -31,8 +31,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ user, error: null });
   },
 
-  logout: () => {
+  logout: async () => {
     localStorage.removeItem('pintamax_user');
+    // Also sign out from Supabase Auth
+    try {
+      const { supabase } = await import('../services/supabase');
+      await supabase.auth.signOut();
+    } catch (_) {}
     set({ user: null });
   },
 

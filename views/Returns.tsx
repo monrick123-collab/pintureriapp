@@ -70,7 +70,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 ? selectedFormBranch
                 : user.branchId;
 
-            const [prodData, retData, branchesData] = await Promise.all([
+            const [prodData, retData] = await Promise.all([
                 productBranch
                     ? InventoryService.getProductsByBranch(productBranch)
                     : Promise.resolve([]),
@@ -78,19 +78,24 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                     branchIdToFetch,
                     sd || undefined,
                     ed || undefined
-                ),
-                (isAdmin || isWarehouse) ? InventoryService.getBranches() : Promise.resolve([])
+                )
             ]);
             setProducts(prodData);
             setReturns(retData as unknown as Return[]);
-            if (branchesData.length > 0) {
-                setBranches(branchesData);
-                // Auto-select first branch for admin/warehouse if none selected and user has no branchId
-                if ((isAdmin || isWarehouse) && !selectedFormBranch && branchesData.length > 0) {
-                    const firstBranch = branchesData[0].id;
-                    setSelectedFormBranch(firstBranch);
-                    // Load products for that branch
-                    loadProductsForBranch(firstBranch);
+
+            if (isAdmin || isWarehouse) {
+                try {
+                    const branchesData = await InventoryService.getBranches();
+                    if (branchesData.length > 0) {
+                        setBranches(branchesData);
+                        if (!selectedFormBranch) {
+                            const firstBranch = branchesData[0].id;
+                            setSelectedFormBranch(firstBranch);
+                            loadProductsForBranch(firstBranch);
+                        }
+                    }
+                } catch (be) {
+                    console.error('Error loading branches:', be);
                 }
             }
         } catch (e) {

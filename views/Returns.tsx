@@ -57,6 +57,21 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        if (!(isAdmin || isWarehouse)) return;
+        InventoryService.getBranches()
+            .then(data => {
+                if (data.length > 0) {
+                    setBranches(data);
+                    if (!selectedFormBranch) {
+                        setSelectedFormBranch(data[0].id);
+                        loadProductsForBranch(data[0].id);
+                    }
+                }
+            })
+            .catch(e => console.error('Error loading branches:', e));
+    }, [isAdmin, isWarehouse]);
+
     const loadData = async (sd = startDate, ed = endDate, branchFilter = selectedBranchFilter) => {
         try {
             setLoading(true);
@@ -83,21 +98,6 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
             setProducts(prodData);
             setReturns(retData as unknown as Return[]);
 
-            if (isAdmin || isWarehouse) {
-                try {
-                    const branchesData = await InventoryService.getBranches();
-                    if (branchesData.length > 0) {
-                        setBranches(branchesData);
-                        if (!selectedFormBranch) {
-                            const firstBranch = branchesData[0].id;
-                            setSelectedFormBranch(firstBranch);
-                            loadProductsForBranch(firstBranch);
-                        }
-                    }
-                } catch (be) {
-                    console.error('Error loading branches:', be);
-                }
-            }
         } catch (e) {
             console.error(e);
         } finally {

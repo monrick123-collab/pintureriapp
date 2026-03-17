@@ -441,7 +441,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
-                <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0">
                     <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-3xl">local_shipping</span>
                         Traspasos
@@ -470,7 +470,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                 {activeTab === 'history' ? (
                     <>
                         {/* Historial de Traspasos (Existente) */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             {/* ... (Contenido de filtros existente) */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
@@ -492,9 +492,9 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{transfers.length} traspaso{transfers.length !== 1 ? 's' : ''}</span>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-7xl mx-auto space-y-6">
-                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -553,12 +553,12 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                 ) : activeTab === 'barter_history' ? (
                     <>
                         {/* Historial de Trueques */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{barters.length} trueque{barters.length !== 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-7xl mx-auto space-y-6">
-                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -612,18 +612,18 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                 ) : activeTab === 'barter_pending' ? (
                     <>
                         {/* Ofertas de Trueque Pendientes */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{pendingBarters.length} oferta{pendingBarters.length !== 1 ? 's' : ''} pendiente{pendingBarters.length !== 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-7xl mx-auto space-y-6">
                                 {pendingBarters.length === 0 ? (
-                                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-12 text-center">
+                                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] p-12 text-center">
                                         <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">inbox</span>
                                         <p className="text-slate-400 font-bold">No hay ofertas de trueque pendientes</p>
                                     </div>
                                 ) : (
-                                    <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                                         <table className="w-full text-left">
                                             <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                                 <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">

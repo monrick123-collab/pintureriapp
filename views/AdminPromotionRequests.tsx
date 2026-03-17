@@ -155,9 +155,9 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
-                <header className="h-20 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-primary text-3xl">local_offer</span>
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0">
+                    <h1 className="text-base md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 pl-10 lg:pl-0">
+                        <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">local_offer</span>
                         Gestión de Promociones
                     </h1>
                     <div className="flex items-center gap-3">
@@ -168,16 +168,16 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
                                 { key: 'promotions', label: 'Promociones', icon: 'settings' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    className={`px-2 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1 md:gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>
-                                    {tab.label}
+                                    <span className="hidden sm:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto space-y-6">
                         {/* Pending Requests */}
                         {(activeTab === 'pending' || activeTab === 'all') && (

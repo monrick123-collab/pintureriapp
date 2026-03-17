@@ -216,7 +216,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
       </div>
 
       <div className="grid grid-cols-2 gap-12 mb-16 relative z-10">
-        <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100 relative overflow-hidden group">
+        <div className="p-8 bg-slate-50 rounded-2xl md:rounded-[32px] border border-slate-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/50 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform" />
           <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
             <span className="material-symbols-outlined text-xs">person</span>
@@ -240,7 +240,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </div>
         </div>
 
-        <div className="p-8 border-2 border-slate-100 rounded-[32px] flex flex-col justify-center">
+        <div className="p-8 border-2 border-slate-100 rounded-2xl md:rounded-[32px] flex flex-col justify-center">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
             <span className="material-symbols-outlined text-xs">badge</span>
             Atendido por
@@ -341,7 +341,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </div>
         </div>
 
-        <div className="bg-slate-900 rounded-[32px] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden print:bg-transparent print:border print:border-slate-300 print:text-slate-900 print:shadow-none">
+        <div className="bg-slate-900 rounded-2xl md:rounded-[32px] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden print:bg-transparent print:border print:border-slate-300 print:text-slate-900 print:shadow-none">
           <div className="absolute -bottom-10 -left-10 size-40 bg-white/5 rounded-full blur-2xl print:hidden" />
           <div className="space-y-4 relative z-10">
             <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest print:text-slate-500">
@@ -435,7 +435,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         </header>
 
         {activeView === 'history' && (
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
             <div className="max-w-5xl mx-auto space-y-6">
               {/* KPI Cards */}
               {(() => {
@@ -460,7 +460,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                 );
               })()}
               {/* Table */}
-              <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -705,7 +705,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
         {isDiscountModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl md:rounded-[32px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="p-8 md:p-10 overflow-y-auto">
                 <h2 className="text-2xl font-black mb-6">Descuento Especial</h2>
                 <div className="space-y-6">

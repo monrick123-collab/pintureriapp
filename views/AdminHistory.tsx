@@ -179,13 +179,13 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
       <Sidebar user={user} onLogout={onLogout} />
       
       <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-        <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
+        <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 flex-wrap gap-2 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
           <h1 className="text-xl font-black">Historial de Actividades</h1>
           <span className="text-xs text-slate-400 font-bold">Admin: {user.name}</span>
         </header>
 
         {/* Filtros */}
-        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
+        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tipo</label>
             <select
@@ -244,7 +244,7 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
         </div>
 
         {/* Tabla de historial */}
-        <div className="mx-8 my-4 bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border dark:border-slate-800 overflow-hidden flex-1 overflow-y-auto">
+        <div className="mx-8 my-4 bg-white dark:bg-slate-900 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-800 overflow-hidden flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

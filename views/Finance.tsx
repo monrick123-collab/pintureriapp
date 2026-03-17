@@ -99,7 +99,7 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
       <Sidebar user={user} onLogout={onLogout} />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark">
-        <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 flex-wrap gap-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white">Panel de Contabilidad</h1>
             <div className="flex gap-4 mt-2">
@@ -124,7 +124,7 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
           </select>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
           {activeTab === 'dashboard' && summary && (
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -332,7 +332,7 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
         {
           isPriceModalOpen && selectedRequest && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95">
+              <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl md:rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95">
                 <h3 className="text-xl font-black mb-1 uppercase tracking-tighter text-slate-900 dark:text-white">Asignar Precio</h3>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">{selectedRequest.productName}</p>
 

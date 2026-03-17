@@ -954,7 +954,7 @@ const addToCart = (product: Product) => {
                     <>
                         <div className="flex-1 flex flex-col overflow-hidden">
                         {/* Filter Bar matching Municipal Style */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Periodo</label>
                                 <select
@@ -1023,9 +1023,9 @@ const addToCart = (product: Product) => {
                         </div>
 
                         {/* Table matching Municipal Style */}
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             {historySubTab === 'promotions' ? (
-                                <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                                <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                                     <div className="overflow-x-auto custom-scrollbar">
                                         <table className="w-full text-left">
                                             <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">
@@ -1080,7 +1080,7 @@ const addToCart = (product: Product) => {
                                     </div>
                                 </div>
                             ) : (
-                            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                                 <div className="overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">

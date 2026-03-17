@@ -319,7 +319,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
                 {/* Header */}
-                <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 flex-wrap gap-2 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-3xl">account_balance</span>
                         <div>
@@ -589,7 +589,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 {/* ======================== HISTORY ======================== */}
                 {activeTab === 'history' && (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -619,8 +619,8 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); loadData('', ''); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors">Limpiar</button>}
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{history.length} venta{history.length !== 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
+                            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                                 <div className="overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">
@@ -682,14 +682,14 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 {activeTab === 'accounts' && (
                     <div className="flex-1 flex overflow-hidden">
                         {/* Account list */}
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-5xl mx-auto space-y-4">
                                 <div className="flex items-center justify-between mb-2">
                                     <h2 className="text-lg font-black">Cuentas de Crédito Municipal</h2>
                                     <span className="text-xs text-slate-400 font-bold">{accounts.length} municipio{accounts.length !== 1 ? 's' : ''}</span>
                                 </div>
                                 {accounts.length === 0 && (
-                                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-12 text-center text-slate-400">
+                                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] p-12 text-center text-slate-400">
                                         <span className="material-symbols-outlined text-5xl mb-2 block">account_balance</span>
                                         <p className="font-bold italic text-sm">Sin cuentas registradas aún.<br />Aparecerán automáticamente al crear ventas a crédito.</p>
                                     </div>

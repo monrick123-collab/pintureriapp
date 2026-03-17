@@ -72,15 +72,18 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
-                    <h1 className="text-xl font-black">Suministros (Limpieza y Papelería)</h1>
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0 gap-3 flex-wrap">
+                    <h1 className="text-base md:text-xl font-black pl-10 lg:pl-0">Suministros</h1>
                     {(isWarehouse || isStoreManager || isAdmin) && (
-                        <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Registrar Solicitud/Gasto</button>
+                        <button onClick={() => setIsModalOpen(true)} className="px-4 md:px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">
+                            <span className="hidden sm:inline">Registrar Solicitud/Gasto</span>
+                            <span className="sm:hidden flex items-center gap-1"><span className="material-symbols-outlined text-sm">add</span>Registrar</span>
+                        </button>
                     )}
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
+                    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">

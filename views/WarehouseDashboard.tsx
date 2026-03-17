@@ -171,7 +171,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950">
-                <header className="h-20 flex items-center justify-between px-6 md:px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-wrap gap-2 shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="w-10 lg:hidden" />
                         <div className="p-2 bg-primary/10 rounded-lg text-primary hidden sm:block">
@@ -205,7 +205,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                     {currentTab === 'branches' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {branches.map(branch => (
@@ -604,7 +604,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                             <p className="text-sm text-slate-500 mt-2">Verifica la cantidad recibida y el estado de cada producto.</p>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-4">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar space-y-4">
                             {receiveItems.map((item, index) => (
                                 <div key={item.id} className={`p-4 rounded-2xl border transition-colors ${item.status === 'received_full' ? 'border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10' :
                                     item.status === 'received_partial' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-900/10' :

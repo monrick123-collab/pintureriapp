@@ -112,20 +112,21 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
-                <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-amber-500 text-3xl">currency_exchange</span>
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">Cambio de Moneda</h1>
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 shrink-0 gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 pl-10 lg:pl-0">
+                        <span className="material-symbols-outlined text-amber-500 text-2xl md:text-3xl">currency_exchange</span>
+                        <h1 className="text-base md:text-2xl font-black text-slate-800 dark:text-white">Cambio de Moneda</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
                             {([
-                                { key: 'new', label: 'Nuevo Cambio', icon: 'add_circle' },
+                                { key: 'new', label: 'Nuevo', icon: 'add_circle' },
                                 { key: 'history', label: 'Historial', icon: 'list' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                    className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>
+                                    <span className="hidden sm:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -135,7 +136,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                 {activeTab === 'history' ? (
                     <>
                         {/* Filtro por fechas */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -151,9 +152,9 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{requests.length} solicitud{requests.length !== 1 ? 'es' : ''}</span>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-5xl mx-auto space-y-6">
-                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">

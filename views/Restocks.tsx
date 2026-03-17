@@ -265,10 +265,10 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
-                <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                            <span className="material-symbols-outlined text-primary text-3xl">reorder</span>
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0">
+                    <div className="flex items-center gap-4 pl-10 lg:pl-0">
+                        <h1 className="text-base md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                            <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">reorder</span>
                             Resurtidos
                         </h1>
                     </div>
@@ -279,8 +279,9 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                 { key: 'history', label: 'Historial', icon: 'list' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                    className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>
+                                    <span className="hidden sm:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -290,7 +291,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                 {activeTab === 'history' ? (
                     <>
                         {/* Filtros */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             {(isAdmin || isWarehouse) && (
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
@@ -342,9 +343,9 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{sheets.length} hoja{sheets.length !== 1 ? 's' : ''}</span>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                             <div className="max-w-7xl mx-auto space-y-6">
-                                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -595,7 +596,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                     <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
                                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Sucursal Destino</p>

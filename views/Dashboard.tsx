@@ -123,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <div className="p-4 md:p-10 max-w-[1600px] mx-auto w-full space-y-6 md:space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Venta Consolidada */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl md:rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Venta Consolidada</p>
                 <div className="p-2.5 bg-green-500/10 rounded-2xl text-green-500 group-hover:scale-110 transition-transform">
@@ -137,7 +137,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
 
             {/* Despachos Hoy */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl md:rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Despachos Hoy</p>
                 <div className="p-2.5 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:scale-110 transition-transform">
@@ -151,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
 
             {/* Uso de Almacén */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl md:rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Uso de Almacén</p>
                 <div className="p-2.5 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
@@ -165,7 +165,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
 
             {/* Solicitudes Pendientes */}
-            <div className="bg-slate-900 dark:bg-primary p-8 rounded-[32px] text-white shadow-2xl shadow-primary/20 space-y-4 transition-all hover:scale-[1.02] group relative overflow-hidden">
+            <div className="bg-slate-900 dark:bg-primary p-8 rounded-2xl md:rounded-[32px] text-white shadow-2xl shadow-primary/20 space-y-4 transition-all hover:scale-[1.02] group relative overflow-hidden">
               <div className="absolute top-4 right-4 opacity-10">
                 <span className="material-symbols-outlined text-[80px]">pending_actions</span>
               </div>
@@ -190,7 +190,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           )} */}
 
           {requests.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-2xl md:rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between mb-8 md:mb-10">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-primary/10 rounded-2xl text-primary shadow-inner">
@@ -204,7 +204,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {requests.map(req => (
-                  <div key={req.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[32px] border-2 border-transparent hover:border-primary transition-all flex flex-col group">
+                  <div key={req.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-2xl md:rounded-[32px] border-2 border-transparent hover:border-primary transition-all flex flex-col group">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex flex-col">
                         <span className="text-[11px] font-black text-primary uppercase tracking-widest">{req.branchName}</span>
@@ -232,7 +232,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           )}
 
           {discountRequests.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-amber-500">
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-2xl md:rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-amber-500">
               <div className="flex items-center justify-between mb-8 md:mb-10">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600">
@@ -246,7 +246,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {discountRequests.map(req => (
-                  <div key={req.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[32px] border-2 border-transparent hover:border-amber-500 transition-all flex flex-col group">
+                  <div key={req.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-2xl md:rounded-[32px] border-2 border-transparent hover:border-amber-500 transition-all flex flex-col group">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex flex-col">
                         <span className="text-[11px] font-black text-amber-600 uppercase tracking-widest">{req.requesterName}</span>
@@ -281,7 +281,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           )}
 
           {supplyOrders.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-blue-600">
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-2xl md:rounded-[32px] md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-blue-600">
               <div className="flex items-center justify-between mb-8 md:mb-10">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl text-blue-600">
@@ -295,7 +295,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {supplyOrders.map(order => (
-                  <div key={order.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[32px] border-2 border-transparent hover:border-blue-600 transition-all flex flex-col group">
+                  <div key={order.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-2xl md:rounded-[32px] border-2 border-transparent hover:border-blue-600 transition-all flex flex-col group">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex flex-col">
                         <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{order.branchName}</span>
@@ -335,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           )}
 
           {/* Data Maintenance Channel */}
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-8 rounded-[32px] border-2 border-dashed border-slate-300 dark:border-slate-700">
+          <div className="bg-slate-100 dark:bg-slate-800/50 p-8 rounded-2xl md:rounded-[32px] border-2 border-dashed border-slate-300 dark:border-slate-700">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-2xl">

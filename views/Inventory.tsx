@@ -298,7 +298,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       <Sidebar user={user} onLogout={onLogout} />
 
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
-        <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 md:px-8 shrink-0">
+        <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-10 lg:hidden" />
             <div className="flex flex-col">
@@ -399,7 +399,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                     ))}
                   </select>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                   <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left min-w-[700px]">
                       <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
@@ -484,7 +484,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </div>
               </div>
             ) : viewMode === 'requests' ? (
-              <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
@@ -519,7 +519,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-800 rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">

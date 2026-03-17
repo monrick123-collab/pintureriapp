@@ -63,7 +63,7 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full print-format-container">
-                <header className="flex h-20 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0 print:hidden">
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0 print:hidden">
                     <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-3xl">point_of_sale</span>
                         Corte de Caja
@@ -93,7 +93,7 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-950 print:p-0">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar bg-white dark:bg-slate-950 print:p-0">
                     <div className="max-w-5xl mx-auto space-y-8 print:max-w-none">
                         {/* Header Reporte (Print only) */}
                         <div className="hidden print:block text-center mb-10 border-b-4 border-slate-900 pb-6">

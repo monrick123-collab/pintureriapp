@@ -195,7 +195,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 flex-wrap gap-2 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
                     <h1 className="text-xl font-black">Envasado (Litreados)</h1>
                     {/* Bodega y Admin ven las pestañas; Encargado solo ve la lista por defecto */}
                     {(isWarehouse || isAdmin) && (
@@ -234,7 +234,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                     // TABLA DE TAMBOS POR SUCURSAL
                     <div className="flex-1 flex flex-col overflow-hidden">
                         {/* Barra de filtro por sucursal */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filtrar por Sucursal</label>
                                 <select
@@ -254,7 +254,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                         </div>
 
                         {/* Tabla de tambos */}
-                        <div className="mx-8 my-4 bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border dark:border-slate-800 overflow-hidden flex-1 overflow-y-auto">
+                        <div className="mx-8 my-4 bg-white dark:bg-slate-900 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-800 overflow-hidden flex-1 overflow-y-auto">
                             <table className="w-full">
                                 <thead className="border-b dark:border-slate-800">
                                     <tr>
@@ -330,7 +330,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                     <>
 
                         {/* Barra de filtro por fechas */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input
@@ -365,7 +365,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                             )}
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{requests.length} solicitud{requests.length !== 1 ? 'es' : ''}</span>
                         </div>
-                        <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                        <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-left">
                                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">

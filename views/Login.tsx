@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
-import { MOCK_USER } from '../constants';
+import { supabase } from '../services/supabase';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -11,23 +11,56 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const emailLower = email.toLowerCase();
+    setLoading(true);
+    setError('');
 
-    if (emailLower.includes('admin')) {
-      onLogin({ ...MOCK_USER, role: UserRole.ADMIN, name: 'Administrador' });
-    } else if (emailLower.includes('bodega')) {
-      onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE, name: 'Encargado Bodega', branchId: 'BR-MAIN', id: 'WH-001' });
-    } else if (emailLower.includes('subencargado')) {
-      onLogin({ ...MOCK_USER, role: UserRole.WAREHOUSE_SUB, name: 'Subencargado Prueba', branchId: 'BR-MAIN', id: 'SUB-001' });
-    } else if (emailLower.includes('contador')) {
-      onLogin({ ...MOCK_USER, role: UserRole.FINANCE, name: 'Contador de Pruebas', branchId: 'BR-MAIN', id: 'ACC-001' });
-    } else if (emailLower.includes('encargado')) {
-      onLogin({ ...MOCK_USER, role: UserRole.STORE_MANAGER, name: 'Encargado de Tienda', branchId: 'BR-CENTRO', id: 'MGR-001' });
-    } else {
-      onLogin(MOCK_USER);
+    try {
+      // 1. Autenticar con Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password
+      });
+
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('Correo o contraseña incorrectos.');
+        }
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) throw new Error('No se pudo obtener la sesión.');
+
+      // 2. Obtener el perfil real con branch_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('No se encontró el perfil del usuario. Contacta al administrador.');
+      }
+
+      // 3. Mapear a la interfaz User con el branch_id REAL de la BD
+      const user: User = {
+        id: profile.id,
+        name: profile.full_name || authData.user.email || 'Usuario',
+        email: profile.email || authData.user.email || '',
+        role: (profile.role as UserRole) || UserRole.SELLER,
+        branchId: profile.branch_id || undefined,
+        avatar: profile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+      };
+
+      onLogin(user);
+    } catch (e: any) {
+      setError(e.message || 'Error al iniciar sesión. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,6 +93,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <p className="text-slate-500 font-medium">Por favor ingrese sus datos de acceso.</p>
           </div>
 
+          {error && (
+            <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-2xl text-sm font-bold">
+              <span className="material-symbols-outlined text-lg shrink-0">error</span>
+              {error}
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-xs font-black uppercase text-slate-400 tracking-widest">Correo Electrónico</label>
@@ -72,6 +112,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -87,6 +128,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
@@ -102,10 +144,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <button
               type="submit"
-              className="w-full bg-primary text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+              disabled={loading}
+              className="w-full bg-primary text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:scale-100"
             >
-              INGRESAR AL PANEL
-              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              {loading ? (
+                <>
+                  <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                  VERIFICANDO...
+                </>
+              ) : (
+                <>
+                  INGRESAR AL PANEL
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </>
+              )}
             </button>
           </form>
 

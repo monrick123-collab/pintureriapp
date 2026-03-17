@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import { User, UserRole } from '../types';
 import { UserService } from '../services/userService';
 import { InventoryService } from '../services/inventoryService';
+import { supabase } from '../services/supabase';
 
 interface UserManagementProps {
   user: User;
@@ -14,8 +15,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
   const [branches, setBranches] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [createLoading, setCreateLoading] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    id: '', name: '', email: '', role: 'SELLER', branchId: 'BR-MAIN'
+    name: '', email: '', password: '', role: 'STORE_MANAGER', branchId: ''
   });
 
   React.useEffect(() => {
@@ -40,14 +42,47 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.password || formData.password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    setCreateLoading(true);
     try {
-      await UserService.createProfile(formData);
+      // 1. Crear usuario en Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            role: formData.role
+          }
+        }
+      });
+      if (signUpError) throw signUpError;
+      if (!authData.user) throw new Error('No se pudo crear el usuario de autenticación.');
+
+      // 2. Crear o actualizar el perfil con el UUID real del auth
+      await UserService.createProfile({
+        id: authData.user.id,
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        branchId: formData.branchId || undefined
+      });
+
       setIsModalOpen(false);
-      setFormData({ id: '', name: '', email: '', role: 'SELLER', branchId: 'BR-MAIN' });
+      setFormData({ name: '', email: '', password: '', role: 'STORE_MANAGER', branchId: '' });
       loadData();
-      alert("Usuario creado correctamente");
+      alert(`Usuario creado correctamente.\nEl usuario puede iniciar sesión con:\n• Email: ${formData.email}\n• Contraseña: la que definiste`);
     } catch (e: any) {
-      alert("Error: " + e.message);
+      if (e.message?.includes('already registered')) {
+        alert('Este correo ya está registrado en el sistema.');
+      } else {
+        alert('Error: ' + (e.message || 'No se pudo crear el usuario'));
+      }
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -119,7 +154,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                             {u.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{u.branch_id || '---'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          {u.branch_id ? (branches.find((b: any) => b.id === u.branch_id)?.name || u.branch_id) : <span className="text-slate-400 italic">Sin sucursal</span>}
+                        </td>
                         <td className="px-6 py-4">
                           <span className="text-sm font-medium text-green-600">Activo</span>
                         </td>
@@ -140,31 +177,33 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                 <h3 className="text-xl font-bold mb-6">Crear Nuevo Usuario</h3>
                 <form onSubmit={handleCreateUser} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-slate-400">ID de Usuario (Mock)</label>
-                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: WH-002" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} />
-                  </div>
-                  <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-slate-400">Nombre Completo</label>
-                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Juan López" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-slate-400">Correo Electrónico</label>
-                    <input required type="email" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    <input required type="email" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="usuario@pintamax.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Contraseña inicial (mín. 6 caracteres)</label>
+                    <input required type="password" minLength={6} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase text-slate-400">Rol</label>
                       <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                         <option value="ADMIN">Administrador</option>
-                        <option value="SELLER">Vendedor</option>
+                        <option value="STORE_MANAGER">Encargado de Tienda</option>
                         <option value="WAREHOUSE">Encargado de Bodega</option>
                         <option value="WAREHOUSE_SUB">Subencargado de Bodega</option>
+                        <option value="SELLER">Vendedor</option>
                         <option value="FINANCE">Contador</option>
                       </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase text-slate-400">Sucursal</label>
                       <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={formData.branchId} onChange={e => setFormData({ ...formData, branchId: e.target.value })}>
+                        <option value="">Sin sucursal (Admin)</option>
                         {branches.map(b => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
@@ -172,8 +211,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                     </div>
                   </div>
                   <div className="flex gap-4 pt-4">
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
-                    <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg">Guardar</button>
+                    <button type="button" onClick={() => setIsModalOpen(false)} disabled={createLoading} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
+                    <button type="submit" disabled={createLoading} className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                      {createLoading ? <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>Creando...</> : 'Crear Usuario'}
+                    </button>
                   </div>
                 </form>
               </div>

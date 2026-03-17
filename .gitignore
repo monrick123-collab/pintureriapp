@@ -3,6 +3,30 @@
 debug-gemini.ts
 node_modules
 
+# Archivos temporales y de debug (no deben commitearse)
+*.txt
+*.cjs
+check_*.js
+check_*.html
+db_pg_test.js
+get_today_sales.js
+merge_wholesale.*
+run_migration.js
+run_sql.js
+run_test.js
+start_app.sh
+sync-github.sh
+update-github.sh
+execute_*.sh
+test_connection.*
+test_db.js
+test_migration.js
+test_packaging_types.js
+test_rls_*.js
+tsc_out*.txt
+connectivity_test.json
+metadata.json
+
 # Build outputs
 dist/
 build/

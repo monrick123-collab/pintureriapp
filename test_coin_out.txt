@@ -1,3 +1,0 @@
-Starting script...
-Folio: 1 Error: null
-Insert Data: null Error: insert or update on table "coin_change_requests" violates foreign key constraint "coin_change_requests_requester_id_fkey"

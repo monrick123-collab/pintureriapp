@@ -63,12 +63,17 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
             const branchIdToFetch = (isAdmin || isWarehouse)
                 ? (branchFilter || undefined)
                 : user.branchId;
+
+            // For admin/warehouse: only load products if a branch is explicitly selected
+            // For other roles: load products from their own branch
             const productBranch = (isAdmin || isWarehouse)
-                ? (selectedFormBranch || user.branchId || 'BR-MAIN')
-                : (user.branchId || 'BR-MAIN');
+                ? selectedFormBranch
+                : user.branchId;
 
             const [prodData, retData, branchesData] = await Promise.all([
-                InventoryService.getProductsByBranch(productBranch),
+                productBranch
+                    ? InventoryService.getProductsByBranch(productBranch)
+                    : Promise.resolve([]),
                 InventoryService.getReturnRequests(
                     branchIdToFetch,
                     sd || undefined,
@@ -80,6 +85,13 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
             setReturns(retData as unknown as Return[]);
             if (branchesData.length > 0) {
                 setBranches(branchesData);
+                // Auto-select first branch for admin/warehouse if none selected and user has no branchId
+                if ((isAdmin || isWarehouse) && !selectedFormBranch && branchesData.length > 0) {
+                    const firstBranch = branchesData[0].id;
+                    setSelectedFormBranch(firstBranch);
+                    // Load products for that branch
+                    loadProductsForBranch(firstBranch);
+                }
             }
         } catch (e) {
             console.error(e);
@@ -128,8 +140,13 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 reason: item.reason
             }));
 
+            const submitBranch = (isAdmin || isWarehouse) ? selectedFormBranch : user.branchId;
+            if (!submitBranch) {
+                alert('Selecciona una sucursal antes de enviar.');
+                return;
+            }
             await InventoryService.createReturnRequest(
-                user.branchId || 'BR-MAIN',
+                submitBranch,
                 items,
                 transportedBy,
                 receivedBy
@@ -420,6 +437,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                     setSelectedFormBranch(e.target.value);
                                                     setSelectedProductId('');
                                                     if (e.target.value) loadProductsForBranch(e.target.value);
+                                                    else setProducts([]);
                                                 }}
                                             >
                                                 <option value="">Selecciona una sucursal...</option>
@@ -433,9 +451,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                             className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700"
                                             value={selectedProductId}
                                             onChange={e => setSelectedProductId(e.target.value)}
-                                            disabled={(isAdmin || isWarehouse) && !selectedFormBranch}
+                                            disabled={!selectedFormBranch && !user.branchId}
                                         >
-                                            <option value="">{(isAdmin || isWarehouse) && !selectedFormBranch ? 'Selecciona sucursal primero...' : 'Selecciona producto...'}</option>
+                                            <option value="">
+                                                {!selectedFormBranch && !user.branchId
+                                                    ? 'Selecciona sucursal primero...'
+                                                    : products.length === 0
+                                                        ? 'Sin productos disponibles'
+                                                        : 'Selecciona producto...'}
+                                            </option>
                                             {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock} dispon.)</option>)}
                                         </select>
                                     </div>

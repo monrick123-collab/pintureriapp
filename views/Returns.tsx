@@ -35,12 +35,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     // Global Request States
     const [transportedBy, setTransportedBy] = useState('');
     const [receivedBy, setReceivedBy] = useState('');
+    const [selectedFormBranch, setSelectedFormBranch] = useState(user.branchId || '');
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
     const [showAuth, setShowAuth] = useState(false);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [approvingReturnId, setApprovingReturnId] = useState<string | null>(null);
+    const [approvalDestBranchId, setApprovalDestBranchId] = useState('');
 
     // Fechas
     const today = new Date();
@@ -57,12 +60,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const loadData = async (sd = startDate, ed = endDate, branchFilter = selectedBranchFilter) => {
         try {
             setLoading(true);
-            const branchIdToFetch = (isAdmin || isWarehouse) 
-                ? (branchFilter || undefined) 
+            const branchIdToFetch = (isAdmin || isWarehouse)
+                ? (branchFilter || undefined)
                 : user.branchId;
-                
+            const productBranch = (isAdmin || isWarehouse)
+                ? (selectedFormBranch || user.branchId || 'BR-MAIN')
+                : (user.branchId || 'BR-MAIN');
+
             const [prodData, retData, branchesData] = await Promise.all([
-                InventoryService.getProductsByBranch(user.branchId || 'BR-MAIN'),
+                InventoryService.getProductsByBranch(productBranch),
                 InventoryService.getReturnRequests(
                     branchIdToFetch,
                     sd || undefined,
@@ -79,6 +85,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadProductsForBranch = async (branchId: string) => {
+        try {
+            const prodData = await InventoryService.getProductsByBranch(branchId || 'BR-MAIN');
+            setProducts(prodData);
+        } catch (e) {
+            console.error(e);
         }
     };
 
@@ -131,12 +146,30 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         }
     };
 
-    const handleAuthorize = async (id: string, approved: boolean) => {
+    const handleAuthorize = async (id: string, approved: boolean, destinationBranchId?: string) => {
         try {
-            await InventoryService.authorizeReturn(id, user.id, approved);
+            await InventoryService.authorizeReturn(id, user.id, approved, destinationBranchId);
+            setApprovingReturnId(null);
+            setApprovalDestBranchId('');
             loadData();
         } catch (e: any) {
             alert("Error: " + e.message);
+        }
+    };
+
+    const handleCloseReturn = async (id: string) => {
+        if (!confirm('¿Confirmar recepción física y cerrar esta devolución definitivamente?')) return;
+        try {
+            const { supabase } = await import('../services/supabase');
+            const { error } = await supabase
+                .from('returns')
+                .update({ status: 'closed', updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) throw error;
+            loadData();
+            alert('Devolución cerrada correctamente.');
+        } catch (e: any) {
+            alert('Error: ' + e.message);
         }
     };
 
@@ -160,18 +193,18 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-primary text-3xl">keyboard_return</span>
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0 gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 pl-10 lg:pl-0">
+                        <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">keyboard_return</span>
                         <div>
-                            <h1 className="text-xl font-black">Devoluciones a Bodega</h1>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Gestión de devoluciones</p>
+                            <h1 className="text-base md:text-xl font-black">Devoluciones a Bodega</h1>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest hidden sm:block">Gestión de devoluciones</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
                             {([
-                                { key: 'new', label: 'Nueva Devolución', icon: 'add_circle' },
+                                { key: 'new', label: 'Nueva', icon: 'add_circle' },
                                 { key: 'history', label: 'Historial', icon: 'list' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => {
@@ -181,8 +214,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         setActiveTab(tab.key);
                                     }
                                 }}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
+                                    className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <span className="material-symbols-outlined text-sm">{tab.icon}</span>
+                                    <span className="hidden sm:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -199,7 +233,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                 {activeTab === 'history' ? (
                     <>
                         {/* Filtro por fechas */}
-                        <div className="mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-6 py-4 shadow-sm shrink-0">
+                        <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             {(isAdmin || isWarehouse) && (
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
@@ -230,8 +264,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                             <span className="text-[10px] text-slate-400 font-bold ml-auto">{returns.length} devolución{returns.length !== 1 ? 'es' : ''}</span>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                            <div className="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
+                            <div className="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                                 <div className="overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
@@ -275,17 +309,44 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' :
                                                             r.status === 'rejected' ? 'bg-red-100 text-red-600' :
                                                                 r.status === 'received_at_warehouse' ? 'bg-blue-100 text-blue-600' :
-                                                                    'bg-amber-100 text-amber-600'
+                                                                    r.status === 'closed' ? 'bg-slate-100 text-slate-500' :
+                                                                        'bg-amber-100 text-amber-600'
                                                             }`}>
                                                             {translateStatus(r.status)}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
                                                         {isAdmin && r.status === 'pending_authorization' && (
-                                                            <div className="flex justify-end gap-2">
-                                                                <button onClick={() => handleAuthorize(r.id, true)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><span className="material-symbols-outlined">check_circle</span></button>
-                                                                <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><span className="material-symbols-outlined">cancel</span></button>
-                                                            </div>
+                                                            approvingReturnId === r.id ? (
+                                                                <div className="flex flex-col items-end gap-2 min-w-[200px]">
+                                                                    <label className="text-[10px] font-black uppercase text-slate-400">Sucursal/Bodega destino</label>
+                                                                    <select
+                                                                        autoFocus
+                                                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary/20"
+                                                                        value={approvalDestBranchId}
+                                                                        onChange={e => setApprovalDestBranchId(e.target.value)}
+                                                                    >
+                                                                        <option value="">Selecciona destino...</option>
+                                                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                                                    </select>
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            disabled={!approvalDestBranchId}
+                                                                            onClick={() => handleAuthorize(r.id, true, approvalDestBranchId)}
+                                                                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                        >Confirmar</button>
+                                                                        <button
+                                                                            onClick={() => { setApprovingReturnId(null); setApprovalDestBranchId(''); }}
+                                                                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                                        >Cancelar</button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex justify-end gap-2">
+                                                                    <button onClick={() => { setApprovingReturnId(r.id); setApprovalDestBranchId(''); }} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg" title="Aprobar"><span className="material-symbols-outlined">check_circle</span></button>
+                                                                    <button onClick={() => handleAuthorize(r.id, false)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" title="Rechazar"><span className="material-symbols-outlined">cancel</span></button>
+                                                                </div>
+                                                            )
                                                         )}
                                                         {isWarehouse && r.status === 'approved' && (
                                                             <button
@@ -296,6 +357,22 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                                 <span className="material-symbols-outlined text-sm">inventory</span>
                                                                 Recibido
                                                             </button>
+                                                        )}
+                                                        {isAdmin && r.status === 'received_at_warehouse' && (
+                                                            <button
+                                                                onClick={() => handleCloseReturn(r.id)}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-black transition-colors"
+                                                                title="Confirmar recepción física y cerrar devolución"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">lock</span>
+                                                                Cerrar
+                                                            </button>
+                                                        )}
+                                                        {r.status === 'closed' && (
+                                                            <span className="text-[10px] font-black text-green-600 uppercase flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">verified</span>
+                                                                Cerrada
+                                                            </span>
                                                         )}
                                                         <button
                                                             onClick={() => navigate(`/returns/${r.id}/print`)}
@@ -326,20 +403,43 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                     </>
                 ) : (
 
-                    <div className="flex-1 flex overflow-hidden">
-                        <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 mx-8 my-4 rounded-3xl shadow-sm border dark:border-slate-800 overflow-hidden">
+                    <div className="flex-1 flex overflow-y-auto md:overflow-hidden">
+                        <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 mx-3 md:mx-8 my-3 md:my-4 rounded-2xl md:rounded-3xl shadow-sm border dark:border-slate-800 overflow-hidden">
                             {/* Form Section */}
-                            <div className="flex-[3] p-8 overflow-y-auto border-r border-slate-100 dark:border-slate-800 custom-scrollbar">
-                                <h3 className="text-2xl font-black mb-6">Nueva Devolución</h3>
-                                <div className="space-y-6 max-w-2xl">
+                            <div className="flex-[3] p-4 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 custom-scrollbar">
+                                <h3 className="text-xl md:text-2xl font-black mb-5">Nueva Devolución</h3>
+                                <div className="space-y-5 max-w-2xl">
+                                    {/* Branch selector for admin/warehouse */}
+                                    {(isAdmin || isWarehouse) && branches.length > 0 && (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Sucursal origen del inventario</label>
+                                            <select
+                                                className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700 font-bold"
+                                                value={selectedFormBranch}
+                                                onChange={e => {
+                                                    setSelectedFormBranch(e.target.value);
+                                                    setSelectedProductId('');
+                                                    if (e.target.value) loadProductsForBranch(e.target.value);
+                                                }}
+                                            >
+                                                <option value="">Selecciona una sucursal...</option>
+                                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Producto</label>
-                                        <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
-                                            <option value="">Selecciona...</option>
+                                        <select
+                                            className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700"
+                                            value={selectedProductId}
+                                            onChange={e => setSelectedProductId(e.target.value)}
+                                            disabled={(isAdmin || isWarehouse) && !selectedFormBranch}
+                                        >
+                                            <option value="">{(isAdmin || isWarehouse) && !selectedFormBranch ? 'Selecciona sucursal primero...' : 'Selecciona producto...'}</option>
                                             {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock} dispon.)</option>)}
                                         </select>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
                                             <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black border border-slate-200 dark:border-slate-700" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
@@ -351,6 +451,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 <option value="demostracion">Demostraciones</option>
                                                 <option value="defecto">Defecto de Material</option>
                                                 <option value="traspaso_matriz">Retorno a Matriz</option>
+                                                <option value="por_envasado">Por Envasado</option>
                                                 {(isAdmin || isWarehouse) && (
                                                     <option value="devolucion_proveedor">Devolución a Proveedor</option>
                                                 )}
@@ -367,9 +468,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         Agregar a Lista
                                     </button>
 
-                                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-5">
                                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Datos Logísticos</h4>
-                                        <div className="grid grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
                                                 <input className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
@@ -384,15 +485,15 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                             </div>
 
                             {/* Cart Section */}
-                            <div className="flex-[2] bg-slate-50 dark:bg-slate-900/50 p-8 flex flex-col">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Resumen de Devolución</h4>
+                            <div className="flex-[2] bg-slate-50 dark:bg-slate-900/50 p-4 md:p-8 flex flex-col min-h-[280px] md:min-h-0">
+                                <div className="flex justify-between items-center mb-4 md:mb-6">
+                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Resumen</h4>
                                     <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1.5 rounded-xl">{cart.length} items</span>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar mb-8">
+                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar mb-5">
                                     {cart.map((item, idx) => (
-                                        <div key={idx} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center group shadow-sm hover:border-primary/30 transition-colors">
+                                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center group shadow-sm hover:border-primary/30 transition-colors">
                                             <div>
                                                 <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.productName}</p>
                                                 <p className="text-xs text-slate-500 uppercase font-black mt-1">{item.reason.replace('_', ' ')} • Cant: {item.quantity}</p>
@@ -401,7 +502,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         </div>
                                     ))}
                                     {cart.length === 0 && (
-                                        <div className="h-40 flex flex-col items-center justify-center text-slate-400 italic text-sm gap-2">
+                                        <div className="h-32 flex flex-col items-center justify-center text-slate-400 italic text-sm gap-2">
                                             <span className="material-symbols-outlined text-4xl opacity-50">shopping_cart</span>
                                             <span>Lista vacía</span>
                                         </div>
@@ -411,7 +512,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={cart.length === 0 || !transportedBy || !receivedBy}
-                                    className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 disabled:opacity-50 disabled:shadow-none transition-all uppercase text-sm tracking-wide"
+                                    className="w-full py-4 md:py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 disabled:opacity-50 disabled:shadow-none transition-all uppercase text-sm tracking-wide"
                                 >
                                     Confirmar Devolución
                                 </button>

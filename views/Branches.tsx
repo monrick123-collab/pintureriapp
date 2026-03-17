@@ -119,7 +119,7 @@ const Branches: React.FC<BranchesProps> = ({ user, onLogout }) => {
       <Sidebar user={user} onLogout={onLogout} />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950">
-        <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 flex-wrap gap-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-primary">
               <span className="material-symbols-outlined text-2xl">store</span>
@@ -138,7 +138,7 @@ const Branches: React.FC<BranchesProps> = ({ user, onLogout }) => {
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
           {loading && branches.length === 0 ? (
             <div className="text-center py-20 text-slate-400 font-bold animate-pulse">Cargando sucursales...</div>
           ) : (

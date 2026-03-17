@@ -858,29 +858,44 @@ export const InventoryService = {
         return data;
     },
 
-    async authorizeReturn(returnId: string, adminId: string, approved: boolean): Promise<void> {
-        // Simple regex to check if adminId is a valid UUID
+    async authorizeReturn(returnId: string, adminId: string, approved: boolean, destinationBranchId?: string): Promise<void> {
         const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(adminId);
 
-        const updatePayload: any = {
-            status: approved ? 'approved' : 'rejected',
-            updated_at: new Date().toISOString()
-        };
+        if (approved && destinationBranchId) {
+            // Primero marcar como aprobado
+            const updatePayload: any = {
+                status: 'approved',
+                updated_at: new Date().toISOString()
+            };
+            if (isValidUUID) updatePayload.authorized_by = adminId;
 
-        // Only include authorize_by if it's a valid UUID to avoid Postgres type errors with mock users (e.g., '4829')
-        if (isValidUUID) {
-            updatePayload.authorized_by = adminId;
+            const { error: approveError } = await supabase
+                .from('returns')
+                .update(updatePayload)
+                .eq('id', returnId);
+            if (approveError) throw approveError;
+
+            // Luego procesar el movimiento de inventario con destino elegido
+            const { error: rpcError } = await supabase.rpc('process_return', {
+                p_return_id:             returnId,
+                p_user_id:               adminId,
+                p_destination_branch_id: destinationBranchId
+            });
+            if (rpcError) throw rpcError;
+        } else {
+            // Rechazo: solo cambiar estado
+            const updatePayload: any = {
+                status: 'rejected',
+                updated_at: new Date().toISOString()
+            };
+            if (isValidUUID) updatePayload.authorized_by = adminId;
+
+            const { error } = await supabase
+                .from('returns')
+                .update(updatePayload)
+                .eq('id', returnId);
+            if (error) throw error;
         }
-
-        const { error } = await supabase
-            .from('returns')
-            .update(updatePayload)
-            .eq('id', returnId);
-
-        if (error) throw error;
-
-        // Nota: El ajuste de inventario real debería hacerse mediante una RPC 
-        // para asegurar atomicidad si es aprobado.
     },
 
     // --- INTERNAL SUPPLIES (Punto 7) ---
@@ -928,10 +943,12 @@ export const InventoryService = {
         const { error } = await supabase
             .from('packaging_requests')
             .insert({
-                bulk_product_id: request.bulkProductId,
+                bulk_product_id:    request.bulkProductId,
                 target_package_type: request.targetPackageType,
-                quantity_drum: request.quantityDrum,
-                branch_id: request.branchId,
+                target_product_id:  request.targetProductId || null,
+                quantity_drum:      request.quantityDrum,
+                liters_requested:   request.litersRequested ?? (request.quantityDrum * 200),
+                branch_id:          request.branchId,
                 status: 'sent_to_branch'
             });
         if (error) throw error;
@@ -958,62 +975,38 @@ export const InventoryService = {
         if (error) throw error;
         return (data || []).map((r: any) => ({
             ...r,
-            stockReleased: r.stock_released
+            stockReleased:    r.stock_released,
+            litersRequested:  r.liters_requested,
+            targetProductId:  r.target_product_id,
+            packagesProduced: r.packages_produced,
         }));
     },
 
     async updatePackagingStatus(requestId: string, status: string, userId?: string): Promise<void> {
         const now = new Date().toISOString();
-        const update: Record<string, any> = { status, updated_at: now };
-        // Guardar fecha de inicio al comenzar envasado
-        if (status === 'processing') update.started_at = now;
-        // Guardar fecha de terminado al completar
-        if (status === 'completed') {
-            update.completed_at = now;
-            
-            // Cuando se completa el envasado, disminuir el inventario del tambo
-            // Primero obtenemos los detalles del request
-            const { data: request, error: fetchError } = await supabase
+
+        if (status === 'processing') {
+            const { error } = await supabase
                 .from('packaging_requests')
-                .select('bulk_product_id, branch_id, quantity_drum, target_package_type')
-                .eq('id', requestId)
-                .single();
-            
-            if (!fetchError && request && request.bulk_product_id && request.branch_id && request.quantity_drum && request.target_package_type) {
-                // Calcular litros por tipo de envase
-                const getLitersPerPackage = (type: string): number => {
-                    switch (type) {
-                        case 'cuarto_litro': return 0.25;
-                        case 'medio_litro': return 0.5;
-                        case 'litro': return 1;
-                        case 'galon': return 3.8;
-                        default: return 0;
-                    }
-                };
-                
-                const litersPerPackage = getLitersPerPackage(request.target_package_type);
-                // Cada tambo es 200L, así que disminuimos 200 litros por cada tambo
-                const quantityToDecrease = request.quantity_drum * 200; // 200 litros por tambo
-                
-                // Llamamos a la función RPC para disminuir el inventario
-                const { error: consumptionError } = await supabase.rpc('process_internal_consumption', {
-                    p_product_id: request.bulk_product_id,
-                    p_branch_id: request.branch_id,
-                    p_user_id: userId || 'system',
-                    p_quantity: quantityToDecrease,
-                    p_reason: `Envasado a ${request.target_package_type} (${litersPerPackage} L c/u)`
-                });
-                
-                if (consumptionError) {
-                    console.error('Error al disminuir inventario:', consumptionError);
-                    // No lanzamos error para no bloquear la actualización de estado
-                }
-            }
+                .update({ status, started_at: now, updated_at: now })
+                .eq('id', requestId);
+            if (error) throw error;
+            return;
+        }
+
+        if (status === 'completed') {
+            // El RPC maneja: descuento de tambo + alta de botellas + update del request
+            const { error } = await supabase.rpc('complete_packaging', {
+                p_request_id: requestId,
+                p_user_id: userId || 'system'
+            });
+            if (error) throw error;
+            return;
         }
 
         const { error } = await supabase
             .from('packaging_requests')
-            .update(update)
+            .update({ status, updated_at: now })
             .eq('id', requestId);
         if (error) throw error;
     },

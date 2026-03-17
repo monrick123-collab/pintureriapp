@@ -14,6 +14,7 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'promotions'>('pending');
     const [selectedRequest, setSelectedRequest] = useState<PromotionRequest | null>(null);
+    const [detailRequest, setDetailRequest] = useState<PromotionRequest | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [isPromotionModalOpen, setIsPromotionModalOpen] = useState(false);
     const [editingPromotion, setEditingPromotion] = useState<WholesalePromotion | null>(null);
@@ -154,9 +155,9 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
             <Sidebar user={user} onLogout={onLogout} />
 
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
-                <header className="h-20 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 shrink-0">
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-primary text-3xl">local_offer</span>
+                <header className="min-h-[4rem] flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 flex-wrap gap-2 shrink-0">
+                    <h1 className="text-base md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 pl-10 lg:pl-0">
+                        <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">local_offer</span>
                         Gestión de Promociones
                     </h1>
                     <div className="flex items-center gap-3">
@@ -167,16 +168,16 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
                                 { key: 'promotions', label: 'Promociones', icon: 'settings' }
                             ] as const).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    className={`px-2 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1 md:gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>
-                                    {tab.label}
+                                    <span className="hidden sm:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
                     <div className="max-w-6xl mx-auto space-y-6">
                         {/* Pending Requests */}
                         {(activeTab === 'pending' || activeTab === 'all') && (
@@ -213,7 +214,15 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
                                                 {requests.map(r => (
                                                     <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                                                         <td className="px-6 py-4 font-bold text-sm">{r.clientName || 'N/A'}</td>
-                                                        <td className="px-6 py-4 text-sm">{r.totalItems} productos</td>
+                                                        <td className="px-6 py-4 text-sm">
+                                                            <button
+                                                                onClick={() => setDetailRequest(r)}
+                                                                className="flex items-center gap-1 text-primary hover:underline font-bold"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">list_alt</span>
+                                                                {r.totalItems} productos
+                                                            </button>
+                                                        </td>
                                                         <td className="px-6 py-4 text-sm font-bold">${r.subtotal.toLocaleString()}</td>
                                                         <td className="px-6 py-4">
                                                             <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-lg text-xs font-black">
@@ -351,6 +360,87 @@ const AdminPromotionRequests: React.FC<AdminPromotionRequestsProps> = ({ user, o
                         )}
                     </div>
                 </div>
+
+                {/* Detail Modal */}
+                {detailRequest && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden">
+                            <div className="p-6 border-b dark:border-slate-700 bg-primary/5">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">receipt_long</span>
+                                        Detalle de Venta
+                                    </h3>
+                                    <button onClick={() => setDetailRequest(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Cliente: <span className="font-bold">{detailRequest.clientName || 'N/A'}</span></p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                {detailRequest.items && detailRequest.items.length > 0 ? (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b dark:border-slate-700">
+                                                <th className="pb-2 text-left">Producto</th>
+                                                <th className="pb-2 text-center">Cant.</th>
+                                                <th className="pb-2 text-right">Precio Unit.</th>
+                                                <th className="pb-2 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-700">
+                                            {detailRequest.items.map((item: any, idx: number) => (
+                                                <tr key={idx}>
+                                                    <td className="py-2 font-bold">{item.productName || item.name || `Producto ${idx + 1}`}</td>
+                                                    <td className="py-2 text-center">{item.quantity}</td>
+                                                    <td className="py-2 text-right">${(item.price || item.unitPrice || 0).toLocaleString()}</td>
+                                                    <td className="py-2 text-right font-black">${((item.quantity || 0) * (item.price || item.unitPrice || 0)).toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <p className="text-slate-400 text-sm text-center py-4">No hay detalle de productos disponible.</p>
+                                )}
+                                <div className="border-t dark:border-slate-700 pt-4 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500">Subtotal</span>
+                                        <span className="font-bold">${detailRequest.subtotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-purple-600 font-bold">Descuento solicitado ({detailRequest.requestedDiscountPercent}%)</span>
+                                        <span className="font-black text-purple-600">-${detailRequest.requestedDiscountAmount.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base font-black border-t dark:border-slate-700 pt-2">
+                                        <span>Total con descuento</span>
+                                        <span className="text-green-600">${(detailRequest.subtotal - detailRequest.requestedDiscountAmount).toLocaleString()}</span>
+                                    </div>
+                                    {detailRequest.reason && (
+                                        <p className="text-xs text-slate-400 mt-1">Motivo: {detailRequest.reason}</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-700 flex gap-3">
+                                {detailRequest.status === 'pending' && (
+                                    <>
+                                        <button
+                                            onClick={() => { handleApprove(detailRequest.id); setDetailRequest(null); }}
+                                            className="flex-1 py-3 bg-green-500 text-white font-black rounded-2xl uppercase text-xs shadow-lg"
+                                        >Aprobar</button>
+                                        <button
+                                            onClick={() => { setSelectedRequest(detailRequest); setDetailRequest(null); }}
+                                            className="flex-1 py-3 bg-red-100 text-red-500 font-black rounded-2xl uppercase text-xs"
+                                        >Rechazar</button>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => setDetailRequest(null)}
+                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl uppercase text-xs"
+                                >Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Rejection Modal */}
                 {selectedRequest && (

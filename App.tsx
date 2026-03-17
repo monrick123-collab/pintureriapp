@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './views/Login';
 import POS from './views/POS';
 import Dashboard from './views/Dashboard';
@@ -12,6 +13,7 @@ import Branches from './views/Branches';
 import Quotations from './views/Quotations';
 import Returns from './views/Returns';
 import ReturnNote from './views/ReturnNote';
+import CoinChangeNote from './views/CoinChangeNote';
 import Supplies from './views/Supplies';
 import AiAssistant from './components/AiAssistant';
 import Packaging from './views/Packaging';
@@ -68,6 +70,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <div className="min-h-screen">
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />} />
@@ -93,6 +96,7 @@ const App: React.FC = () => {
           <Route path="/quotations" element={user ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/returns" element={user ? <Returns user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/returns/:id/print" element={user ? <ReturnNote /> : <Navigate to="/login" replace />} />
+          <Route path="/coin-change/:id/print" element={user ? <CoinChangeNote /> : <Navigate to="/login" replace />} />
           <Route path="/restocks/:id/print" element={user ? <RestockNote user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/supplies" element={user ? <Supplies user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/packaging" element={user ? <Packaging user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
@@ -123,6 +127,7 @@ const App: React.FC = () => {
         {user && <AiAssistant />}
         <Toast />
       </div>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 };

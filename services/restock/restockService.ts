@@ -82,6 +82,12 @@ export const RestockService = {
                 message: `La sucursal ${bData?.name || branchId} solicitó un nuevo producto.`,
                 actionUrl: '/restocks'
             });
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nueva Solicitud de Resurtido',
+                message: `La sucursal ${bData?.name || branchId} solicitó resurtido — requiere supervisión.`,
+                actionUrl: '/restocks'
+            });
         } catch (e) {
             console.error('Failed to send notification', e);
         }

@@ -44,5 +44,23 @@ export const quotationService = {
 
         if (error) throw error;
         return data as Quotation;
+    },
+
+    async linkToSale(quotationId: string, saleId: string) {
+        const { error } = await supabase
+            .from('quotations')
+            .update({ sale_id: saleId, status: 'completed' })
+            .eq('id', quotationId);
+
+        if (error) throw error;
+    },
+
+    async markAsSaleClosed(quotationId: string) {
+        const { error } = await supabase
+            .from('quotations')
+            .update({ status: 'completed' })
+            .eq('id', quotationId);
+
+        if (error) throw error;
     }
 };

@@ -36,6 +36,20 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleMarkShipped = async (id: string) => {
+        try {
+            const { supabase } = await import('../services/supabase');
+            const { error } = await supabase
+                .from('internal_supplies')
+                .update({ status: 'shipped', shipped_at: new Date().toISOString(), shipped_by: user.id })
+                .eq('id', id);
+            if (error) throw error;
+            loadData();
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -58,15 +72,18 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
         <div className="h-screen flex overflow-hidden">
             <Sidebar user={user} onLogout={onLogout} />
             <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0">
-                    <h1 className="text-xl font-black">Suministros (Limpieza y Papelería)</h1>
+                <header className="min-h-[4rem] flex items-center justify-between px-4 md:px-8 py-3 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shrink-0 gap-3 flex-wrap">
+                    <h1 className="text-base md:text-xl font-black pl-10 lg:pl-0">Suministros</h1>
                     {(isWarehouse || isStoreManager || isAdmin) && (
-                        <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">Registrar Solicitud/Gasto</button>
+                        <button onClick={() => setIsModalOpen(true)} className="px-4 md:px-6 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20">
+                            <span className="hidden sm:inline">Registrar Solicitud/Gasto</span>
+                            <span className="sm:hidden flex items-center gap-1"><span className="material-symbols-outlined text-sm">add</span>Registrar</span>
+                        </button>
                     )}
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar">
+                    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] shadow-sm border dark:border-slate-700 overflow-hidden">
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 uppercase text-[10px] font-black text-slate-400">
@@ -75,7 +92,9 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                         <th className="px-6 py-5">Categoría</th>
                                         <th className="px-6 py-5">Sucursal Destino</th>
                                         <th className="px-6 py-5 text-right">Valor (Solo Control)</th>
+                                        <th className="px-6 py-5">Estado</th>
                                         <th className="px-8 py-5 text-right">Fecha</th>
+                                        {isAdmin && <th className="px-6 py-5 text-right">Acción</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y dark:divide-slate-700">
@@ -89,6 +108,11 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                             </td>
                                             <td className="px-6 py-5">{s.branches?.name}</td>
                                             <td className="px-6 py-5 text-right font-black text-slate-400">${s.amount.toLocaleString()}</td>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.status === 'shipped' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    {s.status === 'shipped' ? 'Enviado' : 'Pendiente'}
+                                                </span>
+                                            </td>
                                             <td className="px-8 py-5 text-right text-xs text-slate-500">
                                                 {(s.createdAt && !isNaN(new Date(s.createdAt).getTime()))
                                                     ? new Date(s.createdAt).toLocaleDateString()
@@ -96,6 +120,21 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                                                         ? new Date(s.created_at).toLocaleDateString()
                                                         : '---')}
                                             </td>
+                                            {isAdmin && (
+                                                <td className="px-6 py-5 text-right">
+                                                    {(!s.status || s.status === 'pending') && (
+                                                        <button
+                                                            onClick={() => handleMarkShipped(s.id)}
+                                                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
+                                                        >
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                                                Enviado
+                                                            </span>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

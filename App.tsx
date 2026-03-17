@@ -40,24 +40,59 @@ import AdminHistory from './views/AdminHistory';
 import AdminPendingPayments from './views/AdminPendingPayments';
 import { UserRole } from './types';
 import { useAuthStore } from './store/authStore';
+import { supabase } from './services/supabase';
 
 const App: React.FC = () => {
   const { user, setUser, login, logout } = useAuthStore();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('pintamax_user');
-      if (savedUser) {
+    // Validate session against Supabase Auth on startup
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        // Active Supabase session — fetch fresh profile
         try {
-          const parsedUser = JSON.parse(savedUser);
-          setUser(parsedUser);
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile) {
+            const freshUser = {
+              id: profile.id,
+              name: profile.full_name || session.user.email || 'Usuario',
+              email: profile.email || session.user.email || '',
+              role: profile.role,
+              branchId: profile.branch_id || undefined,
+              avatar: profile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+            };
+            setUser(freshUser);
+            localStorage.setItem('pintamax_user', JSON.stringify(freshUser));
+            return;
+          }
         } catch (e) {
-          console.error("Failed to parse user session:", e);
-          localStorage.removeItem('pintamax_user');
-          setUser(null);
+          console.error('Error fetching profile:', e);
         }
       }
-    }
+
+      // No valid Supabase session — clear any stale localStorage data
+      localStorage.removeItem('pintamax_user');
+      setUser(null);
+    };
+
+    initSession();
+
+    // Listen for auth changes (login/logout from other tabs)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        localStorage.removeItem('pintamax_user');
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [setUser]);
 
   const handleLogin = (u: any) => {

@@ -59,3 +59,36 @@ export const translateStatus = (status: string): string => {
 
     return STATUS_MAP[status.toLowerCase()] || status;
 };
+
+/**
+ * Mapea un status string al variant del componente Badge.
+ * Uso: <Badge variant={getStatusColor(item.status)}>{translateStatus(item.status)}</Badge>
+ */
+export const getStatusColor = (
+    status: string
+): 'success' | 'warning' | 'danger' | 'info' | 'default' => {
+    const map: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
+        approved: 'success',
+        approved_warehouse: 'success',
+        completed: 'success',
+        received: 'success',
+        received_at_warehouse: 'success',
+        active: 'success',
+        paid: 'success',
+        resolved: 'success',
+        available: 'success',
+        closed: 'default',
+        cancelled: 'default',
+        pending: 'warning',
+        pending_admin: 'warning',
+        pending_authorization: 'warning',
+        low: 'warning',
+        processing: 'info',
+        shipped: 'info',
+        rejected: 'danger',
+        out: 'danger',
+        overdue: 'danger',
+        inactive: 'danger',
+    };
+    return map[status?.toLowerCase()] ?? 'default';
+};

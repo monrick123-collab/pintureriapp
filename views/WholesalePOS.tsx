@@ -8,6 +8,7 @@ import { AiService } from '../services/aiService';
 import { PromotionService } from '../services/promotionService';
 import { translateStatus } from '../utils/formatters';
 import { Link } from 'react-router-dom';
+import { useToast } from '../hooks/useToast';
 
 interface WholesalePOSProps {
     user: User;
@@ -55,6 +56,8 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [deliveryReceiver, setDeliveryReceiver] = useState('');
     const [clientFinancials, setClientFinancials] = useState<{ balance: number, oldestPendingDate: string | null } | null>(null);
     const [transferReference, setTransferReference] = useState(''); // Para aprobación de pagos
+
+    const toast = useToast();
 
     
     // --- HISTORY STATES ---
@@ -175,7 +178,7 @@ useEffect(() => {
     const handleAddWholesalePayment = async () => {
         if (!selectedAccount) return;
         const amount = parseFloat(paymentAmount);
-        if (isNaN(amount) || amount <= 0) { alert('Monto inválido'); return; }
+        if (isNaN(amount) || amount <= 0) { toast.warning('Monto inválido', 'Ingrese un monto mayor a cero'); return; }
         try {
             setLoading(true);
             await SalesService.addWholesalePayment(
@@ -192,7 +195,7 @@ useEffect(() => {
             setAccounts(updated);
             setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
         } catch (e: any) {
-            alert('Error: ' + (e.message || e.toString()));
+            toast.error('Error', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -210,7 +213,7 @@ useEffect(() => {
             setAccounts(updated);
             setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
         } catch (e: any) {
-            alert('Error: ' + (e.message || e.toString()));
+            toast.error('Error', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -226,7 +229,7 @@ useEffect(() => {
             setAccounts(updated);
             setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
         } catch (e: any) {
-            alert('Error: ' + (e.message || e.toString()));
+            toast.error('Error', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -235,7 +238,7 @@ useEffect(() => {
     const handleSetWholesaleLimit = async () => {
         if (!selectedAccount) return;
         const limit = parseFloat(limitAmount);
-        if (isNaN(limit) || limit < 0) { alert('Límite inválido'); return; }
+        if (isNaN(limit) || limit < 0) { toast.warning('Límite inválido', 'Ingrese un límite de crédito válido'); return; }
         try {
             await SalesService.setWholesaleCreditLimit(selectedAccount.id, limit);
             setLimitAmount('');
@@ -244,7 +247,7 @@ useEffect(() => {
             setAccounts(updated);
             setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
         } catch (e: any) {
-            alert('Error: ' + (e.message || e.toString()));
+            toast.error('Error', e.message || e.toString());
         }
     };
 
@@ -314,7 +317,7 @@ useEffect(() => {
 
     const handleCompleteFromPromotion = (req: PromotionRequest) => {
         if (!req.items?.length) {
-            alert('Esta solicitud no tiene productos guardados. Agrega los productos manualmente al carrito y aplica el descuento.');
+            toast.info('Sin productos guardados', 'Agrega los productos manualmente al carrito y aplica el descuento.');
             setAppliedDiscount(req.requestedDiscountPercent);
             setPendingPromotionRequestId(req.id);
             setActiveTab('pos');
@@ -367,7 +370,7 @@ const addToCart = (product: Product) => {
             setAiSuggestion(suggestion);
         } catch (e) {
             console.error(e);
-            alert("No se pudo conectar con la IA");
+            toast.error("Error de conexión", "No se pudo conectar con la IA");
         } finally {
             setLoadingAi(false);
         }
@@ -382,7 +385,7 @@ const addToCart = (product: Product) => {
 
     const handleRequestPromotion = async () => {
         if (!selectedClient || cart.length === 0 || promotionRequestDiscount <= 0) {
-            alert("Seleccione cliente y especifique el descuento solicitado");
+            toast.warning("Datos incompletos", "Seleccione cliente y especifique el descuento solicitado");
             return;
         }
 
@@ -415,9 +418,9 @@ const addToCart = (product: Product) => {
             setShowPromotionRequest(false);
             setPromotionRequestReason('');
             setPromotionRequestDiscount(0);
-            alert("Solicitud de promoción enviada al administrador para aprobación.");
+            toast.success("Solicitud enviada", "El administrador recibirá la solicitud de promoción para aprobación.");
         } catch (e: any) {
-            alert("Error al enviar solicitud: " + (e.message || e.toString()));
+            toast.error("Error al enviar solicitud", e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -429,7 +432,7 @@ const addToCart = (product: Product) => {
             try {
                 setLoading(true);
                 await SalesService.updateInvoiceNumber(sale.id, invoiceNumber);
-                alert('Factura actualizada correctamente');
+                toast.success('Factura actualizada', 'El número de factura se guardó correctamente');
                 // Recargar historial
                 if (activeTab === 'history') {
                     await fetchHistorySales();
@@ -439,7 +442,7 @@ const addToCart = (product: Product) => {
                 }
             } catch (e) {
                 console.error(e);
-                alert('Error al actualizar factura');
+                toast.error('Error', 'No se pudo actualizar la factura');
             } finally {
                 setLoading(false);
             }
@@ -448,25 +451,25 @@ const addToCart = (product: Product) => {
 
     const handleFinalizeSale = async () => {
         if (!selectedClient || !selectedAdminId) {
-            alert("Seleccione cliente y administrador de salida");
+            toast.warning("Datos incompletos", "Seleccione cliente y administrador de salida");
             return;
         }
 
         // 1. Validation: Delivery Data
         if (!deliveryReceiver.trim()) {
-            alert("Debe ingresar el nombre de quien recibe la mercancía.");
+            toast.warning("Datos incompletos", "Ingrese el nombre de quien recibe la mercancía");
             return;
         }
 
         // 2. Validation: Billing Data (if Contado + Card/Transfer)
         if (paymentType === 'contado' && (paymentMethod === 'card' || paymentMethod === 'transfer')) {
             if (!billingData.bank || !billingData.socialReason) {
-                alert("Para pagos con Tarjeta o Transferencia, los datos de facturación son obligatorios.");
+                toast.warning("Facturación requerida", "Banco y Razón Social son obligatorios para este método de pago");
                 return;
             }
             // Para transferencias, solicitar referencia
             if (paymentMethod === 'transfer' && !transferReference.trim()) {
-                alert("Para pagos con Transferencia, ingrese la referencia de transferencia.");
+                toast.warning("Datos incompletos", "Ingrese la referencia de la transferencia");
                 return;
             }
         }
@@ -476,7 +479,7 @@ const addToCart = (product: Product) => {
             if (clientFinancials) {
                 const totalDebt = clientFinancials.balance + total;
                 if (selectedClient.creditLimit && totalDebt > selectedClient.creditLimit) {
-                    alert(`El cliente excede su límite de crédito. Límite: $${selectedClient.creditLimit}, Deuda Actual + Venta: $${totalDebt}`);
+                    toast.error("Límite de crédito excedido", `Límite: $${selectedClient.creditLimit.toLocaleString()} · Deuda + venta: $${totalDebt.toLocaleString()}`);
                     return;
                 }
 
@@ -484,7 +487,7 @@ const addToCart = (product: Product) => {
                 if (clientFinancials.oldestPendingDate) {
                     const daysOverdue = (new Date().getTime() - new Date(clientFinancials.oldestPendingDate).getTime()) / (1000 * 3600 * 24);
                     if (daysOverdue > 15) {
-                        alert(`El cliente tiene adeudos con más de 15 días de antigüedad (${Math.floor(daysOverdue)} días). Venta a crédito bloqueada.`);
+                        toast.error("Venta a crédito bloqueada", `El cliente tiene adeudos de más de 15 días (${Math.floor(daysOverdue)} días)`);
                         return;
                     }
                 }
@@ -541,7 +544,7 @@ const addToCart = (product: Product) => {
             }, 2000);
         } catch (e) {
             console.error(e);
-            alert("Error al procesar venta mayorista");
+            toast.error("Error en venta", "No se pudo procesar la venta mayorista. Verifique la conexión.");
         } finally {
             setLoading(false);
         }

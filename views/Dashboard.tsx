@@ -4,6 +4,8 @@ import Sidebar from '../components/Sidebar';
 import { InventoryService } from '../services/inventoryService';
 import { DiscountService } from '../services/discountService';
 import { RestockRequest, DiscountRequest, User, SupplyOrder } from '../types';
+import Badge from '../components/ui/Badge';
+import { translateStatus, getStatusColor } from '../utils/formatters';
 // import { AiInsightsWidget } from '../components/AiInsightsWidget';
 
 interface DashboardProps {
@@ -12,14 +14,6 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const msgStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-amber-100 text-amber-700';
-      case 'processing': return 'bg-blue-100 text-blue-700';
-      case 'shipped': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-slate-100 text-slate-500';
-    }
-  };
   const [requests, setRequests] = useState<RestockRequest[]>([]);
   const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([]);
   const [supplyOrders, setSupplyOrders] = useState<SupplyOrder[]>([]);
@@ -301,9 +295,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{order.branchName}</span>
                         <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Folio: S-{order.folio}</span>
                       </div>
-                      <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${msgStatusColor(order.status)}`}>
-                        {order.status}
-                      </span>
+                      <Badge variant={getStatusColor(order.status)} size="sm" rounded="lg">
+                        {translateStatus(order.status)}
+                      </Badge>
                     </div>
                     <div className="mb-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Estimado</p>

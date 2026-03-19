@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User, Product, Return, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
-import { translateStatus } from '../utils/formatters';
+import { translateStatus, getStatusColor } from '../utils/formatters';
+import Badge from '../components/ui/Badge';
 import AuthorizationModal from '../components/AuthorizationModal';
 import SmartSearch from '../components/SmartSearch';
 import { supabase } from '../services/supabase';
@@ -260,7 +261,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                         <div className="mx-3 md:mx-8 mt-4 flex flex-wrap items-end gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-4 shadow-sm shrink-0">
                             {(isAdmin || isWarehouse) && (
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
+                                    <label className="text-xs font-black uppercase text-slate-400 tracking-widest">Sucursal</label>
                                     <select 
                                         className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20"
                                         value={selectedBranchFilter} 
@@ -274,11 +275,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                 </div>
                             )}
                             <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Desde</label>
+                                <label className="text-xs font-black uppercase text-slate-400 tracking-widest">Desde</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={startDate} onChange={e => setStartDate(e.target.value)} />
                             </div>
                             <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hasta</label>
+                                <label className="text-xs font-black uppercase text-slate-400 tracking-widest">Hasta</label>
                                 <input type="date" className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-primary/20" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
                             <button onClick={() => loadData(startDate, endDate, selectedBranchFilter)} className="px-5 py-2 bg-primary text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-primary/20 hover:scale-105 transition-all">Filtrar</button>
@@ -330,14 +331,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-5">
-                                                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${r.status === 'approved' ? 'bg-green-100 text-green-600' :
-                                                            r.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                                                                r.status === 'received_at_warehouse' ? 'bg-blue-100 text-blue-600' :
-                                                                    r.status === 'closed' ? 'bg-slate-100 text-slate-500' :
-                                                                        'bg-amber-100 text-amber-600'
-                                                            }`}>
+                                                        <Badge variant={getStatusColor(r.status)} size="sm">
                                                             {translateStatus(r.status)}
-                                                        </span>
+                                                        </Badge>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
                                                         {isAdmin && r.status === 'pending_authorization' && (
@@ -436,7 +432,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                     {/* Branch selector for admin/warehouse */}
                                     {(isAdmin || isWarehouse) && (
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Sucursal origen del inventario</label>
+                                            <label className="text-xs font-black uppercase text-slate-500">Sucursal origen del inventario</label>
                                             <select
                                                 className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700 font-bold"
                                                 value={selectedFormBranch}
@@ -454,7 +450,7 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         </div>
                                     )}
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-slate-500">Producto</label>
+                                        <label className="text-xs font-black uppercase text-slate-500">Producto</label>
                                         {(!selectedFormBranch && !user.branchId) ? (
                                             <div className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-400 text-sm">
                                                 Selecciona sucursal primero...
@@ -492,11 +488,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Cantidad</label>
+                                            <label className="text-xs font-black uppercase text-slate-500">Cantidad</label>
                                             <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none font-black border border-slate-200 dark:border-slate-700" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
+                                            <label className="text-xs font-black uppercase text-slate-500">Motivo</label>
                                             <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={reason} onChange={e => setReason(e.target.value)}>
                                                 <option value="uso_tienda">Consumo Interno</option>
                                                 <option value="demostracion">Demostraciones</option>
@@ -523,11 +519,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Datos Logísticos</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                             <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-slate-500">Transportista</label>
+                                                <label className="text-xs font-black uppercase text-slate-500">Transportista</label>
                                                 <input className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={transportedBy} onChange={e => setTransportedBy(e.target.value)} placeholder="Nombre Chofer" />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-slate-500">Quien Recibe (Almacén)</label>
+                                                <label className="text-xs font-black uppercase text-slate-500">Quien Recibe (Almacén)</label>
                                                 <input className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} placeholder="Nombre Almacén" />
                                             </div>
                                         </div>

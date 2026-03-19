@@ -6,6 +6,7 @@ import { SalesService } from '../services/salesService';
 import { DiscountService } from '../services/discountService';
 import { DiscountRequest } from '../types';
 import { exportToCSV } from '../utils/csvExport';
+import { useToast } from '../hooks/useToast';
 
 interface POSProps {
   user: User;
@@ -37,6 +38,14 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeDiscountRequest, setActiveDiscountRequest] = useState<DiscountRequest | null>(null);
   const [appliedDiscount, setAppliedDiscount] = useState<{ amount: number, type: 'percentage' | 'fixed' } | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // --- BILLING STATES (reemplaza el patrón document.getElementById) ---
+  const [billingBank, setBillingBank] = useState('');
+  const [billingSocial, setBillingSocial] = useState('');
+  const [billingInvoice, setBillingInvoice] = useState('');
+  const [billingError, setBillingError] = useState('');
+
+  const toast = useToast();
 
   // --- HISTORY STATES ---
   const PAGE_SIZE = 25;
@@ -165,14 +174,14 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     if (newInvoice !== null) {
         try {
             await SalesService.updateInvoiceNumber(sale.id, newInvoice);
-            alert('Factura actualizada correctamente');
+            toast.success('Factura actualizada', 'El número de factura se guardó correctamente');
             fetchHistorySales(); // Recargar para ver el cambio
             if (selectedHistorySale?.id === sale.id) {
                 setSelectedHistorySale({ ...selectedHistorySale, billingInvoiceNumber: newInvoice });
             }
         } catch (e) {
             console.error(e);
-            alert('Error al actualizar la factura');
+            toast.error('Error', 'No se pudo actualizar la factura');
         }
     }
   };
@@ -186,7 +195,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     const inCart = cart.find(i => i.id === product.id)?.quantity || 0;
 
     if (inCart >= localStock) {
-      alert("No hay suficiente stock en esta sucursal");
+      toast.warning("Stock insuficiente", "No hay suficiente stock en esta sucursal");
       return;
     }
 
@@ -197,8 +206,6 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    setAppliedDiscount(null);
-    setActiveDiscountRequest(null);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -209,8 +216,6 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return item;
     }).filter(item => item.quantity > 0));
-    setAppliedDiscount(null);
-    setActiveDiscountRequest(null);
   };
 
   const filteredProducts = products.filter(p => {
@@ -236,9 +241,9 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         setActiveDiscountRequest(updated);
         if (updated.status === 'approved') {
           setAppliedDiscount({ amount: updated.amount, type: updated.type });
-          alert("¡Descuento aprobado!");
+          toast.success("Descuento aplicado", "El descuento ha sido añadido a la venta");
         } else if (updated.status === 'rejected') {
-          alert("El descuento fue rechazado.");
+          toast.error("Descuento rechazado", "El administrador rechazó la solicitud");
           setActiveDiscountRequest(null);
         }
       });
@@ -260,7 +265,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       setDiscountReason('');
     } catch (e) {
       console.error(e);
-      alert("Error al solicitar descuento.");
+      toast.error("Error", "No se pudo solicitar el descuento. Intente de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -315,14 +320,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
 
       setTimeout(() => {
         setShowSuccess(false);
-        setIsPaymentModalOpen(false);
-        setCart([]);
-        setCashReceived('');
-      }, 2000);
+      }, 3500);
 
     } catch (e) {
       console.error(e);
-      alert("Error al procesar la venta. Verifique la conexión o el stock.");
+      toast.error("Error en venta", "Verifique la conexión o el stock disponible.");
     } finally {
       setLoading(false);
     }
@@ -559,17 +561,35 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                           <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase">Datos de Facturación Obligatorios</span>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">Banco</label>
-                          <input id="billing-bank" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Ej: BBVA, Santander" />
+                          <label className="text-xs font-bold uppercase text-slate-400">Banco</label>
+                          <input
+                            value={billingBank}
+                            onChange={e => { setBillingBank(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Ej: BBVA, Santander"
+                          />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">Razón Social</label>
-                          <input id="billing-social" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Nombre o Razón Social" />
+                          <label className="text-xs font-bold uppercase text-slate-400">Razón Social</label>
+                          <input
+                            value={billingSocial}
+                            onChange={e => { setBillingSocial(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Nombre o Razón Social"
+                          />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">No. Factura / Referencia</label>
-                          <input id="billing-invoice" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Folio de Factura" />
+                          <label className="text-xs font-bold uppercase text-slate-400">No. Factura / Referencia</label>
+                          <input
+                            value={billingInvoice}
+                            onChange={e => { setBillingInvoice(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Folio de Factura"
+                          />
                         </div>
+                        {billingError && (
+                          <p className="text-xs text-red-500 font-bold mt-1">{billingError}</p>
+                        )}
                       </div>
                     )}
 
@@ -583,15 +603,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <span className="text-green-600">${change.toLocaleString()}</span>
                     </div>
                     <div className="flex gap-4 pt-4">
-                      <button onClick={() => setIsPaymentModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
+                      <button onClick={() => { setIsPaymentModalOpen(false); setBillingError(''); }} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
                       <button onClick={() => {
                         if (paymentMethod === 'card' || paymentMethod === 'transfer') {
-                          const bank = (document.getElementById('billing-bank') as HTMLInputElement).value;
-                          const social = (document.getElementById('billing-social') as HTMLInputElement).value;
-                          const invoice = (document.getElementById('billing-invoice') as HTMLInputElement).value;
-
-                          if (!bank || !social || !invoice) {
-                            alert("Escriba Banco, Razón Social y No. Factura para continuar.");
+                          if (!billingBank.trim() || !billingSocial.trim() || !billingInvoice.trim()) {
+                            setBillingError("Complete Banco, Razón Social y No. Factura para continuar.");
                             return;
                           }
                         }
@@ -606,6 +622,21 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <div className="size-20 rounded-full bg-green-500 text-white flex items-center justify-center mb-4"><span className="material-symbols-outlined text-5xl">check</span></div>
                       <h3 className="text-2xl font-black">¡Venta Exitosa!</h3>
                       <p className="text-slate-500">Inventario actualizado en tiempo real.</p>
+                      <button
+                        onClick={() => {
+                          setShowSuccess(false);
+                          setIsPaymentModalOpen(false);
+                          setCart([]);
+                          setCashReceived('');
+                          setBillingBank('');
+                          setBillingSocial('');
+                          setBillingInvoice('');
+                          setBillingError('');
+                        }}
+                        className="mt-6 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
+                      >
+                        Nueva Venta
+                      </button>
                     </div>
                   )}
                 </div>

@@ -5,6 +5,7 @@ import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 import AuthorizationModal from '../components/AuthorizationModal';
 import SmartSearch from '../components/SmartSearch';
+import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
 
 interface ReturnsProps {
@@ -185,7 +186,6 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const handleCloseReturn = async (id: string) => {
         if (!confirm('¿Confirmar recepción física y cerrar esta devolución definitivamente?')) return;
         try {
-            const { supabase } = await import('../services/supabase');
             const { error } = await supabase
                 .from('returns')
                 .update({ status: 'closed', updated_at: new Date().toISOString() })
@@ -201,7 +201,6 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     const handleConfirmReception = async (id: string) => {
         if (!confirm('¿Confirmas que el producto fue recibido físicamente en bodega?')) return;
         try {
-            const { supabase } = await import('../services/supabase');
             const { error } = await supabase
                 .from('returns')
                 .update({ status: 'received_at_warehouse', updated_at: new Date().toISOString() })

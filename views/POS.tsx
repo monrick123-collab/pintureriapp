@@ -18,7 +18,7 @@ type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 
 const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
-  const currentBranchId = user.branchId || 'BR-CENTRO';
+  const currentBranchId = user.branchId || '';
 
   // --- POS STATES ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,7 +47,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
-    user.role === UserRole.ADMIN ? 'ALL' : 'BR-CENTRO'
+    user.role === UserRole.ADMIN ? 'ALL' : (user.branchId || '')
   );
   const [selectedHistorySale, setSelectedHistorySale] = useState<Sale | null>(null);
   const [historyPage, setHistoryPage] = useState(0);

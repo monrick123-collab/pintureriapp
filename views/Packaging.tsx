@@ -459,7 +459,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     )}
 
                                                     {/* Encargado de tienda: confirmar llegada del tambo */}
-                                                    {(isStoreManager || isAdmin) && user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
+                                                    {(isStoreManager || isAdmin) && !!user.branchId && user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
                                                         <button
                                                             onClick={() => handleConfirmReceipt(r.id)}
                                                             className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
@@ -469,7 +469,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     )}
 
                                                     {/* Encargado de tienda: iniciar envasado */}
-                                                    {(isStoreManager || isAdmin) && user.branchId === r.branch_id && r.status === 'received_at_branch' && (
+                                                    {(isStoreManager || isAdmin) && !!user.branchId && user.branchId === r.branch_id && r.status === 'received_at_branch' && (
                                                         <button
                                                             onClick={() => handleUpdateStatus(r.id, 'processing')}
                                                             className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"
@@ -479,7 +479,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     )}
 
                                                     {/* Encargado de tienda: marcar como completado */}
-                                                    {(isStoreManager || isAdmin) && user.branchId === r.branch_id && r.status === 'processing' && (
+                                                    {(isStoreManager || isAdmin) && !!user.branchId && user.branchId === r.branch_id && r.status === 'processing' && (
                                                         <button
                                                             onClick={() => handleUpdateStatus(r.id, 'completed')}
                                                             className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase transition-colors"

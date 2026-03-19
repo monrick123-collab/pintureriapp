@@ -455,7 +455,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 { key: 'barter_pending', label: 'Ofertas Pendientes', icon: 'inbox', badge: pendingBarters.length },
                                 { key: 'barter_history', label: 'Historial Trueques', icon: 'history_edu' }
                             ] as const).map(tab => (
-                                <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
+                                <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setIsDetailModalOpen(false); setIsBarterDetailOpen(false); setIsSelectionModalOpen(false); }}
                                     className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all relative ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
                                     {'badge' in tab && tab.badge > 0 && (

@@ -111,7 +111,8 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
 
     const loadProductsForBranch = async (branchId: string) => {
         try {
-            const prodData = await InventoryService.getProductsByBranch(branchId || 'BR-MAIN');
+            if (!branchId) return;
+            const prodData = await InventoryService.getProductsByBranch(branchId);
             setProducts(prodData);
         } catch (e) {
             console.error(e);

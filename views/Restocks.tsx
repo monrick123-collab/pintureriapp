@@ -199,7 +199,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
             const shippingId = await ShippingService.createShippingOrder({
                 entityType: 'restock_sheet',
                 entityId: selectedSheet.id,
-                originBranchId: 'BR-MAIN',
+                originBranchId: user.branchId || (branches.find(b => b.type === 'warehouse')?.id ?? ''),
                 destinationBranchId: selectedSheet.branchId,
                 createdBy: user.id,
                 carrier: shippingCarrier,

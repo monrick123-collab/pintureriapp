@@ -49,6 +49,13 @@ export const translateStatus = (status: string): string => {
         'warehouse': 'Bodega',
         'store': 'Tienda',
 
+        // Trueque
+        'in_transit': 'En Tránsito',
+        'pending_offer': 'Oferta Pendiente',
+        'pending_selection': 'Selección Pendiente',
+        'pending_approval': 'Pendiente Aprobación',
+        'counter_proposed': 'Contra-oferta',
+
         // Métodos de Pago
         'cash': 'Efectivo',
         'card': 'Tarjeta',
@@ -85,6 +92,11 @@ export const getStatusColor = (
         low: 'warning',
         processing: 'info',
         shipped: 'info',
+        in_transit: 'info',
+        pending_offer: 'warning',
+        pending_selection: 'warning',
+        pending_approval: 'warning',
+        counter_proposed: 'warning',
         rejected: 'danger',
         out: 'danger',
         overdue: 'danger',

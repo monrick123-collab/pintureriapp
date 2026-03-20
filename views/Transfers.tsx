@@ -1,10 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection, ShippingOrder } from '../types';
+import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection, BarterSuggestion, ShippingOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { ShippingService, CARRIER_OPTIONS, SHIPPING_STATUS_LABELS } from '../services/shippingService';
 import { exportToCSV } from '../utils/csvExport';
+import { useToast } from '../hooks/useToast';
+import { translateStatus, getStatusColor } from '../utils/formatters';
+import Badge from '../components/ui/Badge';
 
 interface TransfersProps {
     user: User;
@@ -41,6 +44,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [shippingCarrier, setShippingCarrier] = useState('');
     const [shippingTrackingNumber, setShippingTrackingNumber] = useState('');
     const [shippingNotes, setShippingNotes] = useState('');
+
+    const [suggestions, setSuggestions] = useState<BarterSuggestion[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const toast = useToast();
 
     const isAdmin = user.role === UserRole.ADMIN;
     const branchId = user.branchId || 'BR-MAIN';
@@ -103,7 +110,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         const existing = cart.find(item => item.id === p.id);
         const currentQty = existing ? existing.quantity : 0;
         if (currentQty + 1 > available) {
-            alert(`No hay suficiente stock disponible. Stock actual: ${available}`);
+            toast.warning('Stock insuficiente', `Stock actual: ${available}`);
             return;
         }
         if (existing) {
@@ -139,10 +146,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setToBranchId('');
             setNotes('');
             loadData();
-            alert("Traspaso iniciado correctamente.");
+            toast.success('Traspaso iniciado', 'El traspaso fue creado correctamente.');
         } catch (e: any) {
             console.error("Error en createStockTransfer:", e);
-            alert("Error al crear traspaso: " + (e.message || e.toString()));
+            toast.error('Error al crear traspaso', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -156,7 +163,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsDetailModalOpen(true);
         } catch (e: any) {
             console.error("Error al cargar detalles:", e);
-            alert("Error al obtener los detalles: " + (e.message || e.toString()));
+            toast.error('Error', 'No se pudieron obtener los detalles del traspaso.');
         } finally {
             setLoading(false);
         }
@@ -187,7 +194,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsBarterDetailOpen(true);
         } catch (e: any) {
             console.error("Error al cargar detalles del trueque:", e);
-            alert("Error al obtener los detalles del trueque: " + (e.message || e.toString()));
+            toast.error('Error', 'No se pudieron obtener los detalles del trueque.');
         } finally {
             setLoading(false);
         }
@@ -202,7 +209,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsSelectionModalOpen(true);
         } catch (e: any) {
             console.error("Error al cargar detalles del trueque:", e);
-            alert("Error al obtener los detalles del trueque: " + (e.message || e.toString()));
+            toast.error('Error', 'No se pudieron cargar los detalles del trueque.');
         } finally {
             setLoading(false);
         }
@@ -210,7 +217,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const handleBarterSubmit = async () => {
         if (cart.length === 0 || !toBranchId) {
-            alert("Agrega productos a dar y selecciona una sucursal destino.");
+            toast.warning('Datos incompletos', 'Agrega productos a dar y selecciona una sucursal destino.');
             return;
         }
         try {
@@ -225,13 +232,14 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setActiveTab('barter_history');
             setCart([]);
             setReceivedCart([]);
+            setSuggestions([]);
             setToBranchId('');
             setNotes('');
             loadData();
-            alert("Oferta de trueque enviada correctamente. La sucursal destino seleccionará qué productos desea recibir.");
+            toast.success('Oferta enviada', 'La sucursal destino seleccionará qué productos desea recibir.');
         } catch (e: any) {
             console.error("Error en createBarterOffer:", e);
-            alert("Error al crear oferta de trueque: " + (e.message || e.toString()));
+            toast.error('Error al crear oferta', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -239,7 +247,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const handleSelectBarterItems = async () => {
         if (!selectedBarter || selectionCart.length === 0) {
-            alert("Selecciona al menos un producto del inventario del solicitante.");
+            toast.warning('Selección vacía', 'Selecciona al menos un producto del inventario del solicitante.');
             return;
         }
         try {
@@ -252,10 +260,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsSelectionModalOpen(false);
             setSelectionCart([]);
             loadData();
-            alert("Selección enviada. El administrador revisará la solicitud.");
+            toast.success('Selección enviada', 'El administrador revisará la solicitud de trueque.');
         } catch (e: any) {
             console.error("Error al seleccionar items:", e);
-            alert("Error al enviar selección: " + (e.message || e.toString()));
+            toast.error('Error al enviar selección', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -263,7 +271,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const handleCounterOffer = async () => {
         if (!selectedBarter || selectionCart.length === 0) {
-            alert("Agrega productos a tu contra-oferta.");
+            toast.warning('Selección vacía', 'Agrega productos a tu contra-oferta.');
             return;
         }
         try {
@@ -278,10 +286,10 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setSelectionCart([]);
             setNotes('');
             loadData();
-            alert("Contra-oferta enviada correctamente.");
+            toast.success('Contra-oferta enviada', 'La sucursal solicitante revisará tu propuesta.');
         } catch (e: any) {
             console.error("Error al enviar contra-oferta:", e);
-            alert("Error al enviar contra-oferta: " + (e.message || e.toString()));
+            toast.error('Error al enviar contra-oferta', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -291,7 +299,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         const existing = selectionCart.find(s => s.productId === productId);
         if (existing) {
             if (existing.quantity + 1 > maxQty) {
-                alert(`No puedes seleccionar más de ${maxQty} unidades.`);
+                toast.warning('Límite alcanzado', `No puedes seleccionar más de ${maxQty} unidades.`);
                 return;
             }
             setSelectionCart(selectionCart.map(s => 
@@ -319,16 +327,16 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const handleApproveBarter = async (id: string) => {
         if (!isAdmin) return;
-        if (!confirm("¿Estás seguro de aprobar este trueque? El inventario se ajustará automáticamente.")) return;
+        if (!confirm("¿Aprobar este trueque? El stock quedará reservado hasta que ambas sucursales confirmen el intercambio.")) return;
         try {
             setLoading(true);
             await InventoryService.approveBarterTransfer(id, user.id);
             setIsBarterDetailOpen(false);
             loadData();
-            alert("Trueque aprobado y procesado correctamente.");
+            toast.success('Trueque aprobado', 'El stock está reservado. La sucursal origen debe confirmar el envío.');
         } catch (e: any) {
             console.error("Error al aprobar trueque:", e);
-            alert("Error al aprobar: " + (e.message || e.toString()));
+            toast.error('Error al aprobar', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -349,6 +357,55 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleConfirmDispatch = async (barterId: string) => {
+        if (!confirm("¿Confirmar que los productos ya fueron enviados?")) return;
+        try {
+            setLoading(true);
+            await InventoryService.confirmBarterDispatch(barterId, user.id);
+            setIsBarterDetailOpen(false);
+            loadData();
+            toast.success('Envío confirmado', 'El trueque está en tránsito. Esperando confirmación de recepción.');
+        } catch (e: any) {
+            toast.error('Error al confirmar envío', e.message || e.toString());
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmReception = async (barterId: string) => {
+        if (!confirm("¿Confirmar la recepción de los productos? El inventario se actualizará en este momento.")) return;
+        try {
+            setLoading(true);
+            await InventoryService.confirmBarterReception(barterId, user.id);
+            setIsBarterDetailOpen(false);
+            loadData();
+            toast.success('Trueque completado', 'El inventario de ambas sucursales ha sido actualizado.');
+        } catch (e: any) {
+            toast.error('Error al confirmar recepción', e.message || e.toString());
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLoadSuggestions = async () => {
+        if (!toBranchId) {
+            toast.warning('Selecciona sucursal destino', 'Elige primero la sucursal con la que quieres hacer el trueque.');
+            return;
+        }
+        try {
+            setLoadingSuggestions(true);
+            const result = await InventoryService.suggestBarterItems(branchId, toBranchId);
+            setSuggestions(result);
+            if (result.length === 0) {
+                toast.info('Sin sugerencias', 'No hay excedentes claros entre tu sucursal y la destino.');
+            }
+        } catch (e: any) {
+            toast.error('Error al cargar sugerencias', e.message || e.toString());
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    };
+
     // Shipping Functions
     const handleViewShipping = async (entityType: 'stock_transfer' | 'barter_transfer' | 'restock_sheet', entityId: string) => {
         try {
@@ -362,7 +419,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const handleCreateShipping = async (entityType: 'stock_transfer' | 'barter_transfer', entityId: string, originId: string, destId: string) => {
         if (!shippingCarrier || !shippingTrackingNumber) {
-            alert("Ingrese paquetería y número de guía");
+            toast.warning('Datos incompletos', 'Ingrese paquetería y número de guía.');
             return;
         }
         try {
@@ -389,9 +446,9 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setShippingTrackingNumber('');
             setShippingNotes('');
             loadData();
-            alert("Envío registrado correctamente");
+            toast.success('Envío registrado', 'El seguimiento ha sido creado correctamente.');
         } catch (e: any) {
-            alert("Error al crear envío: " + (e.message || e.toString()));
+            toast.error('Error al crear envío', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -408,7 +465,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setShippingOrder(null);
             loadData();
         } catch (e: any) {
-            alert("Error al actualizar envío: " + (e.message || e.toString()));
+            toast.error('Error al actualizar envío', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -579,24 +636,29 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-center">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                                                            b.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                                                            b.status === 'rejected' || b.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                            b.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
-                                                            b.status === 'pending_approval' ? 'bg-purple-500/10 text-purple-500' :
-                                                            b.status === 'counter_proposed' ? 'bg-orange-500/10 text-orange-500' :
-                                                            'bg-amber-500/10 text-amber-500'
-                                                        }`}>
-                                                            {b.status === 'pending_offer' ? 'Oferta Enviada' : 
-                                                             b.status === 'pending_selection' ? 'Pendiente Selección' :
-                                                             b.status === 'pending_approval' ? 'Pendiente Aprobación' :
-                                                             b.status === 'counter_proposed' ? 'Contra-Oferta' :
-                                                             b.status === 'approved' ? 'Aprobado' : 
-                                                             b.status === 'completed' ? 'Completado' : 
-                                                             b.status === 'rejected' ? 'Rechazado' : 'Cancelado'}
-                                                        </span>
+                                                        <Badge variant={getStatusColor(b.status)} size="sm">
+                                                            {translateStatus(b.status)}
+                                                        </Badge>
+                                                        {(b.status === 'approved' || b.status === 'in_transit') && (
+                                                            <span className="ml-2 inline-flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                                                                <span className="material-symbols-outlined text-[10px]">lock</span>
+                                                                Stock Reservado
+                                                            </span>
+                                                        )}
                                                     </td>
-                                                    <td className="px-8 py-5 text-right">
+                                                    <td className="px-8 py-5 text-right flex items-center gap-2 justify-end">
+                                                        {b.status === 'approved' && b.fromBranchId === branchId && (
+                                                            <button onClick={() => handleConfirmDispatch(b.id)} className="px-3 py-1.5 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 transition-all flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                                                Confirmar Envío
+                                                            </button>
+                                                        )}
+                                                        {b.status === 'in_transit' && b.toBranchId === branchId && (
+                                                            <button onClick={() => handleConfirmReception(b.id)} className="px-3 py-1.5 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-all flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">inventory_2</span>
+                                                                Confirmar Recepción
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => handleViewBarter(b)} className="p-2 text-slate-400 hover:text-primary transition-colors">
                                                             <span className="material-symbols-outlined">visibility</span>
                                                         </button>
@@ -755,6 +817,44 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 </div>
 
                                 <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-4">
+                                    {activeTab === 'barter_new' && (
+                                        <button
+                                            onClick={handleLoadSuggestions}
+                                            disabled={loadingSuggestions || !toBranchId}
+                                            className="w-full py-2.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 font-black rounded-xl text-[10px] uppercase hover:bg-amber-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">lightbulb</span>
+                                            {loadingSuggestions ? 'Calculando...' : 'Sugerencias automáticas'}
+                                        </button>
+                                    )}
+                                    {activeTab === 'barter_new' && suggestions.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] font-black uppercase text-amber-600 tracking-widest">Excedentes sugeridos</p>
+                                            {suggestions.slice(0, 5).map(s => {
+                                                const alreadyInCart = cart.some(c => c.id === s.productId);
+                                                return (
+                                                    <div key={s.productId} className="flex items-center justify-between p-2 bg-amber-50/60 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20">
+                                                        <div className="min-w-0 flex-1 pr-2">
+                                                            <p className="text-xs font-bold truncate">{s.productName}</p>
+                                                            <p className="text-[9px] text-slate-400 font-mono">{s.productSku} · Excedente: +{s.surplus}</p>
+                                                        </div>
+                                                        {!alreadyInCart && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const product = products.find(p => p.id === s.productId);
+                                                                    if (product) addToCart(product);
+                                                                }}
+                                                                className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-black uppercase hover:bg-amber-600 transition-all shrink-0"
+                                                            >
+                                                                Agregar
+                                                            </button>
+                                                        )}
+                                                        {alreadyInCart && <span className="text-[9px] text-green-500 font-black shrink-0">✓ En carrito</span>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                     <textarea
                                         className="w-full p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm text-xs font-medium resize-none h-20"
                                         placeholder="Notas..."
@@ -763,7 +863,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     />
                                     <button
                                         onClick={activeTab === 'barter_new' ? handleBarterSubmit : handleSubmit}
-                                        disabled={loading || !toBranchId || (activeTab === 'new' ? cart.length === 0 : (cart.length === 0 || receivedCart.length === 0))}
+                                        disabled={loading || !toBranchId || (activeTab === 'new' ? cart.length === 0 : cart.length === 0)}
                                         className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl uppercase text-xs tracking-wide hover:scale-[1.02] transition-all disabled:opacity-50"
                                     >
                                         {activeTab === 'barter_new' ? 'Enviar Trueque' : 'Confirmar Traspaso'}
@@ -866,8 +966,14 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         <span className="material-symbols-outlined text-primary">swap_horiz</span>
                                         Detalle de Trueque #B-{selectedBarter.folio.toString().padStart(4, '0')}
                                     </h3>
-                                    <p className="text-slate-500 text-sm font-medium mt-1">
-                                        Estado: <span className="font-bold uppercase tracking-widest">{selectedBarter.status}</span>
+                                    <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
+                                        Estado: <Badge variant={getStatusColor(selectedBarter.status)} size="sm">{translateStatus(selectedBarter.status)}</Badge>
+                                        {(selectedBarter.status === 'approved' || selectedBarter.status === 'in_transit') && (
+                                            <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                                                <span className="material-symbols-outlined text-[10px]">lock</span>
+                                                Stock Reservado
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                                 <button onClick={() => setIsBarterDetailOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
@@ -876,6 +982,36 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                             </div>
 
                             <div className="p-8 overflow-y-auto max-h-[70vh] space-y-8">
+                                {/* Stepper de estado */}
+                                <div className="flex items-center gap-1 overflow-x-auto pb-2">
+                                    {[
+                                        { key: 'pending_offer', label: 'Oferta' },
+                                        { key: 'pending_approval', label: 'Aprobación' },
+                                        { key: 'approved', label: 'Aprobado' },
+                                        { key: 'in_transit', label: 'En Tránsito' },
+                                        { key: 'completed', label: 'Completado' },
+                                    ].map((step, i, arr) => {
+                                        const statusOrder = ['pending_offer', 'counter_proposed', 'pending_selection', 'pending_approval', 'approved', 'in_transit', 'completed'];
+                                        const currentIdx = statusOrder.indexOf(selectedBarter.status);
+                                        const stepIdx = statusOrder.indexOf(step.key);
+                                        const isDone = currentIdx > stepIdx;
+                                        const isCurrent = currentIdx === stepIdx || (step.key === 'pending_approval' && ['counter_proposed', 'pending_selection'].includes(selectedBarter.status));
+                                        return (
+                                            <React.Fragment key={step.key}>
+                                                <div className={`flex flex-col items-center min-w-[72px] text-center ${isDone ? 'text-green-500' : isCurrent ? 'text-primary' : 'text-slate-300 dark:text-slate-600'}`}>
+                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 mb-1 ${isDone ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : isCurrent ? 'border-primary bg-primary/10' : 'border-slate-200 dark:border-slate-700'}`}>
+                                                        {isDone ? <span className="material-symbols-outlined text-sm">check</span> : i + 1}
+                                                    </div>
+                                                    <span className="text-[9px] font-black uppercase tracking-wide leading-tight">{step.label}</span>
+                                                </div>
+                                                {i < arr.length - 1 && (
+                                                    <div className={`flex-1 h-0.5 mt-3.5 ${isDone ? 'bg-green-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Lo que Entrega */}
                                     <div className="space-y-4">
@@ -944,7 +1080,31 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         Rechazar
                                     </button>
                                     <button onClick={() => handleApproveBarter(selectedBarter.id)} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl text-[10px] uppercase shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
-                                        Aprobar y Procesar
+                                        Aprobar y Reservar Stock
+                                    </button>
+                                </div>
+                            )}
+                            {selectedBarter.status === 'approved' && selectedBarter.fromBranchId === branchId && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10 flex gap-4">
+                                    <p className="flex-1 text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">lock</span>
+                                        El stock está reservado. Confirma cuando hayas despachado la mercancía.
+                                    </p>
+                                    <button onClick={() => handleConfirmDispatch(selectedBarter.id)} disabled={loading} className="px-6 py-3 bg-blue-600 text-white font-black rounded-2xl text-[10px] uppercase shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                        Confirmar Envío
+                                    </button>
+                                </div>
+                            )}
+                            {selectedBarter.status === 'in_transit' && selectedBarter.toBranchId === branchId && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-green-50 dark:bg-green-900/10 flex gap-4">
+                                    <p className="flex-1 text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                        Los productos están en camino. Confirma la recepción para finalizar el trueque.
+                                    </p>
+                                    <button onClick={() => handleConfirmReception(selectedBarter.id)} disabled={loading} className="px-6 py-3 bg-green-600 text-white font-black rounded-2xl text-[10px] uppercase shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">inventory_2</span>
+                                        Confirmar Recepción
                                     </button>
                                 </div>
                             )}

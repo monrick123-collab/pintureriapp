@@ -62,9 +62,14 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const branchToUse = selectedBranchId || user.branchId || '';
+        if (!branchToUse) {
+            alert('Selecciona una sucursal destino antes de registrar.');
+            return;
+        }
         try {
             await InventoryService.createInternalSupply({
-                branchId: selectedBranchId || user.branchId || '',
+                branchId: branchToUse,
                 description,
                 amount,
                 category

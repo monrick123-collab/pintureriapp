@@ -79,6 +79,10 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (totalAmount <= 0) return;
+        if (!branchId) {
+            alert('Selecciona una sucursal antes de continuar.');
+            return;
+        }
         try {
             setLoading(true);
             await CoinService.createCoinChangeRequest(branchId, user.id, totalAmount, breakdown, collectedBy || undefined);

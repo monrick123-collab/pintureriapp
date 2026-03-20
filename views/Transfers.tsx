@@ -22,6 +22,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [pendingBarters, setPendingBarters] = useState<BarterTransfer[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
+    const [allBranches, setAllBranches] = useState<Branch[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [receivedCart, setReceivedCart] = useState<CartItem[]>([]);
     const [selectionCart, setSelectionCart] = useState<{ productId: string; productName: string; quantity: number }[]>([]);
@@ -52,7 +53,13 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const toast = useToast();
 
     const isAdmin = user.role === UserRole.ADMIN;
-    const branchId = user.branchId || 'BR-MAIN';
+    // userBranchId: rama real del usuario — para comparaciones de identidad en historial
+    const userBranchId = user.branchId || '';
+    // fromBranchId: sucursal ORIGEN al crear un traspaso (admin puede cambiarla)
+    const [adminFromBranchId, setAdminFromBranchId] = useState('');
+    const fromBranchId = isAdmin ? adminFromBranchId : userBranchId;
+    // Alias para compatibilidad con historial (no debe cambiar con el selector)
+    const branchId = userBranchId;
     const isBarter = receivedCart.length > 0;
 
     // Fechas
@@ -83,24 +90,27 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                     console.error("No se pudieron cargar los trueques:", err);
                     return [] as BarterTransfer[];
                 }),
-                InventoryService.getProductsByBranch(branchId),
+                fromBranchId ? InventoryService.getProductsByBranch(fromBranchId) : Promise.resolve([] as Product[]),
                 InventoryService.getBranches()
             ]);
-            
+
             // Cargar ofertas pendientes si el usuario puede verlas
             if (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB || user.role === UserRole.STORE_MANAGER || isAdmin) {
                 try {
-                    const pending = await InventoryService.getPendingBarterOffers(branchId);
-                    setPendingBarters(pending);
+                    if (fromBranchId) {
+                        const pending = await InventoryService.getPendingBarterOffers(fromBranchId);
+                        setPendingBarters(pending);
+                    }
                 } catch (e) {
                     console.error("No se pudieron cargar ofertas pendientes:", e);
                 }
             }
-            
+
             setTransfers(t);
             setBarters(b_trans);
             setProducts(p);
-            setBranches(b.filter(branch => branch.id !== branchId));
+            setAllBranches(b);
+            setBranches(b.filter(branch => branch.id !== fromBranchId));
         } catch (e) {
             console.error(e);
         } finally {
@@ -109,7 +119,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     };
 
     const addToCart = (p: Product) => {
-        const available = p.inventory[branchId] || 0;
+        const available = p.inventory[fromBranchId] || 0;
         const existing = cart.find(item => item.id === p.id);
         const currentQty = existing ? existing.quantity : 0;
         if (currentQty + 1 > available) {
@@ -129,20 +139,24 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
     const updateQty = (id: string, qty: number) => {
         const product = products.find(p => p.id === id);
-        const available = product ? product.inventory[branchId] || 0 : Infinity;
+        const available = product ? product.inventory[fromBranchId] || 0 : Infinity;
         const clamped = Math.max(0, Math.min(qty, available));
         setCart(cart.map(item => item.id === id ? { ...item, quantity: clamped } : item));
     };
 
     const handleSubmit = async () => {
         if (cart.length === 0 || !toBranchId) return;
+        if (!fromBranchId) {
+            toast.warning('Selecciona sucursal origen', 'Elige la sucursal desde la que se realizará el traspaso.');
+            return;
+        }
         try {
             setLoading(true);
             const items = cart.map(c => ({
                 productId: c.id,
                 quantity: c.quantity
             }));
-            await InventoryService.createStockTransfer(branchId, toBranchId, notes, items);
+            await InventoryService.createStockTransfer(fromBranchId, toBranchId, notes, items);
             setIsModalOpen(false);
             setActiveTab('history');
             setCart([]);
@@ -223,10 +237,14 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             toast.warning('Datos incompletos', 'Agrega productos a dar y selecciona una sucursal destino.');
             return;
         }
+        if (!fromBranchId) {
+            toast.warning('Selecciona sucursal origen', 'Elige la sucursal desde la que se realizará el trueque.');
+            return;
+        }
         try {
             setLoading(true);
             await InventoryService.createBarterOffer({
-                fromBranchId: branchId,
+                fromBranchId: fromBranchId,
                 toBranchId: toBranchId,
                 requestedBy: user.id,
                 notes: notes,
@@ -397,7 +415,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
         try {
             setLoadingSuggestions(true);
-            const result = await InventoryService.suggestBarterItems(branchId, toBranchId);
+            const result = await InventoryService.suggestBarterItems(fromBranchId, toBranchId);
             setSuggestions(result);
             if (result.length === 0) {
                 toast.info('Sin sugerencias', 'No hay excedentes claros entre tu sucursal y la destino.');
@@ -700,8 +718,33 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                             ))}
                         </div>
 
-                        {/* Top bar: Sucursal destino + mode badge */}
+                        {/* Top bar: Sucursal origen (admin) + destino + mode badge */}
                         <div className="mx-3 md:mx-8 mt-3 flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-3 shadow-sm shrink-0">
+                            {isAdmin && (
+                                <div className="flex-1 min-w-[200px] max-w-xs">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Sucursal Origen</label>
+                                    <select
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm"
+                                        value={adminFromBranchId}
+                                        onChange={e => {
+                                            setAdminFromBranchId(e.target.value);
+                                            setCart([]);
+                                            setReceivedCart([]);
+                                            setToBranchId('');
+                                            if (e.target.value) {
+                                                InventoryService.getProductsByBranch(e.target.value)
+                                                    .then(setProducts)
+                                                    .catch(console.error);
+                                            } else {
+                                                setProducts([]);
+                                            }
+                                        }}
+                                    >
+                                        <option value="">Seleccionar origen...</option>
+                                        {allBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    </select>
+                                </div>
+                            )}
                             <div className="flex-1 min-w-[200px] max-w-xs">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Sucursal Destino</label>
                                 <select

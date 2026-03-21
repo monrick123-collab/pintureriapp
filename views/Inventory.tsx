@@ -176,6 +176,9 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     if (!selectedProduct) return;
     try {
       await InventoryService.updateProduct(selectedProduct.id, formData as Partial<Product>);
+      if (initialStock !== (selectedProduct.inventory?.[selectedBranchId] ?? 0)) {
+        await InventoryService.updateStock(selectedProduct.id, selectedBranchId, initialStock);
+      }
       await loadData();
       setIsEditModalOpen(false);
       resetForm();
@@ -205,6 +208,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       location: p.location || '',
       unit_measure: p.unit_measure || 'pza'
     });
+    setInitialStock(p.inventory?.[selectedBranchId] ?? 0);
     setIsEditModalOpen(true);
   };
 
@@ -623,8 +627,21 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                         <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder='Ej: Pintura blanca tambo 200L' value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-black uppercase text-slate-500">Stock Inicial (bodega principal)</label>
+                        <label className="text-xs font-black uppercase text-slate-500">Stock Inicial (sucursal actual)</label>
                         <input type="number" min={0} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" placeholder="0" value={initialStock || ''} onChange={e => setInitialStock(Math.max(0, parseInt(e.target.value) || 0))} />
+                      </div>
+                    </div>
+                  )}
+                  {isEditModalOpen && selectedProduct && (
+                    <div className="grid grid-cols-1 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+                      <div className="col-span-1 text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Datos Adicionales</div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Descripción <span className="text-primary">(escribe "tambo" si es granel)</span></label>
+                        <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder='Ej: Pintura blanca tambo 200L' value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Stock actual (sucursal actual)</label>
+                        <input type="number" min={0} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={initialStock} onChange={e => setInitialStock(Math.max(0, parseInt(e.target.value) || 0))} />
                       </div>
                     </div>
                   )}

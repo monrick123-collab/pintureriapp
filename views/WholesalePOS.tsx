@@ -20,8 +20,10 @@ type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 
 const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState<TabType>('pos');
-    const currentBranchId = user.branchId || 'BR-MAIN';
+    const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+    const [adminPosBranchId, setAdminPosBranchId] = useState<string>('');
+    const currentBranchId = isAdmin ? adminPosBranchId : (user.branchId || '');
 
     const [products, setProducts] = useState<Product[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -105,7 +107,18 @@ useEffect(() => {
 
     useEffect(() => {
         loadInitialData();
+        if (isAdmin) {
+            loadBranches();
+        }
     }, []);
+
+    useEffect(() => {
+        if (isAdmin && adminPosBranchId) {
+            InventoryService.getProductsByBranch(adminPosBranchId)
+                .then(setProducts)
+                .catch(console.error);
+        }
+    }, [adminPosBranchId]);
 
     const loadInitialData = async () => {
         try {
@@ -640,6 +653,16 @@ const addToCart = (product: Product) => {
                     <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900 relative">
                                         <div className="flex-1 flex flex-col overflow-hidden">
                                             <div className="p-6 pb-2 space-y-4">
+                                                {isAdmin && (
+                                                    <select
+                                                        value={adminPosBranchId}
+                                                        onChange={e => { setAdminPosBranchId(e.target.value); setCart([]); setSearch(''); }}
+                                                        className="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-primary"
+                                                    >
+                                                        <option value="">— Selecciona sucursal para vender —</option>
+                                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                                    </select>
+                                                )}
                                                 <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-14 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                                                     <div className="flex items-center justify-center px-4 text-slate-400"><span className="material-symbols-outlined">search</span></div>
                                                     <input className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold" placeholder="Buscar producto por SKU o nombre..." value={search} onChange={e => setSearch(e.target.value)} />

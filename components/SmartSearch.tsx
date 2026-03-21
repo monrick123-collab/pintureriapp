@@ -15,6 +15,8 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ products, onSelectProduct, cu
   // Filtrar productos por sucursal actual
   const branchProducts = useMemo(() => {
     if (includeZeroStock) return products;
+    // Si no hay branchId definida (p.ej. Admin sin sucursal seleccionada), mostrar todos
+    if (!currentBranchId) return products;
     return products.filter(product => {
       const branchStock = product.inventory?.[currentBranchId] || 0;
       return branchStock > 0;

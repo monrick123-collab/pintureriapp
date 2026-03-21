@@ -58,10 +58,13 @@ export const ShippingService = {
     },
 
     async getShippingByEntity(entityType: ShippingEntityType, entityId: string): Promise<ShippingOrder | null> {
-        const { data, error } = await supabase.rpc('get_shipping_by_entity', {
-            p_entity_type: entityType,
-            p_entity_id: entityId
-        });
+        const { data, error } = await supabase
+            .from('shipping_orders')
+            .select('*')
+            .eq('entity_type', entityType)
+            .eq('entity_id', entityId)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
         if (error) throw error;
 
@@ -71,17 +74,17 @@ export const ShippingService = {
             id: data[0].id,
             entityType: entityType,
             entityId: entityId,
-            originBranchId: '',
-            destinationBranchId: '',
+            originBranchId: data[0].origin_branch_id || '',
+            destinationBranchId: data[0].destination_branch_id || '',
             carrier: data[0].carrier,
             trackingNumber: data[0].tracking_number,
             status: data[0].status,
             shippedAt: data[0].shipped_at,
             deliveredAt: data[0].delivered_at,
             notes: data[0].notes,
-            createdBy: '',
+            createdBy: data[0].created_by || '',
             createdAt: data[0].created_at,
-            updatedAt: data[0].created_at
+            updatedAt: data[0].updated_at
         };
     },
 
@@ -132,12 +135,17 @@ export const ShippingService = {
                 'cancelled': 'Envío cancelado'
             };
 
-            await NotificationService.createNotification({
-                targetRole: 'STORE_MANAGER',
+            const notificationPayload = {
                 title: 'Actualización de Envío',
                 message: statusMessages[params.newStatus] + (params.trackingNumber ? ` - Guía: ${params.trackingNumber}` : ''),
                 actionUrl: '/transfers'
-            });
+            };
+            // Notificar a STORE_MANAGER y ADMIN (silenciar errores para no bloquear la operación principal)
+            await Promise.allSettled([
+                NotificationService.createNotification({ ...notificationPayload, targetRole: 'STORE_MANAGER' }),
+                NotificationService.createNotification({ ...notificationPayload, targetRole: 'ADMIN' }),
+                NotificationService.createNotification({ ...notificationPayload, targetRole: 'WAREHOUSE' })
+            ]);
         }
     },
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User, Product, Branch, StockTransfer, UserRole, CartItem, BarterTransfer, BarterItem, BarterSelection, BarterSuggestion, ShippingOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
+import { TransferService } from '../services/transfer/transferService';
 import { ShippingService, CARRIER_OPTIONS, SHIPPING_STATUS_LABELS } from '../services/shippingService';
 import { exportToCSV } from '../utils/csvExport';
 import { useToast } from '../hooks/useToast';
@@ -343,6 +344,22 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setSelectionCart(selectionCart.map(s => 
                 s.productId === productId ? { ...s, quantity: clamped } : s
             ));
+        }
+    };
+
+    const handleApproveTransfer = async (transferId: string) => {
+        if (!isAdmin) return;
+        if (!confirm('¿Aprobar este traspaso? Se marcará como en tránsito.')) return;
+        try {
+            setLoading(true);
+            await TransferService.updateTransferStatus(transferId, 'in_transit');
+            setIsDetailModalOpen(false);
+            loadData();
+            toast.success('Traspaso aprobado', 'El traspaso está ahora en tránsito.');
+        } catch (e: any) {
+            toast.error('Error al aprobar', e.message || e.toString());
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1026,6 +1043,17 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     </div>
                                 )}
                             </div>
+                            {isAdmin && selectedTransfer.status === 'pending' && (
+                                <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800">
+                                    <button
+                                        onClick={() => handleApproveTransfer(selectedTransfer.id)}
+                                        disabled={loading}
+                                        className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-lg shadow-green-500/20 hover:scale-[1.02] transition-all disabled:opacity-50"
+                                    >
+                                        Aprobar Traspaso
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

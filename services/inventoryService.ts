@@ -881,7 +881,14 @@ export const InventoryService = {
                 p_user_id:               adminId,
                 p_destination_branch_id: destinationBranchId
             });
-            if (rpcError) throw rpcError;
+            if (rpcError) {
+                // Compensating rollback: revertir status para que el Admin pueda reintentar
+                await supabase
+                    .from('returns')
+                    .update({ status: 'pending_authorization', authorized_by: null, updated_at: new Date().toISOString() })
+                    .eq('id', returnId);
+                throw rpcError;
+            }
         } else {
             // Rechazo: solo cambiar estado
             const updatePayload: any = {

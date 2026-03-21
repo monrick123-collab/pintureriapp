@@ -19,7 +19,9 @@ type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 
 const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
-  const currentBranchId = user.branchId || '';
+  const isAdmin = user.role === UserRole.ADMIN;
+  const [adminPosBranchId, setAdminPosBranchId] = useState<string>('');
+  const currentBranchId = isAdmin ? adminPosBranchId : (user.branchId || '');
 
   // --- POS STATES ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -81,7 +83,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
 
   // --- HISTORY EFFECTS ---
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'history' || isAdmin) {
       loadBranches();
     }
   }, [activeTab]);
@@ -380,6 +382,16 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
             <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="p-6 pb-2 space-y-4">
+                  {isAdmin && (
+                    <select
+                      value={adminPosBranchId}
+                      onChange={e => { setAdminPosBranchId(e.target.value); setCart([]); setSearch(''); }}
+                      className="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">— Selecciona sucursal para vender —</option>
+                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  )}
                   <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-12 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                     <div className="flex items-center justify-center px-4 text-slate-400">
                       <span className="material-symbols-outlined">search</span>

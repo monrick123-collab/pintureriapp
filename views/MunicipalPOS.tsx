@@ -12,9 +12,10 @@ interface MunicipalPOSProps {
 }
 
 const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
-    const branchId = user.branchId || 'BR-MAIN';
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+    const [adminPosBranchId, setAdminPosBranchId] = useState<string>('');
+    const branchId = isAdmin ? adminPosBranchId : (user.branchId || '');
 
     // Products & admins
     const [products, setProducts] = useState<Product[]>([]);
@@ -78,12 +79,18 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [showBlockForm, setShowBlockForm] = useState(false);
     const [limitAmount, setLimitAmount] = useState('');
 
-    useEffect(() => { 
-        loadData(); 
+    useEffect(() => {
+        loadData();
         if (isAdmin || isWarehouse) {
             loadBranches();
         }
     }, []);
+
+    useEffect(() => {
+        if (isAdmin && adminPosBranchId) {
+            loadData();
+        }
+    }, [adminPosBranchId]);
 
     const loadBranches = async () => {
         try {
@@ -346,6 +353,16 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                     <div className="flex-1 overflow-hidden flex">
                         {/* LEFT — Config */}
                         <div className="w-[380px] flex flex-col bg-white dark:bg-slate-900 border-r dark:border-slate-800 overflow-y-auto custom-scrollbar p-6 gap-4 shrink-0">
+                            {isAdmin && (
+                                <select
+                                    value={adminPosBranchId}
+                                    onChange={e => { setAdminPosBranchId(e.target.value); setCart([]); }}
+                                    className="w-full h-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-sm font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-primary"
+                                >
+                                    <option value="">— Selecciona sucursal para vender —</option>
+                                    {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            )}
                             <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest">Datos del Municipio</h2>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Municipio *</label>

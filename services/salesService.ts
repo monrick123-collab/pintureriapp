@@ -690,15 +690,15 @@ export const SalesService = {
         const { error: historyError } = await supabase
             .from('municipal_payments')
             .insert({
-                account_id: accountId, // La tabla usa account_id, no municipal_account_id
+                account_id: accountId,
                 amount,
-                type: paymentType, // La tabla usa type, no payment_type
+                type: paymentType,
                 notes,
-                registered_by: userId, // La tabla usa registered_by, no created_by
+                registered_by: null,               // columna nullable; app usa clave anon sin sesiones JWT
                 created_at: new Date().toISOString()
             });
 
-        if (historyError) throw error;
+        if (historyError) throw historyError;      // FIX: lanzar la variable correcta (antes lanzaba `error` = null)
     },
 
     /**

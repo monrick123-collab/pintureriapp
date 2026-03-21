@@ -463,6 +463,11 @@ const addToCart = (product: Product) => {
     };
 
     const handleFinalizeSale = async () => {
+        if (isAdmin && !currentBranchId) {
+            toast.warning("Sucursal requerida", "Seleccione una sucursal antes de finalizar la venta");
+            return;
+        }
+
         if (!selectedClient || !selectedAdminId) {
             toast.warning("Datos incompletos", "Seleccione cliente y administrador de salida");
             return;
@@ -555,9 +560,10 @@ const addToCart = (product: Product) => {
                 setAppliedDiscount(0);
                 setPendingPromotionRequestId(null);
             }, 2000);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            toast.error("Error en venta", "No se pudo procesar la venta mayorista. Verifique la conexión.");
+            const msg = e?.message || "Verifique la conexión.";
+            toast.error("Error en venta", msg);
         } finally {
             setLoading(false);
         }
@@ -956,7 +962,7 @@ const addToCart = (product: Product) => {
                                                     </div>
                     
                                                     <button
-                                                        disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading}
+                                                        disabled={cart.length === 0 || !selectedClient || !selectedAdminId || loading || (isAdmin && !currentBranchId)}
                                                         onClick={handleFinalizeSale}
                                                         className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
                                                     >

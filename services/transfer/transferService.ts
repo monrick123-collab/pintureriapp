@@ -58,8 +58,8 @@ export const TransferService = {
                 transferId: i.transfer_id,
                 productId: i.product_id,
                 quantity: i.quantity,
-                productName: i.product?.name,
-                productSku: i.product?.sku,
+                productName: i.product?.name || 'Producto desconocido',
+                productSku: i.product?.sku || '',
                 productImage: i.product?.image
             }))
         };

@@ -6,6 +6,7 @@ import { SalesService } from '../services/salesService';
 import { DiscountService } from '../services/discountService';
 import { DiscountRequest } from '../types';
 import { exportToCSV } from '../utils/csvExport';
+import { useToast } from '../hooks/useToast';
 
 interface POSProps {
   user: User;
@@ -18,7 +19,9 @@ type Period = 'today' | 'week' | 'fortnight' | 'month' | 'custom';
 
 const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
-  const currentBranchId = user.branchId || 'BR-CENTRO';
+  const isAdmin = user.role === UserRole.ADMIN;
+  const [adminPosBranchId, setAdminPosBranchId] = useState<string>('');
+  const currentBranchId = isAdmin ? adminPosBranchId : (user.branchId || '');
 
   // --- POS STATES ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,6 +41,14 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [appliedDiscount, setAppliedDiscount] = useState<{ amount: number, type: 'percentage' | 'fixed' } | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
+  // --- BILLING STATES (reemplaza el patrón document.getElementById) ---
+  const [billingBank, setBillingBank] = useState('');
+  const [billingSocial, setBillingSocial] = useState('');
+  const [billingInvoice, setBillingInvoice] = useState('');
+  const [billingError, setBillingError] = useState('');
+
+  const toast = useToast();
+
   // --- HISTORY STATES ---
   const PAGE_SIZE = 25;
   const [historySales, setHistorySales] = useState<Sale[]>([]);
@@ -47,10 +58,19 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
-    user.role === UserRole.ADMIN ? 'ALL' : 'BR-CENTRO'
+    user.role === UserRole.ADMIN ? 'ALL' : (user.branchId || '')
   );
   const [selectedHistorySale, setSelectedHistorySale] = useState<Sale | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editSale, setEditSale] = useState<Sale | null>(null);
+  const [editItems, setEditItems] = useState<{ product_id: string; product_name: string; quantity: number; price: number }[]>([]);
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>('cash');
+  const [editBillingBank, setEditBillingBank] = useState('');
+  const [editBillingSocial, setEditBillingSocial] = useState('');
+  const [editBillingInvoice, setEditBillingInvoice] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
 
   // --- POS EFFECTS ---
@@ -72,7 +92,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
 
   // --- HISTORY EFFECTS ---
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'history' || isAdmin) {
       loadBranches();
     }
   }, [activeTab]);
@@ -165,15 +185,71 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     if (newInvoice !== null) {
         try {
             await SalesService.updateInvoiceNumber(sale.id, newInvoice);
-            alert('Factura actualizada correctamente');
+            toast.success('Factura actualizada', 'El número de factura se guardó correctamente');
             fetchHistorySales(); // Recargar para ver el cambio
             if (selectedHistorySale?.id === sale.id) {
                 setSelectedHistorySale({ ...selectedHistorySale, billingInvoiceNumber: newInvoice });
             }
         } catch (e) {
             console.error(e);
-            alert('Error al actualizar la factura');
+            toast.error('Error', 'No se pudo actualizar la factura');
         }
+    }
+  };
+
+  const handleCancelSale = async (sale: Sale) => {
+    const reason = window.prompt('Ingrese la razón de cancelación:');
+    if (!reason || !reason.trim()) return;
+    if (!window.confirm(`¿Está seguro de cancelar esta venta por $${sale.total.toLocaleString()}?\n\nRazón: ${reason}\n\nEsto revertirá el inventario.`)) return;
+    try {
+      setCancelLoading(true);
+      await SalesService.cancelSale(sale.id, reason, user.id);
+      toast.success('Venta cancelada', 'El inventario fue revertido correctamente');
+      setSelectedHistorySale(null);
+      fetchHistorySales();
+    } catch (e: any) {
+      toast.error('Error al cancelar', e.message);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const openEditSaleModal = (sale: Sale) => {
+    setEditSale(sale);
+    setEditItems(sale.items.map(i => ({ product_id: i.productId, product_name: i.productName, quantity: i.quantity, price: i.price })));
+    setEditPaymentMethod(sale.paymentMethod);
+    setEditBillingBank(sale.billingBank || '');
+    setEditBillingSocial(sale.billingSocialReason || '');
+    setEditBillingInvoice(sale.billingInvoiceNumber || '');
+    setIsEditModalOpen(true);
+    setSelectedHistorySale(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editSale || editItems.length === 0) return;
+    const subtotal = editItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    const total = subtotal;
+    try {
+      setEditLoading(true);
+      await SalesService.editSale(editSale.id, {
+        items: editItems,
+        paymentMethod: editPaymentMethod,
+        subtotal,
+        discountAmount: 0,
+        iva: 0,
+        total,
+        billingBank: editBillingBank || undefined,
+        billingSocialReason: editBillingSocial || undefined,
+        billingInvoiceNumber: editBillingInvoice || undefined,
+      });
+      toast.success('Venta editada', 'Los cambios fueron guardados correctamente');
+      setIsEditModalOpen(false);
+      setEditSale(null);
+      fetchHistorySales();
+    } catch (e: any) {
+      toast.error('Error al editar', e.message);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -186,7 +262,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
     const inCart = cart.find(i => i.id === product.id)?.quantity || 0;
 
     if (inCart >= localStock) {
-      alert("No hay suficiente stock en esta sucursal");
+      toast.warning("Stock insuficiente", "No hay suficiente stock en esta sucursal");
       return;
     }
 
@@ -197,8 +273,6 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    setAppliedDiscount(null);
-    setActiveDiscountRequest(null);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -209,8 +283,6 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       }
       return item;
     }).filter(item => item.quantity > 0));
-    setAppliedDiscount(null);
-    setActiveDiscountRequest(null);
   };
 
   const filteredProducts = products.filter(p => {
@@ -236,9 +308,9 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         setActiveDiscountRequest(updated);
         if (updated.status === 'approved') {
           setAppliedDiscount({ amount: updated.amount, type: updated.type });
-          alert("¡Descuento aprobado!");
+          toast.success("Descuento aplicado", "El descuento ha sido añadido a la venta");
         } else if (updated.status === 'rejected') {
-          alert("El descuento fue rechazado.");
+          toast.error("Descuento rechazado", "El administrador rechazó la solicitud");
           setActiveDiscountRequest(null);
         }
       });
@@ -260,7 +332,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
       setDiscountReason('');
     } catch (e) {
       console.error(e);
-      alert("Error al solicitar descuento.");
+      toast.error("Error", "No se pudo solicitar el descuento. Intente de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -315,14 +387,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
 
       setTimeout(() => {
         setShowSuccess(false);
-        setIsPaymentModalOpen(false);
-        setCart([]);
-        setCashReceived('');
-      }, 2000);
+      }, 3500);
 
     } catch (e) {
       console.error(e);
-      alert("Error al procesar la venta. Verifique la conexión o el stock.");
+      toast.error("Error en venta", "Verifique la conexión o el stock disponible.");
     } finally {
       setLoading(false);
     }
@@ -378,6 +447,16 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
             <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900">
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="p-6 pb-2 space-y-4">
+                  {isAdmin && (
+                    <select
+                      value={adminPosBranchId}
+                      onChange={e => { setAdminPosBranchId(e.target.value); setCart([]); setSearch(''); }}
+                      className="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">— Selecciona sucursal para vender —</option>
+                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  )}
                   <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-12 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                     <div className="flex items-center justify-center px-4 text-slate-400">
                       <span className="material-symbols-outlined">search</span>
@@ -559,17 +638,35 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                           <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase">Datos de Facturación Obligatorios</span>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">Banco</label>
-                          <input id="billing-bank" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Ej: BBVA, Santander" />
+                          <label className="text-xs font-bold uppercase text-slate-400">Banco</label>
+                          <input
+                            value={billingBank}
+                            onChange={e => { setBillingBank(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Ej: BBVA, Santander"
+                          />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">Razón Social</label>
-                          <input id="billing-social" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Nombre o Razón Social" />
+                          <label className="text-xs font-bold uppercase text-slate-400">Razón Social</label>
+                          <input
+                            value={billingSocial}
+                            onChange={e => { setBillingSocial(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Nombre o Razón Social"
+                          />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase text-slate-400">No. Factura / Referencia</label>
-                          <input id="billing-invoice" className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700" placeholder="Folio de Factura" />
+                          <label className="text-xs font-bold uppercase text-slate-400">No. Factura / Referencia</label>
+                          <input
+                            value={billingInvoice}
+                            onChange={e => { setBillingInvoice(e.target.value); setBillingError(''); }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700"
+                            placeholder="Folio de Factura"
+                          />
                         </div>
+                        {billingError && (
+                          <p className="text-xs text-red-500 font-bold mt-1">{billingError}</p>
+                        )}
                       </div>
                     )}
 
@@ -583,15 +680,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <span className="text-green-600">${change.toLocaleString()}</span>
                     </div>
                     <div className="flex gap-4 pt-4">
-                      <button onClick={() => setIsPaymentModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
+                      <button onClick={() => { setIsPaymentModalOpen(false); setBillingError(''); }} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
                       <button onClick={() => {
                         if (paymentMethod === 'card' || paymentMethod === 'transfer') {
-                          const bank = (document.getElementById('billing-bank') as HTMLInputElement).value;
-                          const social = (document.getElementById('billing-social') as HTMLInputElement).value;
-                          const invoice = (document.getElementById('billing-invoice') as HTMLInputElement).value;
-
-                          if (!bank || !social || !invoice) {
-                            alert("Escriba Banco, Razón Social y No. Factura para continuar.");
+                          if (!billingBank.trim() || !billingSocial.trim() || !billingInvoice.trim()) {
+                            setBillingError("Complete Banco, Razón Social y No. Factura para continuar.");
                             return;
                           }
                         }
@@ -606,6 +699,21 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <div className="size-20 rounded-full bg-green-500 text-white flex items-center justify-center mb-4"><span className="material-symbols-outlined text-5xl">check</span></div>
                       <h3 className="text-2xl font-black">¡Venta Exitosa!</h3>
                       <p className="text-slate-500">Inventario actualizado en tiempo real.</p>
+                      <button
+                        onClick={() => {
+                          setShowSuccess(false);
+                          setIsPaymentModalOpen(false);
+                          setCart([]);
+                          setCashReceived('');
+                          setBillingBank('');
+                          setBillingSocial('');
+                          setBillingInvoice('');
+                          setBillingError('');
+                        }}
+                        className="mt-6 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
+                      >
+                        Nueva Venta
+                      </button>
                     </div>
                   )}
                 </div>
@@ -763,7 +871,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                         <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay registros</td></tr>
                       ) : (
                         pagedHistorySales.map(sale => (
-                          <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                          <tr key={sale.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group ${sale.status === 'cancelled' ? 'opacity-50' : ''}`}>
                             <td className="px-6 py-5">
                               <div className="flex flex-col">
                                 <span className="text-xs font-black text-slate-900 dark:text-white font-mono">{sale.id.slice(0, 8).toUpperCase()}</span>
@@ -805,7 +913,10 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                               </span>
                             </td>
                             <td className="px-6 py-5 text-right">
-                              <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">${sale.total.toLocaleString()}</span>
+                              <span className={`text-sm font-black ${sale.status === 'cancelled' ? 'line-through text-red-400' : 'text-slate-900 dark:text-white group-hover:text-primary'} transition-colors`}>${sale.total.toLocaleString()}</span>
+                              {sale.status === 'cancelled' && (
+                                <span className="ml-2 px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-red-100 text-red-600">Cancelada</span>
+                              )}
                             </td>
                             <td className="px-6 py-5 text-center">
                               <button
@@ -935,17 +1046,124 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                         </span>
                       </div>
 
+                      {/* Cancelación info */}
+                      {selectedHistorySale.status === 'cancelled' && selectedHistorySale.cancellationReason && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl">
+                          <p className="text-[9px] uppercase font-bold text-red-500 mb-1">Razón de Cancelación</p>
+                          <p className="text-xs font-bold text-red-900 dark:text-red-100">{selectedHistorySale.cancellationReason}</p>
+                        </div>
+                      )}
+
                       {/* Botón para agregar/editar factura */}
-                      <div className="pt-4 border-t dark:border-slate-800">
-                          <button 
+                      <div className="pt-4 border-t dark:border-slate-800 space-y-2">
+                          <button
                               onClick={() => handleEditInvoice(selectedHistorySale)}
                               className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
                           >
                               <span className="material-symbols-outlined text-sm">receipt_long</span>
                               {selectedHistorySale.billingInvoiceNumber ? 'Editar Factura' : 'Agregar Factura'}
                           </button>
+
+                          {/* Admin: Editar y Cancelar */}
+                          {isAdmin && selectedHistorySale.status !== 'cancelled' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openEditSaleModal(selectedHistorySale)}
+                                className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                              >
+                                <span className="material-symbols-outlined text-sm">edit</span>
+                                Editar Venta
+                              </button>
+                              <button
+                                onClick={() => handleCancelSale(selectedHistorySale)}
+                                disabled={cancelLoading}
+                                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                <span className="material-symbols-outlined text-sm">cancel</span>
+                                Cancelar Venta
+                              </button>
+                            </div>
+                          )}
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Edit Sale Modal */}
+            {isEditModalOpen && editSale && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}>
+                <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
+                    <h3 className="font-black text-slate-900 dark:text-white text-lg">Editar Venta</h3>
+                    <button onClick={() => setIsEditModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors">
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                    {/* Productos editables */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Productos</p>
+                      {editItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex-1 truncate">{item.product_name}</span>
+                          <input type="number" min={1} value={item.quantity} onChange={e => {
+                            const q = parseInt(e.target.value) || 1;
+                            setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: q } : it));
+                          }} className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                          <input type="number" min={0} step={0.01} value={item.price} onChange={e => {
+                            const p = parseFloat(e.target.value) || 0;
+                            setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, price: p } : it));
+                          }} className="w-24 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                          <button onClick={() => setEditItems(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600">
+                            <span className="material-symbols-outlined text-sm">delete</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Método de pago */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Método de Pago</p>
+                      <div className="flex gap-2">
+                        {(['cash', 'card', 'transfer'] as const).map(m => (
+                          <button key={m} onClick={() => setEditPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${editPaymentMethod === m ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                            {m === 'cash' ? 'Efectivo' : m === 'card' ? 'Tarjeta' : 'Transferencia'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Facturación */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Facturación (Opcional)</p>
+                      <div className="space-y-2">
+                        <input type="text" placeholder="Razón social" value={editBillingSocial} onChange={e => setEditBillingSocial(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Banco" value={editBillingBank} onChange={e => setEditBillingBank(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                          <input type="text" placeholder="No. Factura" value={editBillingInvoice} onChange={e => setEditBillingInvoice(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total calculado */}
+                    <div className="border-t dark:border-slate-800 pt-4">
+                      <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                        <span>Nuevo Total</span>
+                        <span>${editItems.reduce((acc, i) => acc + i.price * i.quantity, 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Botón guardar */}
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={editLoading || editItems.length === 0}
+                      className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">save</span>
+                      {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
                   </div>
                 </div>
               </div>

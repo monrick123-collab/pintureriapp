@@ -1,0 +1,14 @@
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+export default defineConfig({
+  test: {
+    environment: 'node',
+    globals: true,
+    setupFiles: ['./tests/setup.ts'],
+    testTimeout: 15000, // 15s para llamadas reales a Supabase
+  },
+  resolve: {
+    alias: { '@': path.resolve(__dirname, '.') }
+  }
+});

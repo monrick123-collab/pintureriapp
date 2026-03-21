@@ -135,6 +135,9 @@ export const SalesService = {
             billingSocialReason: s.billing_social_reason,
             billingInvoiceNumber: s.billing_invoice_number,
             deliveryReceiverName: s.delivery_receiver_name,
+            cancelledAt: s.cancelled_at,
+            cancelledBy: s.cancelled_by,
+            cancellationReason: s.cancellation_reason,
             items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -190,6 +193,9 @@ export const SalesService = {
             billingSocialReason: data.billing_social_reason,
             billingInvoiceNumber: data.billing_invoice_number,
             deliveryReceiverName: data.delivery_receiver_name,
+            cancelledAt: data.cancelled_at,
+            cancelledBy: data.cancelled_by,
+            cancellationReason: data.cancellation_reason,
             items: (data.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -199,7 +205,7 @@ export const SalesService = {
             }))
         };
     },
-    
+
     async getAdmins(): Promise<{ id: string; name: string }[]> {
         // Obtener usuarios con rol ADMIN o STORE_MANAGER
         const { data, error } = await supabase
@@ -690,15 +696,15 @@ export const SalesService = {
         const { error: historyError } = await supabase
             .from('municipal_payments')
             .insert({
-                account_id: accountId, // La tabla usa account_id, no municipal_account_id
+                account_id: accountId,
                 amount,
-                type: paymentType, // La tabla usa type, no payment_type
+                type: paymentType,
                 notes,
-                registered_by: userId, // La tabla usa registered_by, no created_by
+                registered_by: null,               // columna nullable; app usa clave anon sin sesiones JWT
                 created_at: new Date().toISOString()
             });
 
-        if (historyError) throw error;
+        if (historyError) throw historyError;      // FIX: lanzar la variable correcta (antes lanzaba `error` = null)
     },
 
     /**
@@ -839,6 +845,9 @@ export const SalesService = {
             billingSocialReason: s.billing_social_reason,
             billingInvoiceNumber: s.billing_invoice_number,
             deliveryReceiverName: s.delivery_receiver_name,
+            cancelledAt: s.cancelled_at,
+            cancelledBy: s.cancelled_by,
+            cancellationReason: s.cancellation_reason,
             items: (s.sale_items || []).map((i: any) => ({
                 productId: i.product_id,
                 productName: i.product_name,
@@ -1069,6 +1078,104 @@ export const SalesService = {
         }
 
         return data;
+    },
+
+    // ============================================================
+    // ADMIN: Cancelación y Edición de Ventas
+    // ============================================================
+
+    /**
+     * Cancela una venta regular/mayoreo (revierte inventario y saldo de crédito)
+     */
+    async cancelSale(saleId: string, reason: string, adminId: string): Promise<void> {
+        const { error } = await supabase.rpc('cancel_sale', {
+            p_sale_id: saleId,
+            p_reason: reason,
+            p_admin_id: adminId
+        });
+        if (error) throw new Error(error.message);
+    },
+
+    /**
+     * Cancela una venta municipal (revierte inventario y saldo de crédito municipal)
+     */
+    async cancelMunicipalSale(saleId: string, reason: string, adminId: string): Promise<void> {
+        const { error } = await supabase.rpc('cancel_municipal_sale', {
+            p_sale_id: saleId,
+            p_reason: reason,
+            p_admin_id: adminId
+        });
+        if (error) throw new Error(error.message);
+    },
+
+    /**
+     * Edita una venta regular/mayoreo (recalcula inventario atómicamente)
+     */
+    async editSale(saleId: string, payload: {
+        items: { product_id: string; product_name: string; quantity: number; price: number }[];
+        clientId?: string;
+        paymentMethod?: string;
+        paymentType?: string;
+        subtotal?: number;
+        discountAmount?: number;
+        iva?: number;
+        total?: number;
+        billingBank?: string;
+        billingSocialReason?: string;
+        billingInvoiceNumber?: string;
+        deliveryReceiverName?: string;
+        creditDays?: number;
+    }): Promise<void> {
+        const { error } = await supabase.rpc('edit_sale', {
+            p_sale_id: saleId,
+            p_items: payload.items,
+            p_client_id: payload.clientId || null,
+            p_payment_method: payload.paymentMethod || null,
+            p_payment_type: payload.paymentType || null,
+            p_subtotal: payload.subtotal ?? null,
+            p_discount_amount: payload.discountAmount ?? null,
+            p_iva: payload.iva ?? null,
+            p_total: payload.total ?? null,
+            p_billing_bank: payload.billingBank || null,
+            p_billing_social_reason: payload.billingSocialReason || null,
+            p_billing_invoice_number: payload.billingInvoiceNumber || null,
+            p_delivery_receiver_name: payload.deliveryReceiverName || null,
+            p_credit_days: payload.creditDays ?? null
+        });
+        if (error) throw new Error(error.message);
+    },
+
+    /**
+     * Edita una venta municipal (recalcula inventario atómicamente)
+     */
+    async editMunicipalSale(saleId: string, payload: {
+        items: { product_id: string; product_name: string; quantity: number; price: number }[];
+        municipality?: string;
+        department?: string;
+        paymentMethod?: string;
+        paymentType?: string;
+        subtotal?: number;
+        discountAmount?: number;
+        iva?: number;
+        total?: number;
+        invoiceNumber?: string;
+        notes?: string;
+    }): Promise<void> {
+        const { error } = await supabase.rpc('edit_municipal_sale', {
+            p_sale_id: saleId,
+            p_items: payload.items,
+            p_municipality: payload.municipality || null,
+            p_department: payload.department || null,
+            p_payment_method: payload.paymentMethod || null,
+            p_payment_type: payload.paymentType || null,
+            p_subtotal: payload.subtotal ?? null,
+            p_discount_amount: payload.discountAmount ?? null,
+            p_iva: payload.iva ?? null,
+            p_total: payload.total ?? null,
+            p_invoice_number: payload.invoiceNumber || null,
+            p_notes: payload.notes || null
+        });
+        if (error) throw new Error(error.message);
     },
 };
 

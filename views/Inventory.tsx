@@ -302,7 +302,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           <div className="flex items-center gap-4">
             <div className="w-10 lg:hidden" />
             <div className="flex flex-col">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
               <select
                 className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
                 value={selectedBranchId}
@@ -374,7 +374,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </div>
                 {!isWarehouse && (
                   <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Valor Total Inventario</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Valor Total Inventario</p>
                     <h4 className="text-2xl font-black text-slate-700 dark:text-slate-200">${totalValue.toLocaleString()}</h4>
                   </div>
                 )}
@@ -403,7 +403,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                   <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left min-w-[700px]">
                       <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
-                        <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <tr className="text-xs font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
                           <th className="px-6 py-5">Marca/Ubic.</th>
                           {!isWarehouse && <th className="px-6 py-5">Precio</th>}
@@ -419,7 +419,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                               <td className="px-8 py-5">
                                 <div className="flex items-center gap-4">
                                   <img src={p.image} className="size-12 rounded-xl object-contain bg-slate-100 p-1" />
-                                  <div><p className="font-bold text-slate-900 dark:text-white">{p.name}</p><p className="text-[10px] font-mono text-slate-400">{p.sku}</p></div>
+                                  <div><p className="font-bold text-slate-900 dark:text-white">{p.name}</p><p className="text-xs font-mono text-slate-400">{p.sku}</p></div>
                                 </div>
                               </td>
                               <td className="px-6 py-5">
@@ -488,7 +488,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
-                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <tr className="text-xs font-black text-slate-400 uppercase tracking-widest">
                         <th className="px-8 py-5">Producto</th>
                         <th className="px-6 py-5 text-center">Cant.</th>
                         <th className="px-6 py-5 text-center">Estado</th>
@@ -523,7 +523,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
-                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <tr className="text-xs font-black text-slate-400 uppercase tracking-widest">
                         <th className="px-8 py-5">Producto</th>
                         <th className="px-6 py-5 text-center">Cant.</th>
                         <th className="px-6 py-5">Motivo</th>
@@ -576,19 +576,19 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
               <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="flex flex-col flex-1 overflow-hidden">
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6 custom-scrollbar">
                   <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Nombre</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">SKU</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Nombre</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">SKU</label><input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Marca</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Categoría</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Interiores</option><option>Exteriores</option><option>Esmaltes</option><option>Accesorios</option></select></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Marca</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Categoría</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Interiores</option><option>Exteriores</option><option>Esmaltes</option><option>Accesorios</option></select></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
+                    <label className="text-xs font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
                     <select
                       className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
                       value={formData.packageType}
@@ -606,11 +606,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
                   <div className="grid grid-cols-2 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">
                     <div className="col-span-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Logística y Costos</div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Costo Compra</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Ubicación</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Pasillo A-4" value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Min Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.min_stock || ''} onChange={e => setFormData({ ...formData, min_stock: parseInt(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Costo Compra</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Ubicación</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: Pasillo A-4" value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Min Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.min_stock || ''} onChange={e => setFormData({ ...formData, min_stock: parseInt(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
+                    <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
                   </div>
                 </div>
 
@@ -653,7 +653,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Cantidad</label>
+                  <label className="text-xs font-black uppercase text-slate-400">Cantidad</label>
                   <input
                     type="number"
                     className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-black text-2xl outline-none focus:ring-2 focus:ring-amber-500/20"
@@ -663,7 +663,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Motivo del uso</label>
+                  <label className="text-xs font-black uppercase text-slate-400">Motivo del uso</label>
                   <select
                     className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold text-sm outline-none"
                     value={consumptionReason}
@@ -746,7 +746,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                         <img src={p.image} className="size-10 rounded-xl object-contain bg-white p-1 border border-slate-100" />
                         <div>
                           <p className="font-black text-sm text-slate-800 dark:text-white">{p.name}</p>
-                          <p className="text-[10px] font-mono text-slate-400">{p.sku}</p>
+                          <p className="text-xs font-mono text-slate-400">{p.sku}</p>
                         </div>
                       </div>
                       {/* Stock per branch */}

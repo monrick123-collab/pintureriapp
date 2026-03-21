@@ -15,6 +15,8 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [category, setCategory] = useState<'limpieza' | 'papeleria'>('limpieza');
+    const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState(user.branchId || '');
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE;
@@ -22,6 +24,14 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
     useEffect(() => {
         loadData();
+        if (isAdmin || isWarehouse) {
+            InventoryService.getBranches()
+                .then(data => {
+                    setBranches(data);
+                    if (!selectedBranchId && data.length > 0) setSelectedBranchId(data[0].id);
+                })
+                .catch(e => console.error(e));
+        }
     }, []);
 
     const loadData = async () => {
@@ -52,9 +62,14 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const branchToUse = selectedBranchId || user.branchId || '';
+        if (!branchToUse) {
+            alert('Selecciona una sucursal destino antes de registrar.');
+            return;
+        }
         try {
             await InventoryService.createInternalSupply({
-                branchId: user.branchId || 'BR-MAIN',
+                branchId: branchToUse,
                 description,
                 amount,
                 category
@@ -149,6 +164,20 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
                             <div className="p-10 overflow-y-auto">
                                 <h3 className="text-2xl font-black mb-8">Registrar Suministros</h3>
                                 <form onSubmit={handleSubmit} className="space-y-6">
+                                    {(isAdmin || isWarehouse) && branches.length > 0 && (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Sucursal destino</label>
+                                            <select
+                                                required
+                                                className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
+                                                value={selectedBranchId}
+                                                onChange={e => setSelectedBranchId(e.target.value)}
+                                            >
+                                                <option value="">Selecciona sucursal...</option>
+                                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-500">Descripción del material</label>
                                         <input required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej: Paquete de hojas, Jabón, etc." />

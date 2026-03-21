@@ -212,6 +212,9 @@ export interface Sale {
   billingInvoiceNumber?: string;
   deliveryReceiverName?: string;
   promotionRequestId?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
 }
 
 export interface Quotation {
@@ -436,7 +439,7 @@ export interface BarterTransfer {
   toBranchId: string;
   toBranchName?: string;
   folio: number;
-  status: 'pending_offer' | 'pending_selection' | 'pending_approval' | 'approved' | 'completed' | 'rejected' | 'cancelled' | 'counter_proposed';
+  status: 'pending_offer' | 'pending_selection' | 'pending_approval' | 'approved' | 'in_transit' | 'completed' | 'rejected' | 'cancelled' | 'counter_proposed';
   notes?: string;
   requestedBy: string;
   requestedByName?: string;
@@ -449,6 +452,11 @@ export interface BarterTransfer {
   authorizedBy?: string;
   authorizedByName?: string;
   authorizedAt?: string;
+  dispatchedBy?: string;
+  dispatchedByName?: string;
+  dispatchedAt?: string;
+  receivedBy?: string;
+  receivedAt?: string;
   createdAt: string;
   updatedAt: string;
   givenItems?: BarterItem[];
@@ -490,6 +498,27 @@ export interface BarterCounterOffer {
   proposedBy: string;
   notes?: string;
   createdAt: string;
+}
+
+export interface BarterInventoryHold {
+  id: string;
+  barterId: string;
+  branchId: string;
+  productId: string;
+  productName?: string;
+  quantity: number;
+  createdAt: string;
+}
+
+export interface BarterSuggestion {
+  productId: string;
+  productName: string;
+  productSku: string;
+  fromBranchStock: number;
+  toBranchStock: number;
+  surplus: number;
+  deficit: number;
+  suggestionScore: number;
 }
 
 export interface Notification {
@@ -596,4 +625,23 @@ export interface RestockIncident {
 export interface RestockItemWithReceived extends RestockItem {
   receivedQuantity?: number;
   differenceReason?: string;
+}
+
+// --- Packaging v3 Types ---
+
+export interface PackagingSettings {
+  galon_liters: number;
+  drum_liters: number;
+}
+
+export interface PackagingOrderLine {
+  id?: string;
+  orderId: string;
+  packageType: 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
+  targetProductId: string;
+  targetProductName?: string;
+  quantityRequested: number;
+  litersPerUnit: number;
+  litersSubtotal: number;
+  quantityProduced?: number;
 }

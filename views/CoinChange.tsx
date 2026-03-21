@@ -36,7 +36,10 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const totalAmount = DENOMINATIONS.reduce((acc, d) => acc + (d.value * (breakdown[d.value.toString()] || 0)), 0);
 
     const isAdmin = user.role === UserRole.ADMIN;
-    const branchId = user.branchId || 'BR-MAIN';
+    const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
+    const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState(user.branchId || '');
+    const branchId = selectedBranchId || user.branchId || '';
 
     // Fechas
     const today = new Date();
@@ -47,6 +50,14 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
 
     useEffect(() => {
         loadData();
+        if (isAdmin || isWarehouse) {
+            InventoryService.getBranches()
+                .then(data => {
+                    setBranches(data);
+                    if (!selectedBranchId && data.length > 0) setSelectedBranchId(data[0].id);
+                })
+                .catch(e => console.error(e));
+        }
     }, []);
 
     const loadData = async (sd = startDate, ed = endDate) => {
@@ -68,6 +79,10 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (totalAmount <= 0) return;
+        if (!branchId) {
+            alert('Selecciona una sucursal antes de continuar.');
+            return;
+        }
         try {
             setLoading(true);
             await CoinService.createCoinChangeRequest(branchId, user.id, totalAmount, breakdown, collectedBy || undefined);
@@ -251,6 +266,20 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                             </div>
 
                             <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+                                {(isAdmin || isWarehouse) && branches.length > 0 && (
+                                    <div className="mb-5 shrink-0">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Sucursal solicitante</label>
+                                        <select
+                                            required
+                                            className="mt-1 w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700 font-bold"
+                                            value={selectedBranchId}
+                                            onChange={e => setSelectedBranchId(e.target.value)}
+                                        >
+                                            <option value="">Selecciona sucursal...</option>
+                                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                         {DENOMINATIONS.map(d => (

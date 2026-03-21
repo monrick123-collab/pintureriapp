@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Product, Branch, RestockRequest, SupplyOrder, StockTransfer, BarterTransfer, BarterItem } from '../types';
+import { Product, Branch, RestockRequest, SupplyOrder, StockTransfer, BarterTransfer, BarterItem, BarterSuggestion } from '../types';
 import { NotificationService } from './notificationService';
 
 // Convertir respuesta de DB a Tipos de App
@@ -881,7 +881,14 @@ export const InventoryService = {
                 p_user_id:               adminId,
                 p_destination_branch_id: destinationBranchId
             });
-            if (rpcError) throw rpcError;
+            if (rpcError) {
+                // Compensating rollback: revertir status para que el Admin pueda reintentar
+                await supabase
+                    .from('returns')
+                    .update({ status: 'pending_authorization', authorized_by: null, updated_at: new Date().toISOString() })
+                    .eq('id', returnId);
+                throw rpcError;
+            }
         } else {
             // Rechazo: solo cambiar estado
             const updatePayload: any = {
@@ -1343,23 +1350,19 @@ export const InventoryService = {
         
         if (updateError) throw updateError;
 
-        // Then execute logic to adjust inventory (try bidirectional first, fallback to original)
-        let processError: any = null;
-        
-        try {
-            const result = await supabase.rpc('process_barter_transfer_bidirectional', {
-                p_barter_id: barterId
-            });
-            processError = result.error;
-        } catch (e) {
-            // Fallback to original function if bidirectional doesn't exist
-            const result = await supabase.rpc('process_barter_transfer', {
-                p_barter_id: barterId
-            });
-            processError = result.error;
-        }
+        // Reserve stock in both branches (holds until completion)
+        const { error: reserveError } = await supabase.rpc('reserve_barter_inventory', {
+            p_barter_id: barterId
+        });
 
-        if (processError) throw processError;
+        if (reserveError) {
+            // Compensating rollback: revertir aprobación para evitar barter atascado
+            await supabase
+                .from('barter_transfers')
+                .update({ status: 'pending_approval', authorized_by: null, authorized_at: null, updated_at: new Date().toISOString() })
+                .eq('id', barterId);
+            throw reserveError;
+        }
 
         // Notification to requesting branch
         try {
@@ -1368,9 +1371,9 @@ export const InventoryService = {
                 const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', barter.from_branch_id).single();
                 const { data: toBranch } = await supabase.from('branches').select('name').eq('id', barter.to_branch_id).single();
                 await NotificationService.createNotification({
-                    targetRole: 'ADMIN',
-                    title: 'Trueque Aprobado',
-                    message: `Trueque #B-${barter.folio.toString().padStart(4, '0')} entre ${fromBranch?.name || barter.from_branch_id} y ${toBranch?.name || barter.to_branch_id} ha sido aprobado y procesado.`,
+                    targetRole: 'STORE_MANAGER',
+                    title: 'Trueque Aprobado — Listo para Envío',
+                    message: `Trueque #B-${barter.folio.toString().padStart(4, '0')} entre ${fromBranch?.name || barter.from_branch_id} y ${toBranch?.name || barter.to_branch_id} ha sido aprobado. Confirme el envío cuando despache la mercancía.`,
                     actionUrl: '/transfers?tab=barter_history'
                 });
             }
@@ -1650,11 +1653,104 @@ export const InventoryService = {
     },
 
     async cancelBarterTransfer(barterId: string): Promise<void> {
+        // Release any stock holds before cancelling
+        try {
+            await supabase.rpc('release_barter_holds', { p_barter_id: barterId });
+        } catch (_e) {
+            // Holds may not exist yet; continue with cancellation
+        }
+
         const { error } = await supabase.rpc('cancel_barter_transfer', {
             p_barter_id: barterId
         });
 
         if (error) throw error;
+    },
+
+    async confirmBarterDispatch(barterId: string, dispatchedBy: string): Promise<void> {
+        const { error } = await supabase.rpc('confirm_barter_dispatch', {
+            p_barter_id: barterId,
+            p_dispatched_by: dispatchedBy
+        });
+
+        if (error) throw error;
+
+        try {
+            const { data: barter } = await supabase
+                .from('barter_transfers')
+                .select('from_branch_id, to_branch_id, folio')
+                .eq('id', barterId)
+                .single();
+            if (barter) {
+                const { data: toBranch } = await supabase.from('branches').select('name').eq('id', barter.to_branch_id).single();
+                await NotificationService.createNotification({
+                    targetRole: 'STORE_MANAGER',
+                    title: 'Trueque en Tránsito',
+                    message: `Trueque #B-${String(barter.folio).padStart(4, '0')} ha sido despachado. Confirme la recepción cuando llegue a ${toBranch?.name || barter.to_branch_id}.`,
+                    actionUrl: '/transfers?tab=barter_history'
+                });
+            }
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async confirmBarterReception(barterId: string, receivedBy: string): Promise<void> {
+        // Register who receives before the atomic RPC
+        const { error: updateError } = await supabase
+            .from('barter_transfers')
+            .update({ received_by: receivedBy, updated_at: new Date().toISOString() })
+            .eq('id', barterId);
+
+        if (updateError) throw updateError;
+
+        // Atomic: moves stock, releases holds, marks completed
+        const { error } = await supabase.rpc('process_barter_transfer_bidirectional', {
+            p_barter_id: barterId
+        });
+
+        if (error) throw error;
+
+        try {
+            const { data: barter } = await supabase
+                .from('barter_transfers')
+                .select('from_branch_id, to_branch_id, folio')
+                .eq('id', barterId)
+                .single();
+            if (barter) {
+                const { data: fromBranch } = await supabase.from('branches').select('name').eq('id', barter.from_branch_id).single();
+                const { data: toBranch } = await supabase.from('branches').select('name').eq('id', barter.to_branch_id).single();
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Trueque Completado',
+                    message: `Trueque #B-${String(barter.folio).padStart(4, '0')} entre ${fromBranch?.name || barter.from_branch_id} y ${toBranch?.name || barter.to_branch_id} ha sido completado. Inventarios actualizados.`,
+                    actionUrl: '/transfers?tab=barter_history'
+                });
+            }
+        } catch (e) {
+            console.error('Failed to send notification', e);
+        }
+    },
+
+    async suggestBarterItems(fromBranchId: string, toBranchId: string, limit = 10): Promise<BarterSuggestion[]> {
+        const { data, error } = await supabase.rpc('suggest_barter_items', {
+            p_from_branch_id: fromBranchId,
+            p_to_branch_id: toBranchId,
+            p_limit: limit
+        });
+
+        if (error) throw error;
+
+        return (data ?? []).map((r: any) => ({
+            productId: r.product_id,
+            productName: r.product_name,
+            productSku: r.product_sku,
+            fromBranchStock: r.from_branch_stock,
+            toBranchStock: r.to_branch_stock,
+            surplus: r.surplus,
+            deficit: r.deficit,
+            suggestionScore: r.suggestion_score
+        }));
     },
 
     async confirmRestockWithDifferences(

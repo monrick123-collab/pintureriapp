@@ -138,7 +138,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
       const requestId = await DiscountService.requestDiscount(
         user.id,
         user.name,
-        user.branchId || 'BR-CENTRO',
+        user.branchId || '',
         parseFloat(discountValue),
         discountType,
         discountReason
@@ -157,7 +157,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         id: requestId,
         requesterId: user.id,
         requesterName: user.name,
-        branchId: user.branchId || 'BR-CENTRO',
+        branchId: user.branchId || '',
         amount: parseFloat(discountValue),
         type: discountType,
         status: 'pending',

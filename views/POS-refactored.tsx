@@ -30,7 +30,7 @@ type PaymentMethod = 'cash' | 'card' | 'transfer';
 
 const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('pos');
-  const currentBranchId = user.branchId || 'BR-CENTRO';
+  const currentBranchId = user.branchId || '';
   
   // Use new hooks
   const { products, loading, getProductsByCategory, searchProducts } = useProducts(currentBranchId);

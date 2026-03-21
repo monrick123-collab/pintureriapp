@@ -1355,7 +1355,14 @@ export const InventoryService = {
             p_barter_id: barterId
         });
 
-        if (reserveError) throw reserveError;
+        if (reserveError) {
+            // Compensating rollback: revertir aprobación para evitar barter atascado
+            await supabase
+                .from('barter_transfers')
+                .update({ status: 'pending_approval', authorized_by: null, authorized_at: null, updated_at: new Date().toISOString() })
+                .eq('id', barterId);
+            throw reserveError;
+        }
 
         // Notification to requesting branch
         try {

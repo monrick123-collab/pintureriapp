@@ -522,7 +522,7 @@ const addToCart = (product: Product) => {
                 total: (item.wholesalePrice || item.price) * item.quantity
             }));
 
-            await SalesService.processSale(
+            const saleId = await SalesService.processSale(
                 currentBranchId,
                 saleItems,
                 total,
@@ -545,6 +545,23 @@ const addToCart = (product: Product) => {
                     promotionRequestId: pendingPromotionRequestId || undefined
                 }
             );
+
+            // Si es venta a crédito, registrar cargo en la cuenta de mayoreo
+            if (paymentType === 'credito') {
+                try {
+                    const accountId = await SalesService.createWholesaleAccount(
+                        currentBranchId,
+                        selectedClient.id,
+                        selectedClient.name,
+                        selectedClient.creditLimit || 10000
+                    );
+                    await SalesService.addWholesaleCharge(accountId, total, saleId, undefined, user.id);
+                } catch (creditError) {
+                    console.error('Error registrando cargo en cuenta de crédito:', creditError);
+                    // No bloquear la venta, pero avisar
+                    toast.warning('Venta registrada', 'No se pudo actualizar la cuenta de crédito. Verifique manualmente.');
+                }
+            }
 
             await loadInitialData(); // Reload inventory
 

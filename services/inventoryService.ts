@@ -77,7 +77,7 @@ export const InventoryService = {
         }));
     },
 
-    async createProduct(product: Omit<Product, 'id' | 'inventory'>): Promise<any> {
+    async createProduct(product: Omit<Product, 'id' | 'inventory'>, initialStock = 0, initialBranchId?: string): Promise<any> {
         const { data, error } = await supabase
             .from('products')
             .insert([{
@@ -105,13 +105,13 @@ export const InventoryService = {
 
         if (error) throw error;
 
-        // Inicializar inventario en 0 para todas las sucursales activas
+        // Inicializar inventario para todas las sucursales activas
         const { data: branches } = await supabase.from('branches').select('id');
         if (branches) {
             const inventoryInit = branches.map(b => ({
                 product_id: data.id,
                 branch_id: b.id,
-                stock: 0
+                stock: (initialStock > 0 && initialBranchId && b.id === initialBranchId) ? initialStock : 0
             }));
             await supabase.from('inventory').insert(inventoryInit);
         }

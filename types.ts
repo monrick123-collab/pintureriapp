@@ -623,3 +623,22 @@ export interface RestockItemWithReceived extends RestockItem {
   receivedQuantity?: number;
   differenceReason?: string;
 }
+
+// --- Packaging v3 Types ---
+
+export interface PackagingSettings {
+  galon_liters: number;
+  drum_liters: number;
+}
+
+export interface PackagingOrderLine {
+  id?: string;
+  orderId: string;
+  packageType: 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
+  targetProductId: string;
+  targetProductName?: string;
+  quantityRequested: number;
+  litersPerUnit: number;
+  litersSubtotal: number;
+  quantityProduced?: number;
+}

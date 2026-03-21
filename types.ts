@@ -212,6 +212,9 @@ export interface Sale {
   billingInvoiceNumber?: string;
   deliveryReceiverName?: string;
   promotionRequestId?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
 }
 
 export interface Quotation {

@@ -76,6 +76,18 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
     const [selectedHistorySale, setSelectedHistorySale] = useState<Sale | null>(null);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editSale, setEditSale] = useState<Sale | null>(null);
+    const [editItems, setEditItems] = useState<{ product_id: string; product_name: string; quantity: number; price: number }[]>([]);
+    const [editPaymentMethod, setEditPaymentMethod] = useState<string>('cash');
+    const [editPaymentType, setEditPaymentType] = useState<string>('contado');
+    const [editBillingBank, setEditBillingBank] = useState('');
+    const [editBillingSocial, setEditBillingSocial] = useState('');
+    const [editBillingInvoice, setEditBillingInvoice] = useState('');
+    const [editDeliveryReceiver, setEditDeliveryReceiver] = useState('');
+    const [editCreditDays, setEditCreditDays] = useState(0);
+    const [editLoading, setEditLoading] = useState(false);
 
     // --- ACCOUNTS STATES ---
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -459,6 +471,69 @@ const addToCart = (product: Product) => {
             } finally {
                 setLoading(false);
             }
+        }
+    };
+
+    const handleCancelSale = async (sale: Sale) => {
+        const reason = window.prompt('Ingrese la razón de cancelación:');
+        if (!reason || !reason.trim()) return;
+        if (!window.confirm(`¿Está seguro de cancelar esta venta por $${sale.total.toLocaleString()}?\n\nRazón: ${reason}\n\nEsto revertirá el inventario${sale.paymentType === 'credito' ? ' y el saldo de crédito' : ''}.`)) return;
+        try {
+            setCancelLoading(true);
+            await SalesService.cancelSale(sale.id, reason, user.id);
+            toast.success('Venta cancelada', 'El inventario fue revertido correctamente');
+            setSelectedHistorySale(null);
+            fetchHistorySales();
+        } catch (e: any) {
+            toast.error('Error al cancelar', e.message);
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const openEditSaleModal = (sale: Sale) => {
+        setEditSale(sale);
+        setEditItems(sale.items.map(i => ({ product_id: i.productId, product_name: i.productName, quantity: i.quantity, price: i.price })));
+        setEditPaymentMethod(sale.paymentMethod);
+        setEditPaymentType(sale.paymentType || 'contado');
+        setEditBillingBank(sale.billingBank || '');
+        setEditBillingSocial(sale.billingSocialReason || '');
+        setEditBillingInvoice(sale.billingInvoiceNumber || '');
+        setEditDeliveryReceiver(sale.deliveryReceiverName || '');
+        setEditCreditDays(sale.creditDays || 0);
+        setIsEditModalOpen(true);
+        setSelectedHistorySale(null);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editSale || editItems.length === 0) return;
+        const subtotal = editItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+        const iva = subtotal * 0.16;
+        const total = subtotal + iva;
+        try {
+            setEditLoading(true);
+            await SalesService.editSale(editSale.id, {
+                items: editItems,
+                paymentMethod: editPaymentMethod,
+                paymentType: editPaymentType,
+                subtotal,
+                discountAmount: 0,
+                iva,
+                total,
+                billingBank: editBillingBank || undefined,
+                billingSocialReason: editBillingSocial || undefined,
+                billingInvoiceNumber: editBillingInvoice || undefined,
+                deliveryReceiverName: editDeliveryReceiver || undefined,
+                creditDays: editPaymentType === 'credito' ? editCreditDays : 0,
+            });
+            toast.success('Venta editada', 'Los cambios fueron guardados correctamente');
+            setIsEditModalOpen(false);
+            setEditSale(null);
+            fetchHistorySales();
+        } catch (e: any) {
+            toast.error('Error al editar', e.message);
+        } finally {
+            setEditLoading(false);
         }
     };
 
@@ -1150,7 +1225,7 @@ const addToCart = (product: Product) => {
                                                 <tr><td colSpan={7} className="px-8 py-12 text-center text-slate-400 italic">No hay registros de ventas al mayoreo en este período.</td></tr>
                                             ) : (
                                                 historySales.map(sale => (
-                                                    <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                                    <tr key={sale.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${sale.status === 'cancelled' ? 'opacity-50' : ''}`}>
                                                         <td className="px-6 py-4 font-black text-primary">
                                                             {sale.folio ? `#W-${String(sale.folio).padStart(4, '0')}` : `#${sale.id.slice(0, 8).toUpperCase()}`}
                                                         </td>
@@ -1166,18 +1241,22 @@ const addToCart = (product: Product) => {
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 font-black text-slate-900 dark:text-white">
-                                                            ${sale.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                                            <span className={sale.status === 'cancelled' ? 'line-through text-red-400' : ''}>${sale.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                                                         </td>
                                                         <td className="px-6 py-4">
+                                                            {sale.status === 'cancelled' ? (
+                                                                <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-red-100 text-red-600">Cancelada</span>
+                                                            ) : (
                                                             <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
-                                                                sale.paymentStatus === 'approved' ? 'bg-green-100 text-green-600' : 
+                                                                sale.paymentStatus === 'approved' ? 'bg-green-100 text-green-600' :
                                                                 sale.paymentStatus === 'rejected' ? 'bg-red-100 text-red-600' :
-                                                                'bg-orange-100 text-orange-600' // pending
+                                                                'bg-orange-100 text-orange-600'
                                                             }`}>
-                                                                {sale.paymentStatus === 'approved' ? 'Aprobado' : 
+                                                                {sale.paymentStatus === 'approved' ? 'Aprobado' :
                                                                  sale.paymentStatus === 'rejected' ? 'Rechazado' :
                                                                  'Pendiente'}
                                                             </span>
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 text-sm text-slate-500">
                                                             {new Date(sale.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -1315,16 +1394,36 @@ const addToCart = (product: Product) => {
                                                                 </span>
                                                             </div>
                                                             
+                                                            {/* Cancelación info */}
+                                                            {selectedHistorySale?.status === 'cancelled' && selectedHistorySale.cancellationReason && (
+                                                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl">
+                                                                    <p className="text-[9px] uppercase font-bold text-red-500 mb-1">Razón de Cancelación</p>
+                                                                    <p className="text-xs font-bold text-red-900 dark:text-red-100">{selectedHistorySale.cancellationReason}</p>
+                                                                </div>
+                                                            )}
+
                                                             {/* Botón para agregar/editar factura */}
                                                             {selectedHistorySale && (
-                                                                <div className="pt-4 border-t dark:border-slate-800">
-                                                                    <button 
+                                                                <div className="pt-4 border-t dark:border-slate-800 space-y-2">
+                                                                    <button
                                                                         onClick={() => handleEditInvoice(selectedHistorySale)}
                                                                         className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
                                                                     >
                                                                         <span className="material-symbols-outlined text-sm">receipt_long</span>
                                                                         {selectedHistorySale.billingInvoiceNumber ? 'Editar Factura' : 'Agregar Factura'}
                                                                     </button>
+
+                                                                    {/* Admin: Editar y Cancelar */}
+                                                                    {isAdmin && selectedHistorySale.status !== 'cancelled' && (
+                                                                        <div className="flex gap-2">
+                                                                            <button onClick={() => openEditSaleModal(selectedHistorySale)} className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                                                                <span className="material-symbols-outlined text-sm">edit</span>Editar Venta
+                                                                            </button>
+                                                                            <button onClick={() => handleCancelSale(selectedHistorySale)} disabled={cancelLoading} className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                                                                                <span className="material-symbols-outlined text-sm">cancel</span>Cancelar Venta
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1580,6 +1679,91 @@ const addToCart = (product: Product) => {
                         </div>
                     </div>
                 )}
+            {/* Edit Sale Modal */}
+            {isEditModalOpen && editSale && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}>
+                <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
+                    <h3 className="font-black text-slate-900 dark:text-white text-lg">Editar Venta Mayoreo</h3>
+                    <button onClick={() => setIsEditModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors">
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                    {/* Productos */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Productos</p>
+                      {editItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex-1 truncate">{item.product_name}</span>
+                          <input type="number" min={1} value={item.quantity} onChange={e => { const q = parseInt(e.target.value) || 1; setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: q } : it)); }} className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                          <input type="number" min={0} step={0.01} value={item.price} onChange={e => { const p = parseFloat(e.target.value) || 0; setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, price: p } : it)); }} className="w-24 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                          <button onClick={() => setEditItems(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600"><span className="material-symbols-outlined text-sm">delete</span></button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tipo y método de pago */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Tipo de Pago</p>
+                        <div className="flex gap-1">
+                          {(['contado', 'credito'] as const).map(t => (
+                            <button key={t} onClick={() => setEditPaymentType(t)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${editPaymentType === t ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                              {t === 'credito' ? 'Crédito' : 'Contado'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Método</p>
+                        <div className="flex gap-1">
+                          {(['cash', 'card', 'transfer'] as const).map(m => (
+                            <button key={m} onClick={() => setEditPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${editPaymentMethod === m ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                              {m === 'cash' ? 'Efvo' : m === 'card' ? 'Tarj' : 'Transf'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {editPaymentType === 'credito' && (
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Días de Crédito</p>
+                        <input type="number" min={0} value={editCreditDays} onChange={e => setEditCreditDays(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                      </div>
+                    )}
+
+                    {/* Receptor y facturación */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Datos Adicionales</p>
+                      <div className="space-y-2">
+                        <input type="text" placeholder="Receptor de entrega" value={editDeliveryReceiver} onChange={e => setEditDeliveryReceiver(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                        <input type="text" placeholder="Razón social" value={editBillingSocial} onChange={e => setEditBillingSocial(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Banco" value={editBillingBank} onChange={e => setEditBillingBank(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                          <input type="text" placeholder="No. Factura" value={editBillingInvoice} onChange={e => setEditBillingInvoice(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="border-t dark:border-slate-800 pt-4">
+                      <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                        <span>Nuevo Total</span>
+                        <span>${(() => { const s = editItems.reduce((a, i) => a + i.price * i.quantity, 0); return (s + s * 0.16).toLocaleString(); })()}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">Subtotal + 16% IVA</p>
+                    </div>
+
+                    <button onClick={handleSaveEdit} disabled={editLoading || editItems.length === 0} className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-sm">save</span>
+                      {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             </main>
         </div>
     );

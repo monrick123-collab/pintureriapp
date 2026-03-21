@@ -68,6 +68,20 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         (isAdmin || isWarehouse) ? 'ALL' : branchId
     );
 
+    // Detail / Admin cancel-edit
+    const [selectedHistorySale, setSelectedHistorySale] = useState<any | null>(null);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editSaleData, setEditSaleData] = useState<any | null>(null);
+    const [editItems, setEditItems] = useState<{ product_id: string; product_name: string; quantity: number; price: number }[]>([]);
+    const [editMunicipality, setEditMunicipality] = useState('');
+    const [editDepartment, setEditDepartment] = useState('');
+    const [editPaymentMethod, setEditPaymentMethod] = useState('cash');
+    const [editPaymentType, setEditPaymentType] = useState('contado');
+    const [editInvoiceNumber, setEditInvoiceNumber] = useState('');
+    const [editNotes, setEditNotes] = useState('');
+    const [editLoading, setEditLoading] = useState(false);
+
     // Accounts / credit
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
@@ -144,6 +158,73 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 console.error(e);
                 alert('Error al actualizar la factura');
             }
+        }
+    };
+
+    const handleCancelMunicipalSale = async (sale: any) => {
+        const reason = window.prompt('Ingrese la razón de cancelación:');
+        if (!reason || !reason.trim()) return;
+        if (!window.confirm(`¿Cancelar venta municipal #M-${String(sale.folio).padStart(4, '0')} por $${sale.total.toLocaleString()}?\n\nRazón: ${reason}`)) return;
+        try {
+            setCancelLoading(true);
+            await SalesService.cancelMunicipalSale(sale.id, reason, user.id);
+            alert('Venta municipal cancelada correctamente');
+            setSelectedHistorySale(null);
+            loadData();
+        } catch (e: any) {
+            alert('Error al cancelar: ' + e.message);
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const openEditMunicipalModal = (sale: any) => {
+        setEditSaleData(sale);
+        const items = (sale.municipal_sale_items || []).map((i: any) => ({
+            product_id: i.product_id,
+            product_name: i.product_name,
+            quantity: i.quantity,
+            price: i.unit_price
+        }));
+        setEditItems(items);
+        setEditMunicipality(sale.municipality || '');
+        setEditDepartment(sale.department || '');
+        setEditPaymentMethod(sale.payment_method || 'cash');
+        setEditPaymentType(sale.payment_type || 'contado');
+        setEditInvoiceNumber(sale.invoice_number || '');
+        setEditNotes(sale.notes || '');
+        setIsEditModalOpen(true);
+        setSelectedHistorySale(null);
+    };
+
+    const handleSaveMunicipalEdit = async () => {
+        if (!editSaleData || editItems.length === 0) return;
+        const subtotal = editItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+        const iva = subtotal * 0.16;
+        const total = subtotal + iva;
+        try {
+            setEditLoading(true);
+            await SalesService.editMunicipalSale(editSaleData.id, {
+                items: editItems,
+                municipality: editMunicipality,
+                department: editDepartment,
+                paymentMethod: editPaymentMethod,
+                paymentType: editPaymentType,
+                subtotal,
+                discountAmount: 0,
+                iva,
+                total,
+                invoiceNumber: editInvoiceNumber || undefined,
+                notes: editNotes || undefined,
+            });
+            alert('Venta municipal editada correctamente');
+            setIsEditModalOpen(false);
+            setEditSaleData(null);
+            loadData();
+        } catch (e: any) {
+            alert('Error al editar: ' + e.message);
+        } finally {
+            setEditLoading(false);
         }
     };
 
@@ -648,32 +729,39 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 <th className="px-6 py-4">Pago</th>
                                                 <th className="px-6 py-4">Total</th>
                                                 <th className="px-6 py-4">Estado</th>
+                                                {isAdmin && <th className="px-6 py-4 text-center">Admin</th>}
                                                 <th className="px-6 py-4">Fecha</th>
                                                 <th className="px-6 py-4 text-center">Factura</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {history.map(s => (
-                                                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                                <tr key={s.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${s.status === 'cancelled' ? 'opacity-50' : ''}`}>
                                                     <td className="px-6 py-4 font-black text-primary">#M-{String(s.folio).padStart(4, '0')}</td>
                                                     <td className="px-6 py-4 font-bold">{s.municipality}</td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{s.department || '—'}</td>
                                                     <td className="px-6 py-4">
                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.payment_type === 'credito' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{s.payment_type}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 font-black">{fmtMoney(s.total)}</td>
+                                                    <td className="px-6 py-4 font-black">
+                                                        <span className={s.status === 'cancelled' ? 'line-through text-red-400' : ''}>{fmtMoney(s.total)}</span>
+                                                    </td>
                                                      <td className="px-6 py-4">
+                                                         {s.status === 'cancelled' ? (
+                                                             <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-red-100 text-red-600">Cancelada</span>
+                                                         ) : (
                                                          <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
-                                                             s.payment_status === 'approved' ? 'bg-green-100 text-green-600' : 
+                                                             s.payment_status === 'approved' ? 'bg-green-100 text-green-600' :
                                                              s.payment_status === 'rejected' ? 'bg-red-100 text-red-600' :
                                                              s.payment_status === 'expired' ? 'bg-gray-100 text-gray-600' :
-                                                             'bg-orange-100 text-orange-600' // pending
+                                                             'bg-orange-100 text-orange-600'
                                                          }`}>
-                                                             {s.payment_status === 'approved' ? 'Aprobado' : 
+                                                             {s.payment_status === 'approved' ? 'Aprobado' :
                                                               s.payment_status === 'rejected' ? 'Rechazado' :
                                                               s.payment_status === 'expired' ? 'Expirado' :
                                                               'Pendiente'}
                                                          </span>
+                                                         )}
                                                      </td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{fmtDate(s.created_at)}</td>
                                                     <td className="px-6 py-4 text-center">
@@ -684,14 +772,190 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                             {s.invoice_number ? s.invoice_number : 'Agregar'}
                                                         </button>
                                                     </td>
+                                                    {isAdmin && (
+                                                        <td className="px-6 py-4 text-center">
+                                                            {s.status !== 'cancelled' ? (
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
+                                                                        <span className="material-symbols-outlined text-lg">visibility</span>
+                                                                    </button>
+                                                                    <button onClick={() => openEditMunicipalModal(s)} className="p-1 text-slate-400 hover:text-blue-500 transition-colors" title="Editar">
+                                                                        <span className="material-symbols-outlined text-lg">edit</span>
+                                                                    </button>
+                                                                    <button onClick={() => handleCancelMunicipalSale(s)} disabled={cancelLoading} className="p-1 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50" title="Cancelar">
+                                                                        <span className="material-symbols-outlined text-lg">cancel</span>
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
+                                                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
-                                            {history.length === 0 && <tr><td colSpan={8} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
+                                            {history.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Municipal Sale Detail Modal */}
+                        {selectedHistorySale && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedHistorySale(null)}>
+                                <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                                    <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-black text-slate-900 dark:text-white text-lg">Detalle Venta Municipal</h3>
+                                            <p className="text-xs text-slate-500 font-mono">#M-{String(selectedHistorySale.folio).padStart(4, '0')}</p>
+                                        </div>
+                                        <button onClick={() => setSelectedHistorySale(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors">
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Municipio</p>
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.municipality}</p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Dependencia</p>
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.department || '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Items */}
+                                        {selectedHistorySale.municipal_sale_items?.length > 0 && (
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Productos</p>
+                                                <div className="space-y-2">
+                                                    {selectedHistorySale.municipal_sale_items.map((item: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border dark:border-slate-800">
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-900 dark:text-white">{item.product_name}</p>
+                                                                <p className="text-[10px] text-slate-500">Cantidad: {item.quantity}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-black text-slate-900 dark:text-white">{fmtMoney(item.total_price || item.quantity * item.unit_price)}</p>
+                                                                <p className="text-[10px] text-slate-400">{fmtMoney(item.unit_price)} c/u</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Totales */}
+                                        <div className="border-t dark:border-slate-800 pt-4 space-y-2">
+                                            <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                                                <span>Total</span>
+                                                <span>{fmtMoney(selectedHistorySale.total)}</span>
+                                            </div>
+                                            <div className="flex justify-end gap-2">
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${selectedHistorySale.payment_type === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {selectedHistorySale.payment_type === 'credito' ? 'Crédito' : 'Contado'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Cancelación info */}
+                                        {selectedHistorySale.status === 'cancelled' && selectedHistorySale.cancellation_reason && (
+                                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl">
+                                                <p className="text-[9px] uppercase font-bold text-red-500 mb-1">Razón de Cancelación</p>
+                                                <p className="text-xs font-bold text-red-900 dark:text-red-100">{selectedHistorySale.cancellation_reason}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Edit Municipal Sale Modal */}
+                        {isEditModalOpen && editSaleData && (
+                            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}>
+                                <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                                    <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
+                                        <h3 className="font-black text-slate-900 dark:text-white text-lg">Editar Venta Municipal</h3>
+                                        <button onClick={() => setIsEditModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors">
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                        {/* Municipio y Dependencia */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Municipio</p>
+                                                <input type="text" value={editMunicipality} onChange={e => setEditMunicipality(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700 font-bold" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Dependencia</p>
+                                                <input type="text" value={editDepartment} onChange={e => setEditDepartment(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700 font-bold" />
+                                            </div>
+                                        </div>
+
+                                        {/* Productos */}
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Productos</p>
+                                            {editItems.map((item, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 mb-2">
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex-1 truncate">{item.product_name}</span>
+                                                    <input type="number" min={1} value={item.quantity} onChange={e => { const q = parseInt(e.target.value) || 1; setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: q } : it)); }} className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                                                    <input type="number" min={0} step={0.01} value={item.price} onChange={e => { const p = parseFloat(e.target.value) || 0; setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, price: p } : it)); }} className="w-24 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-center border dark:border-slate-700" />
+                                                    <button onClick={() => setEditItems(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Tipo/método de pago */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Tipo de Pago</p>
+                                                <div className="flex gap-1">
+                                                    {(['contado', 'credito'] as const).map(t => (
+                                                        <button key={t} onClick={() => setEditPaymentType(t)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${editPaymentType === t ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                            {t === 'credito' ? 'Crédito' : 'Contado'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Método</p>
+                                                <div className="flex gap-1">
+                                                    {(['cash', 'transfer', 'check'] as const).map(m => (
+                                                        <button key={m} onClick={() => setEditPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${editPaymentMethod === m ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                            {m === 'cash' ? 'Efvo' : m === 'transfer' ? 'Transf' : 'Cheque'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Factura y notas */}
+                                        <div className="space-y-2">
+                                            <input type="text" placeholder="No. Factura" value={editInvoiceNumber} onChange={e => setEditInvoiceNumber(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700" />
+                                            <textarea placeholder="Notas" value={editNotes} onChange={e => setEditNotes(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs border dark:border-slate-700 h-20 resize-none" />
+                                        </div>
+
+                                        {/* Total */}
+                                        <div className="border-t dark:border-slate-800 pt-4">
+                                            <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                                                <span>Nuevo Total</span>
+                                                <span>{fmtMoney((() => { const s = editItems.reduce((a, i) => a + i.price * i.quantity, 0); return s + s * 0.16; })())}</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 mt-1">Subtotal + 16% IVA</p>
+                                        </div>
+
+                                        <button onClick={handleSaveMunicipalEdit} disabled={editLoading || editItems.length === 0} className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">save</span>
+                                            {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

@@ -655,7 +655,8 @@ export const SalesService = {
             .from('municipal_accounts')
             .select(`
                 *,
-                branch:branches(name)
+                branch:branches(name),
+                payments:municipal_payments(id, amount, type, notes, created_at)
             `)
             .order('municipality', { ascending: true });
 

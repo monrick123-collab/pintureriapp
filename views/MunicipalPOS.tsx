@@ -1139,7 +1139,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                         {(selectedAccount.payments || []).length === 0 && (
                                             <p className="px-6 py-8 text-center text-slate-400 italic text-sm">Sin movimientos registrados.</p>
                                         )}
-                                        {(selectedAccount.payments || []).map((p: any) => (
+                                        {[...(selectedAccount.payments || [])].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((p: any) => (
                                             <div key={p.id} className="px-6 py-4 flex items-center gap-4">
                                                 <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 ${p.type === 'cargo' ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20'}`}>
                                                     <span className={`material-symbols-outlined text-lg ${p.type === 'cargo' ? 'text-red-500' : 'text-green-500'}`}>{p.type === 'cargo' ? 'arrow_upward' : 'arrow_downward'}</span>

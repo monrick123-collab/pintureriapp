@@ -14,7 +14,6 @@ type PackageType = 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
 
 interface CalcLine {
     packageType: PackageType;
-    productId: string;
     qty: number;
 }
 
@@ -26,10 +25,10 @@ const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: s
 ];
 
 const INITIAL_CALC_LINES: CalcLine[] = [
-    { packageType: 'galon',        productId: '', qty: 0 },
-    { packageType: 'litro',        productId: '', qty: 0 },
-    { packageType: 'medio_litro',  productId: '', qty: 0 },
-    { packageType: 'cuarto_litro', productId: '', qty: 0 },
+    { packageType: 'galon',        qty: 0 },
+    { packageType: 'litro',        qty: 0 },
+    { packageType: 'medio_litro',  qty: 0 },
+    { packageType: 'cuarto_litro', qty: 0 },
 ];
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -93,34 +92,13 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const totalUsed = calcLines.reduce((sum, l) => sum + l.qty * getLitersPerUnit(l.packageType), 0);
     const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
-    const activeLines = calcLines.filter(l => l.qty > 0 && l.productId);
+    const activeLines = calcLines.filter(l => l.qty > 0);
     const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId;
 
-    // ─── Auto-derive child SKUs when tambo changes ───
+    // Reset lines when tambo changes
     useEffect(() => {
-        if (!bulkId) {
-            setCalcLines(INITIAL_CALC_LINES);
-            return;
-        }
-        const tambo = bulkProducts.find(p => p.id === bulkId);
-        if (!tambo?.brand) {
-            setCalcLines(INITIAL_CALC_LINES);
-            return;
-        }
-        const tamboBrand = tambo.brand.toLowerCase().trim();
-        const pkgMap: Record<PackageType, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
-        setCalcLines(prev =>
-            PACKAGE_DEFS.map(def => {
-                const prevLine = prev.find(l => l.packageType === def.type)!;
-                const candidates = allProducts.filter(p => {
-                    const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
-                    return !isTambo && p.packageType === pkgMap[def.type] && (p.brand || '').toLowerCase().trim() === tamboBrand;
-                });
-                const matched = candidates[0];
-                return { packageType: def.type, productId: matched ? matched.id : '', qty: prevLine?.qty ?? 0 };
-            })
-        );
-    }, [bulkId, bulkProducts, allProducts]);
+        setCalcLines(INITIAL_CALC_LINES);
+    }, [bulkId]);
 
     // ─── Lifecycle ───
     useEffect(() => {
@@ -193,7 +171,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                 branchId, bulkId, drumQty, user.id,
                 activeLines.map(l => ({
                     packageType: l.packageType,
-                    targetProductId: l.productId,
+                    targetProductId: '',
                     quantity: l.qty,
                     litersPerUnit: getLitersPerUnit(l.packageType)
                 })),
@@ -526,43 +504,6 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     {litersPerUnit.toFixed(2)} L / unidad
                                                 </p>
 
-                                                {(() => {
-                                                    const pkgMap: Record<PackageType, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
-                                                    const tambo = bulkProducts.find(p => p.id === bulkId);
-                                                    const candidates = tambo?.brand
-                                                        ? allProducts.filter(p => {
-                                                            const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
-                                                            return !isTambo && p.packageType === pkgMap[def.type] && (p.brand || '').toLowerCase().trim() === tambo.brand!.toLowerCase().trim();
-                                                          })
-                                                        : [];
-
-                                                    if (!bulkId) {
-                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm mb-3 border dark:border-slate-700 text-slate-400 italic">Selecciona un tambo...</div>;
-                                                    }
-
-                                                    // Fallback: si no hay candidatos por marca, mostrar todos los productos del mismo tipo de envase
-                                                    const fallbackProducts = candidates.length > 0
-                                                        ? candidates
-                                                        : allProducts.filter(p => {
-                                                            const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
-                                                            return !isTambo && p.packageType === pkgMap[def.type];
-                                                          });
-
-                                                    return (
-                                                        <select
-                                                            value={line.productId}
-                                                            onChange={e =>
-                                                                setCalcLines(calcLines.map((l, i) => i === idx ? { ...l, productId: e.target.value } : l))
-                                                            }
-                                                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 outline-none border dark:border-slate-700"
-                                                        >
-                                                            <option value="">
-                                                                {fallbackProducts.length === 0 ? 'Sin productos de este tipo' : 'Selecciona producto...'}
-                                                            </option>
-                                                            {fallbackProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                                        </select>
-                                                    );
-                                                })()}
 
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <button

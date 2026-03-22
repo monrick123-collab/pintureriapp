@@ -52,7 +52,7 @@ export const PackagingService = {
             .from('packaging_requests')
             .select(`
                 *,
-                products (name, sku),
+                products:bulk_product_id (name, sku),
                 branches (name)
             `)
             .order('created_at', { ascending: false });
@@ -75,7 +75,7 @@ export const PackagingService = {
             .from('packaging_requests')
             .select(`
                 *,
-                products (name, sku),
+                products:bulk_product_id (name, sku),
                 branches (name)
             `)
             .eq('id', requestId)

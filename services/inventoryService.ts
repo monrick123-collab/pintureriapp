@@ -528,6 +528,23 @@ export const InventoryService = {
         const { error: rError } = await supabase.from('restock_items').insert(sheetItems);
         if (rError) throw rError;
 
+        try {
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', branchId).single();
+            const branchName = bData?.name || branchId;
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Nueva Hoja de Resurtido',
+                message: `La sucursal ${branchName} creó una nueva hoja de resurtido.`,
+                actionUrl: '/restocks'
+            });
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nueva Hoja de Resurtido',
+                message: `La sucursal ${branchName} creó una nueva hoja de resurtido.`,
+                actionUrl: '/restocks'
+            });
+        } catch (e) { console.error('Notification failed (non-blocking)', e); }
+
         return sheet.id;
     },
 
@@ -547,6 +564,27 @@ export const InventoryService = {
             .update(update)
             .eq('id', sheetId);
         if (error) throw error;
+
+        try {
+            const { data: sheet } = await supabase.from('restock_sheets').select('branch_id').eq('id', sheetId).single();
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', sheet?.branch_id).single();
+            const branchName = bData?.name || 'sucursal';
+            if (type === 'departure') {
+                await NotificationService.createNotification({
+                    targetRole: 'STORE_MANAGER',
+                    targetBranchId: sheet?.branch_id,
+                    title: 'Resurtido en Camino',
+                    message: `Bodega despachó el resurtido para ${branchName}. En camino.`,
+                    actionUrl: '/restocks'
+                });
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Resurtido Despachado',
+                    message: `Bodega despachó el resurtido para ${branchName}.`,
+                    actionUrl: '/restocks'
+                });
+            }
+        } catch (e) { console.error('Notification failed (non-blocking)', e); }
     },
 
     // --- SUPPLY ORDERS (Punto 2) ---
@@ -1771,6 +1809,8 @@ export const InventoryService = {
         items: { productId: string; productName: string; expectedQuantity: number; receivedQuantity: number; reason: string }[],
         confirmedBy: string
     ): Promise<void> {
+        console.log('[Restock] confirmRestockWithDifferences →', { restockSheetId, itemCount: items.length, confirmedBy });
+
         const { error } = await supabase.rpc('confirm_restock_with_differences', {
             p_restock_sheet_id: restockSheetId,
             p_items: items.map(item => ({
@@ -1783,7 +1823,30 @@ export const InventoryService = {
             p_confirmed_by: confirmedBy
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('[Restock] RPC confirm_restock_with_differences FAILED:', error);
+            throw error;
+        }
+
+        console.log('[Restock] confirmRestockWithDifferences OK — inventario actualizado');
+
+        try {
+            const { data: sheet } = await supabase.from('restock_sheets').select('branch_id').eq('id', restockSheetId).single();
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', sheet?.branch_id).single();
+            const branchName = bData?.name || 'sucursal';
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Resurtido Recibido',
+                message: `La sucursal ${branchName} confirmó la recepción del resurtido.`,
+                actionUrl: '/restocks'
+            });
+            await NotificationService.createNotification({
+                targetRole: 'WAREHOUSE',
+                title: 'Resurtido Recibido',
+                message: `La sucursal ${branchName} confirmó la recepción del resurtido.`,
+                actionUrl: '/restocks'
+            });
+        } catch (e) { console.error('Notification failed (non-blocking)', e); }
     },
 
     async getRestockIncidents(restockSheetId?: string): Promise<any[]> {

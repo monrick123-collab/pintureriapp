@@ -657,6 +657,30 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         </p>
                                     </div>
                                 )}
+
+                                {/* Tarjeta de sucursal para STORE_MANAGER */}
+                                {isStoreManager && user.branchId && (() => {
+                                    const myBranch = branches.find(b => b.id === user.branchId);
+                                    const myTambos = bulkProducts.reduce((sum, p) => {
+                                        return sum + (drumInventory[p.id]?.[user.branchId!] || 0);
+                                    }, 0);
+                                    return (
+                                        <div className="bg-gradient-to-r from-primary/10 to-teal-500/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4">
+                                            <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                                                <span className="material-symbols-outlined text-primary text-2xl">store</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tu Sucursal</p>
+                                                <p className="text-xl font-black text-slate-800 dark:text-slate-200">{myBranch?.name || user.branchId}</p>
+                                            </div>
+                                            <div className="ml-auto text-right">
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tambos en Sucursal</p>
+                                                <p className="text-2xl font-black text-primary">{myTambos} <span className="text-sm font-bold text-slate-400">u</span></p>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border dark:border-slate-800 flex flex-wrap items-end gap-3">
                                     <div>
                                         <label className="text-xs font-black uppercase text-slate-500">Desde</label>

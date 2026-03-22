@@ -11,7 +11,7 @@ interface NotificationBellProps {
 const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -96,12 +96,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
 
   const fetchNotifications = async () => {
     try {
+      setFetchError(false);
       const data = await NotificationService.getUnreadNotifications(user.id, user.role, user.branchId);
       setNotifications(data);
     } catch (error) {
       console.error('Failed to fetch notifications', error);
-    } finally {
-      setLoading(false);
+      setFetchError(true);
     }
   };
 
@@ -171,10 +171,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
-            {loading ? (
-              <div className="p-8 text-center text-slate-400">
-                <span className="material-symbols-outlined animate-spin mb-2">sync</span>
-                <p className="text-xs font-bold">Cargando...</p>
+            {fetchError ? (
+              <div className="p-8 text-center text-red-400 flex flex-col items-center">
+                <span className="material-symbols-outlined text-4xl mb-2">error</span>
+                <p className="text-sm font-bold">Error al cargar notificaciones</p>
+                <p className="text-xs mt-1 opacity-70">Verifica la configuración de la base de datos</p>
+                <button onClick={fetchNotifications} className="mt-3 text-xs text-primary font-bold hover:underline">
+                  Reintentar
+                </button>
               </div>
             ) : notifications.length === 0 ? (
               <div className="p-8 text-center text-slate-400 flex flex-col items-center">

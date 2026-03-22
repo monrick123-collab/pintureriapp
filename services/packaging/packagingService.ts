@@ -278,7 +278,7 @@ export const PackagingService = {
         const lineRows = lines.map(l => ({
             order_id:           order.id,
             package_type:       l.packageType,
-            target_product_id:  l.targetProductId,
+            target_product_id:  l.targetProductId || null,
             quantity_requested: l.quantity,
             liters_per_unit:    l.litersPerUnit
         }));

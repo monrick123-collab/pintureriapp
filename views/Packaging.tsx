@@ -32,6 +32,14 @@ const INITIAL_CALC_LINES: CalcLine[] = [
     { packageType: 'cuarto_litro', productId: '', qty: 0 },
 ];
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+    sent_to_branch:     { label: 'Enviado a Sucursal',    color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+    received_at_branch: { label: 'Recibido en Sucursal',  color: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400' },
+    processing:         { label: 'En Proceso',             color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
+    completed:          { label: 'Completado',             color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+    cancelled:          { label: 'Cancelado',              color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' },
+};
+
 const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
@@ -179,14 +187,18 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         if (!canSubmit) return;
         setSubmitting(true);
         try {
-            await PackagingService.submitPackagingOrderV3WithUser(
+            const selectedBranch = branches.find((b: any) => b.id === branchId);
+            const selectedProduct = bulkProducts.find(p => p.id === bulkId);
+            await PackagingService.createPackagingOrderV3(
                 branchId, bulkId, drumQty, user.id,
                 activeLines.map(l => ({
                     packageType: l.packageType,
                     targetProductId: l.productId,
                     quantity: l.qty,
                     litersPerUnit: getLitersPerUnit(l.packageType)
-                }))
+                })),
+                selectedBranch?.name,
+                selectedProduct?.name
             );
             setCalcLines(INITIAL_CALC_LINES);
             setBulkId('');
@@ -198,6 +210,16 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
             alert('Error: ' + e.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleCompletePackaging = async (id: string, branchName?: string, productName?: string) => {
+        if (!confirm('¿Confirmar que el envasado está terminado? Se actualizará el inventario.')) return;
+        try {
+            await PackagingService.completePackagingOrder(id, user.id, branchName, productName);
+            await loadData();
+        } catch (e: any) {
+            alert('Error al completar envasado: ' + e.message);
         }
     };
 
@@ -624,7 +646,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 : 'bg-primary hover:scale-105 shadow-lg shadow-primary/30'
                                         }`}
                                     >
-                                        {submitting ? 'Finalizando...' : 'Finalizar Envasado'}
+                                        {submitting ? 'Enviando...' : 'Enviar Solicitud a Sucursal'}
                                     </button>
                                 </div>
                             </div>
@@ -703,17 +725,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <span
-                                                                className={`inline-block px-2 py-1 rounded-lg text-xs font-bold ${
-                                                                    r.status === 'completed'
-                                                                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
-                                                                        : r.status === 'processing'
-                                                                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
-                                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                                                }`}
-                                                            >
-                                                                {r.status}
-                                                            </span>
+                                                            {(() => {
+                                                                const s = STATUS_LABELS[r.status] ?? { label: r.status, color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' };
+                                                                return (
+                                                                    <span className={`inline-block px-2 py-1 rounded-lg text-xs font-bold ${s.color}`}>
+                                                                        {s.label}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </td>
                                                         <td className="px-6 py-4 text-right space-x-2">
                                                             {r.isV3 && (
@@ -724,28 +743,40 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                                     Ver Detalle
                                                                 </button>
                                                             )}
-                                                            {(isWarehouse || isAdmin) && r.status === 'processing' && (
-                                                                <button
-                                                                    onClick={() => handleUpdateStatus(r.id, 'completed')}
-                                                                    className="text-xs font-bold text-primary hover:underline"
-                                                                >
-                                                                    Finalizar
-                                                                </button>
-                                                            )}
-                                                            {(isStoreManager || isAdmin) && !!user.branchId && user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
+                                                            {/* Paso 1: Confirmar recepción de tambos */}
+                                                            {r.status === 'sent_to_branch' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
                                                                 <button
                                                                     onClick={() => handleConfirmReceipt(r.id)}
                                                                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold hover:bg-blue-600"
                                                                 >
-                                                                    ✅ Recibir
+                                                                    ✅ Confirmar Recepción de Tambos
                                                                 </button>
                                                             )}
+                                                            {/* Paso 2: Iniciar envasado */}
+                                                            {r.status === 'received_at_branch' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(r.id, 'processing')}
+                                                                    className="px-2 py-1 bg-amber-500 text-white rounded text-xs font-bold hover:bg-amber-600"
+                                                                >
+                                                                    ▶ Iniciar Envasado
+                                                                </button>
+                                                            )}
+                                                            {/* Paso 3: Completar envasado — llama al RPC y actualiza inventario */}
+                                                            {r.status === 'processing' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
+                                                                <button
+                                                                    onClick={() => handleCompletePackaging(r.id, r.branches?.name, r.products?.name)}
+                                                                    className="px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
+                                                                >
+                                                                    ✅ Completar Envasado
+                                                                </button>
+                                                            )}
+                                                            {/* Autorizar venta (Admin) */}
                                                             {isAdmin && r.status === 'completed' && !r.stockReleased && (
                                                                 <button
                                                                     onClick={() => handleAuthorize(r.id)}
-                                                                    className="px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
+                                                                    className="px-2 py-1 bg-violet-500 text-white rounded text-xs font-bold hover:bg-violet-600"
                                                                 >
-                                                                    Autorizar
+                                                                    Autorizar Venta
                                                                 </button>
                                                             )}
                                                         </td>

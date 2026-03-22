@@ -19,6 +19,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
   const [formData, setFormData] = React.useState({
     name: '', email: '', password: '', role: 'STORE_MANAGER', branchId: ''
   });
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editLoading, setEditLoading] = React.useState(false);
+  const [editUser, setEditUser] = React.useState<any>(null);
+  const [editFormData, setEditFormData] = React.useState({
+    fullName: '', role: '', branchId: ''
+  });
 
   React.useEffect(() => {
     loadData();
@@ -86,6 +92,41 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleOpenEdit = (u: any) => {
+    setEditUser(u);
+    setEditFormData({
+      fullName: u.full_name || '',
+      role: u.role || 'SELLER',
+      branchId: u.branch_id || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    if (editUser.id === user.id && editFormData.role !== user.role) {
+      alert('No puedes cambiar tu propio rol.');
+      return;
+    }
+    setEditLoading(true);
+    try {
+      await UserService.updateProfile(editUser.id, {
+        fullName: editFormData.fullName,
+        role: editFormData.role,
+        branchId: editFormData.branchId || null
+      });
+      setIsEditModalOpen(false);
+      setEditUser(null);
+      loadData();
+      alert('Usuario actualizado correctamente.');
+    } catch (e: any) {
+      alert('Error: ' + (e.message || 'No se pudo actualizar el usuario'));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <div className="h-screen flex overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} />
@@ -133,6 +174,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                       <th className="px-6 py-4">Rol</th>
                       <th className="px-6 py-4">Sucursal</th>
                       <th className="px-6 py-4">Estado</th>
+                      <th className="px-6 py-4">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -159,6 +201,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm font-medium text-green-600">Activo</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleOpenEdit(u)}
+                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-sm">edit</span>
+                            Editar
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -214,6 +265,52 @@ const UserManagement: React.FC<UserManagementProps> = ({ user, onLogout }) => {
                     <button type="button" onClick={() => setIsModalOpen(false)} disabled={createLoading} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
                     <button type="submit" disabled={createLoading} className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">
                       {createLoading ? <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>Creando...</> : 'Crear Usuario'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Editar Usuario */}
+        {isEditModalOpen && editUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform animate-in zoom-in-95">
+              <div className="p-8 overflow-y-auto">
+                <h3 className="text-xl font-bold mb-2">Editar Usuario</h3>
+                <p className="text-sm text-slate-500 mb-6">{editUser.email}</p>
+                <form onSubmit={handleEditUser} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Nombre Completo</label>
+                    <input required className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg outline-none focus:ring-2 focus:ring-primary/20" value={editFormData.fullName} onChange={e => setEditFormData({ ...editFormData, fullName: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Rol</label>
+                      <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={editFormData.role} onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="STORE_MANAGER">Encargado de Tienda</option>
+                        <option value="WAREHOUSE">Encargado de Bodega</option>
+                        <option value="WAREHOUSE_SUB">Subencargado de Bodega</option>
+                        <option value="SELLER">Vendedor</option>
+                        <option value="FINANCE">Contador</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Sucursal</label>
+                      <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border rounded-lg" value={editFormData.branchId} onChange={e => setEditFormData({ ...editFormData, branchId: e.target.value })}>
+                        <option value="">Sin sucursal (Admin)</option>
+                        {branches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <button type="button" onClick={() => setIsEditModalOpen(false)} disabled={editLoading} className="flex-1 py-2.5 font-bold text-slate-400">Cancelar</button>
+                    <button type="submit" disabled={editLoading} className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                      {editLoading ? <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>Guardando...</> : 'Guardar Cambios'}
                     </button>
                   </div>
                 </form>

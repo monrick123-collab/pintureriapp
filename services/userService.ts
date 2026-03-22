@@ -27,6 +27,20 @@ export const UserService = {
         if (error) throw error;
     },
 
+    async updateProfile(id: string, updates: { role?: string; branchId?: string | null; fullName?: string }): Promise<void> {
+        const payload: Record<string, any> = {};
+        if (updates.role !== undefined) payload.role = updates.role;
+        if (updates.branchId !== undefined) payload.branch_id = updates.branchId || null;
+        if (updates.fullName !== undefined) payload.full_name = updates.fullName;
+
+        const { error } = await supabase
+            .from('profiles')
+            .update(payload)
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
     async deleteProfile(id: string): Promise<void> {
         const { error } = await supabase
             .from('profiles')

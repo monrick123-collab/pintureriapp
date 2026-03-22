@@ -68,6 +68,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [detailWaste, setDetailWaste] = useState<number | null>(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [noBranchWarning, setNoBranchWarning] = useState(false);
 
     // ─── Drums ───
     const [bulkProducts, setBulkProducts] = useState<Product[]>([]);
@@ -108,10 +109,35 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const loadData = async (sd = startDate, ed = endDate) => {
         try {
             setLoading(true);
+            setNoBranchWarning(false);
+
+            const needsBranch = !isAdmin && !isWarehouse;
+            if (needsBranch && !user.branchId) {
+                setNoBranchWarning(true);
+                setRequests([]);
+                const [prods, branchesData, settingsData] = await Promise.all([
+                    InventoryService.getProducts().catch(() => [] as any[]),
+                    InventoryService.getBranches().catch(() => []),
+                    PackagingService.getSettings().catch(() => ({ galon_liters: 3.785, drum_liters: 200 }))
+                ]);
+                const drumProds = prods.filter((p: any) =>
+                    (p.description || '').toLowerCase().includes('tambo') ||
+                    (p.sku || '').toUpperCase().includes('200L')
+                );
+                setBulkProducts(drumProds);
+                setAllProducts(prods);
+                setBranches(branchesData);
+                setSettings(settingsData);
+                setSettingsGalon(settingsData.galon_liters);
+                setLoading(false);
+                return;
+            }
+
+            const branchFilter = (isAdmin || isWarehouse) ? undefined : user.branchId;
             const [prods, requestsData, branchesData, settingsData] = await Promise.all([
                 InventoryService.getProducts().catch(() => [] as any[]),
                 PackagingService.getPackagingRequests(
-                    (isAdmin || isWarehouse) ? undefined : user.branchId,
+                    branchFilter,
                     sd || undefined,
                     ed || undefined
                 ).catch(() => []),
@@ -601,6 +627,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                         // ─── History Tab ───
                         <div className="p-8">
                             <div className="max-w-6xl mx-auto space-y-4">
+                                {noBranchWarning && (
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-amber-500">warning</span>
+                                        <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                                            No tienes sucursal asignada. Contacta al administrador para que te asigne una sucursal.
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border dark:border-slate-800 flex flex-wrap items-end gap-3">
                                     <div>
                                         <label className="text-xs font-black uppercase text-slate-500">Desde</label>

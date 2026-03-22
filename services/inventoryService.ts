@@ -58,22 +58,26 @@ export const InventoryService = {
     async getProductsByBranch(branchId: string): Promise<Product[]> {
         if (branchId === 'ALL') return this.getProducts();
 
-        // Join products + inventory
-        const { data, error } = await supabase
+        // 1. Traer TODOS los productos activos
+        const { data: allProds, error: prodError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('status', 'active');
+        if (prodError) throw prodError;
+
+        // 2. Traer el inventario de esa sucursal
+        const { data: invRows } = await supabase
             .from('inventory')
-            .select(`
-            stock,
-            branch_id,
-            products (*)
-        `)
+            .select('product_id, stock')
             .eq('branch_id', branchId);
 
-        if (error) throw error;
+        const stockMap: Record<string, number> = {};
+        (invRows || []).forEach(r => { stockMap[r.product_id] = r.stock; });
 
-        return (data || []).map(item => ({
-            ...mapDbProduct(item.products),
-            stock: item.stock,
-            inventory: { [branchId]: item.stock } // Partial view
+        return (allProds || []).map(item => ({
+            ...mapDbProduct(item),
+            stock: stockMap[item.id] || 0,
+            inventory: { [branchId]: stockMap[item.id] || 0 }
         }));
     },
 

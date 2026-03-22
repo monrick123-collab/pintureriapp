@@ -309,14 +309,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="w-10 lg:hidden" />
             <div className="flex flex-col">
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
-              <select
-                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                value={selectedBranchId}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                disabled={isWarehouse || isStoreManager}
-              >
-                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
+              {isStoreManager ? (
+                <p className="text-base md:text-lg font-black text-primary">
+                  {loading
+                    ? 'Cargando...'
+                    : branches.find(b => b.id === user.branchId)?.name || user.branchId || 'Sin sucursal'}
+                </p>
+              ) : (
+                <select
+                  className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  disabled={isWarehouse}
+                >
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              )}
             </div>
           </div>
           <div className="flex gap-2 print:hidden">

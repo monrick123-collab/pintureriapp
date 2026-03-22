@@ -85,6 +85,7 @@ export const NotificationService = {
       id: data.id,
       userId: data.user_id,
       targetRole: data.target_role,
+      targetBranchId: data.target_branch_id,
       title: data.title,
       message: data.message,
       actionUrl: data.action_url,

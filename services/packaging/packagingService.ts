@@ -274,14 +274,17 @@ export const PackagingService = {
             .single();
         if (oErr) throw oErr;
 
-        // 2. Insertar líneas
-        const lineRows = lines.map(l => ({
-            order_id:           order.id,
-            package_type:       l.packageType,
-            target_product_id:  l.targetProductId || null,
-            quantity_requested: l.quantity,
-            liters_per_unit:    l.litersPerUnit
-        }));
+        // 2. Insertar líneas (omitir target_product_id si no hay producto asignado)
+        const lineRows = lines.map(l => {
+            const row: Record<string, any> = {
+                order_id:           order.id,
+                package_type:       l.packageType,
+                quantity_requested: l.quantity,
+                liters_per_unit:    l.litersPerUnit
+            };
+            if (l.targetProductId) row.target_product_id = l.targetProductId;
+            return row;
+        });
 
         const { error: lErr } = await supabase
             .from('packaging_order_lines')

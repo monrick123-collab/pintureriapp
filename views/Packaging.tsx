@@ -539,12 +539,15 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     if (!bulkId) {
                                                         return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm mb-3 border dark:border-slate-700 text-slate-400 italic">Selecciona un tambo...</div>;
                                                     }
-                                                    if (candidates.length === 0) {
-                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm mb-3 border dark:border-slate-700 text-slate-400 italic">Sin producto disponible</div>;
-                                                    }
-                                                    if (candidates.length === 1) {
-                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 border dark:border-slate-700">{candidates[0].name}</div>;
-                                                    }
+
+                                                    // Fallback: si no hay candidatos por marca, mostrar todos los productos del mismo tipo de envase
+                                                    const fallbackProducts = candidates.length > 0
+                                                        ? candidates
+                                                        : allProducts.filter(p => {
+                                                            const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
+                                                            return !isTambo && p.packageType === pkgMap[def.type];
+                                                          });
+
                                                     return (
                                                         <select
                                                             value={line.productId}
@@ -553,8 +556,10 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                             }
                                                             className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 outline-none border dark:border-slate-700"
                                                         >
-                                                            <option value="">Selecciona...</option>
-                                                            {candidates.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                            <option value="">
+                                                                {fallbackProducts.length === 0 ? 'Sin productos de este tipo' : 'Selecciona producto...'}
+                                                            </option>
+                                                            {fallbackProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                                         </select>
                                                     );
                                                 })()}

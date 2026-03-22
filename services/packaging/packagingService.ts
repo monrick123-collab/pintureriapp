@@ -14,7 +14,7 @@ export const PackagingService = {
         const map: Record<string, number> = {};
         (data || []).forEach((r: any) => { map[r.key] = parseFloat(r.value); });
         return {
-            galon_liters: map.galon_liters ?? 3.8,
+            galon_liters: map.galon_liters ?? 3.785,
             drum_liters:  map.drum_liters  ?? 200
         };
     },

@@ -39,9 +39,9 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
 
     // ─── Settings ───
-    const [settings, setSettings] = useState<PackagingSettings>({ galon_liters: 3.8, drum_liters: 200 });
+    const [settings, setSettings] = useState<PackagingSettings>({ galon_liters: 3.785, drum_liters: 200 });
     const [showSettings, setShowSettings] = useState(false);
-    const [settingsGalon, setSettingsGalon] = useState(3.8);
+    const [settingsGalon, setSettingsGalon] = useState(3.785);
     const [savingSettings, setSavingSettings] = useState(false);
 
     // ─── Tabs ───
@@ -83,10 +83,36 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
     const totalCapacity = drumQty * settings.drum_liters;
     const totalUsed = calcLines.reduce((sum, l) => sum + l.qty * getLitersPerUnit(l.packageType), 0);
-    const merma = Math.max(0, totalCapacity - totalUsed);
+    const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
     const activeLines = calcLines.filter(l => l.qty > 0 && l.productId);
     const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId;
+
+    // ─── Auto-derive child SKUs when tambo changes ───
+    useEffect(() => {
+        if (!bulkId) {
+            setCalcLines(INITIAL_CALC_LINES);
+            return;
+        }
+        const tambo = bulkProducts.find(p => p.id === bulkId);
+        if (!tambo?.brand) {
+            setCalcLines(INITIAL_CALC_LINES);
+            return;
+        }
+        const tamboBrand = tambo.brand.toLowerCase().trim();
+        const pkgMap: Record<PackageType, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
+        setCalcLines(prev =>
+            PACKAGE_DEFS.map(def => {
+                const prevLine = prev.find(l => l.packageType === def.type)!;
+                const candidates = allProducts.filter(p => {
+                    const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
+                    return !isTambo && p.packageType === pkgMap[def.type] && (p.brand || '').toLowerCase().trim() === tamboBrand;
+                });
+                const matched = candidates[0];
+                return { packageType: def.type, productId: matched ? matched.id : '', qty: prevLine?.qty ?? 0 };
+            })
+        );
+    }, [bulkId, bulkProducts, allProducts]);
 
     // ─── Lifecycle ───
     useEffect(() => {
@@ -104,7 +130,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                     ed || undefined
                 ).catch(() => []),
                 InventoryService.getBranches().catch(() => []),
-                PackagingService.getSettings().catch(() => ({ galon_liters: 3.8, drum_liters: 200 }))
+                PackagingService.getSettings().catch(() => ({ galon_liters: 3.785, drum_liters: 200 }))
             ]);
 
             const drumProds = prods.filter((p: any) =>
@@ -282,14 +308,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                 </div>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setSettingsGalon(3.8)}
+                                        onClick={() => setSettingsGalon(3.785)}
                                         className={`flex-1 py-2 px-3 rounded-lg font-bold text-sm transition-all ${
-                                            settingsGalon === 3.8
+                                            settingsGalon === 3.785
                                                 ? 'bg-blue-500 text-white'
                                                 : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
                                         }`}
                                     >
-                                        3.8 L (Estándar)
+                                        3.785 L (Estándar)
                                     </button>
                                     <button
                                         onClick={() => setSettingsGalon(4.0)}
@@ -478,31 +504,38 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     {litersPerUnit.toFixed(2)} L / unidad
                                                 </p>
 
-                                                <select
-                                                    value={line.productId}
-                                                    onChange={e =>
-                                                        setCalcLines(
-                                                            calcLines.map((l, i) =>
-                                                                i === idx ? { ...l, productId: e.target.value } : l
-                                                            )
-                                                        )
-                                                    }
-                                                    className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 outline-none border dark:border-slate-700"
-                                                >
-                                                    <option value="">Selecciona producto...</option>
-                                                    {allProducts
-                                                        .filter(p => {
+                                                {(() => {
+                                                    const pkgMap: Record<PackageType, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
+                                                    const tambo = bulkProducts.find(p => p.id === bulkId);
+                                                    const candidates = tambo?.brand
+                                                        ? allProducts.filter(p => {
                                                             const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
-                                                            if (isTambo) return false;
-                                                            const pkgMap: Record<string, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
-                                                            return p.packageType === pkgMap[def.type];
-                                                        })
-                                                        .map(p => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.name}
-                                                            </option>
-                                                        ))}
-                                                </select>
+                                                            return !isTambo && p.packageType === pkgMap[def.type] && (p.brand || '').toLowerCase().trim() === tambo.brand!.toLowerCase().trim();
+                                                          })
+                                                        : [];
+
+                                                    if (!bulkId) {
+                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm mb-3 border dark:border-slate-700 text-slate-400 italic">Selecciona un tambo...</div>;
+                                                    }
+                                                    if (candidates.length === 0) {
+                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm mb-3 border dark:border-slate-700 text-slate-400 italic">Sin producto disponible</div>;
+                                                    }
+                                                    if (candidates.length === 1) {
+                                                        return <div className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 border dark:border-slate-700">{candidates[0].name}</div>;
+                                                    }
+                                                    return (
+                                                        <select
+                                                            value={line.productId}
+                                                            onChange={e =>
+                                                                setCalcLines(calcLines.map((l, i) => i === idx ? { ...l, productId: e.target.value } : l))
+                                                            }
+                                                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 outline-none border dark:border-slate-700"
+                                                        >
+                                                            <option value="">Selecciona...</option>
+                                                            {candidates.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                        </select>
+                                                    );
+                                                })()}
 
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <button
@@ -581,17 +614,19 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                     </div>
                                 )}
 
-                                <button
-                                    onClick={handleSubmitV3}
-                                    disabled={!canSubmit || submitting}
-                                    className={`w-full py-4 rounded-2xl font-black text-white uppercase transition-all ${
-                                        !canSubmit || isOverCapacity
-                                            ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed'
-                                            : 'bg-primary hover:scale-105 shadow-lg shadow-primary/30'
-                                    }`}
-                                >
-                                    {submitting ? 'Finalizando...' : 'Finalizar Envasado'}
-                                </button>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={handleSubmitV3}
+                                        disabled={!canSubmit || submitting}
+                                        className={`px-8 py-4 rounded-2xl font-black text-white uppercase transition-all ${
+                                            !canSubmit || isOverCapacity
+                                                ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed'
+                                                : 'bg-primary hover:scale-105 shadow-lg shadow-primary/30'
+                                        }`}
+                                    >
+                                        {submitting ? 'Finalizando...' : 'Finalizar Envasado'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ) : activeTab === 'history' || isStoreManager ? (

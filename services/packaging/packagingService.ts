@@ -62,7 +62,7 @@ export const PackagingService = {
         if (endDate)     query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) { console.error('getPackagingRequests error:', error); throw error; }
         return (data || []).map((r: any) => ({
             ...r,
             stockReleased: r.stock_released,

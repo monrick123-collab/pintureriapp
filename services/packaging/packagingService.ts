@@ -299,6 +299,7 @@ export const PackagingService = {
         try {
             await NotificationService.createNotification({
                 targetRole: 'STORE_MANAGER',
+                targetBranchId: branchId,
                 title: 'Nueva Orden de Envasado',
                 message: `Se enviaron ${drumQty} tambo(s) de "${productName || bulkProductId}" a ${branchName || branchId} para envasar.`,
                 actionUrl: '/packaging'

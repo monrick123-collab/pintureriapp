@@ -426,6 +426,28 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         ))}
                                     </div>
                                 </div>
+                                {/* Barra de capacidad */}
+                                {(() => {
+                                    const totalLiters = detailLines.reduce((sum, l) => sum + (l.litersSubtotal || 0), 0);
+                                    const drumCapacity = (detailOrder.quantity_drum || 1) * settings.drum_liters;
+                                    const pct = drumCapacity > 0 ? Math.min(100, (totalLiters / drumCapacity) * 100) : 0;
+                                    const remaining = Math.max(0, drumCapacity - totalLiters);
+                                    return (
+                                        <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                                                <span>Llenado</span>
+                                                <span>{totalLiters.toFixed(1)} / {drumCapacity.toFixed(1)} L ({pct.toFixed(0)}%)</span>
+                                            </div>
+                                            <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${pct > 100 ? 'bg-red-500' : 'bg-green-500'}`}
+                                                    style={{ width: `${Math.min(100, pct)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-1">Restante: {remaining.toFixed(1)} L</p>
+                                        </div>
+                                    );
+                                })()}
                                 {detailWaste !== null && (
                                     <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
                                         <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">Merma Registrada</p>
@@ -447,7 +469,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
                 {/* Content */}
                 <div className="flex-1 overflow-auto">
-                    {activeTab === 'new' ? (
+                    {activeTab === 'new' && (isAdmin || isWarehouse) ? (
                         // ─── Calculator Tab ───
                         <div className="p-8">
                             <div className="max-w-4xl mx-auto space-y-6">

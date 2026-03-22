@@ -525,6 +525,7 @@ export interface Notification {
   id: string;
   userId?: string;
   targetRole?: string;
+  targetBranchId?: string;
   title: string;
   message: string;
   actionUrl?: string;

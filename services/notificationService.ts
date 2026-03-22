@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { Notification } from '../types';
 
 export const NotificationService = {
-  async getUnreadNotifications(userId: string, userRole: string): Promise<Notification[]> {
+  async getUnreadNotifications(userId: string, userRole: string, branchId?: string): Promise<Notification[]> {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -16,10 +16,16 @@ export const NotificationService = {
       throw error;
     }
 
-    return (data || []).map(n => ({
+    // Filter out notifications targeted to a different branch
+    const filtered = (data || []).filter(n =>
+      !n.target_branch_id || !branchId || n.target_branch_id === branchId
+    );
+
+    return filtered.map(n => ({
       id: n.id,
       userId: n.user_id,
       targetRole: n.target_role,
+      targetBranchId: n.target_branch_id,
       title: n.title,
       message: n.message,
       actionUrl: n.action_url,
@@ -57,6 +63,7 @@ export const NotificationService = {
     const payload = {
       ...(notification.userId && { user_id: notification.userId }),
       ...(notification.targetRole && { target_role: notification.targetRole }),
+      ...(notification.targetBranchId && { target_branch_id: notification.targetBranchId }),
       title: notification.title,
       message: notification.message,
       action_url: notification.actionUrl,

@@ -68,11 +68,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
         (payload: any) => {
           const newNotif = payload.new as any;
           // Check if notification is for this user or their role
-          if (
-            newNotif.user_id === user.id ||
-            newNotif.target_role === user.role ||
-            newNotif.target_role === 'ALL'
-          ) {
+          const isForUser = newNotif.user_id === user.id;
+          const isForRole = newNotif.target_role === user.role || newNotif.target_role === 'ALL';
+          const branchMatch = !newNotif.target_branch_id || !user.branchId || newNotif.target_branch_id === user.branchId;
+          if ((isForUser || isForRole) && branchMatch) {
             // Play notification sound
             playNotificationSound();
             fetchNotifications(); // Refresh list to get formatted data
@@ -97,7 +96,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
 
   const fetchNotifications = async () => {
     try {
-      const data = await NotificationService.getUnreadNotifications(user.id, user.role);
+      const data = await NotificationService.getUnreadNotifications(user.id, user.role, user.branchId);
       setNotifications(data);
     } catch (error) {
       console.error('Failed to fetch notifications', error);

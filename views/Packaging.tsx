@@ -491,7 +491,12 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 >
                                                     <option value="">Selecciona producto...</option>
                                                     {allProducts
-                                                        .filter(p => !(p.description || '').toLowerCase().includes('tambo') && !p.sku.includes('200L'))
+                                                        .filter(p => {
+                                                            const isTambo = (p.description || '').toLowerCase().includes('tambo') || (p.sku || '').toUpperCase().includes('200L');
+                                                            if (isTambo) return false;
+                                                            const pkgMap: Record<string, string> = { galon: 'galon', litro: 'litro', medio_litro: 'medio', cuarto_litro: 'cuarto' };
+                                                            return p.packageType === pkgMap[def.type];
+                                                        })
                                                         .map(p => (
                                                             <option key={p.id} value={p.id}>
                                                                 {p.name}

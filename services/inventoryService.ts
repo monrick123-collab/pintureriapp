@@ -58,11 +58,10 @@ export const InventoryService = {
     async getProductsByBranch(branchId: string): Promise<Product[]> {
         if (branchId === 'ALL') return this.getProducts();
 
-        // 1. Traer TODOS los productos activos
+        // 1. Traer TODOS los productos
         const { data: allProds, error: prodError } = await supabase
             .from('products')
-            .select('*')
-            .eq('status', 'active');
+            .select('*');
         if (prodError) throw prodError;
 
         // 2. Traer el inventario de esa sucursal

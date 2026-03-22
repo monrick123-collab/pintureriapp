@@ -8,10 +8,9 @@ export const PackagingService = {
     // -------------------------------------------------------------------------
 
     async getSettings(): Promise<PackagingSettings> {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('packaging_settings')
             .select('key, value');
-        if (error) throw error;
         const map: Record<string, number> = {};
         (data || []).forEach((r: any) => { map[r.key] = parseFloat(r.value); });
         return {

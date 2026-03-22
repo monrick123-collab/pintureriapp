@@ -97,17 +97,20 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         try {
             setLoading(true);
             const [prods, requestsData, branchesData, settingsData] = await Promise.all([
-                InventoryService.getProducts(),
+                InventoryService.getProducts().catch(() => [] as any[]),
                 PackagingService.getPackagingRequests(
                     (isAdmin || isWarehouse) ? undefined : user.branchId,
                     sd || undefined,
                     ed || undefined
-                ),
-                InventoryService.getBranches(),
-                PackagingService.getSettings()
+                ).catch(() => []),
+                InventoryService.getBranches().catch(() => []),
+                PackagingService.getSettings().catch(() => ({ galon_liters: 3.8, drum_liters: 200 }))
             ]);
 
-            const drumProds = prods.filter(p => (p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L'));
+            const drumProds = prods.filter((p: any) =>
+                (p.description || '').toLowerCase().includes('tambo') ||
+                (p.sku || '').toUpperCase().includes('200L')
+            );
             setBulkProducts(drumProds);
             setAllProducts(prods);
             setRequests(requestsData as any[]);

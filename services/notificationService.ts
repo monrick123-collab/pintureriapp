@@ -16,6 +16,8 @@ export const NotificationService = {
       throw error;
     }
 
+    console.log('[NotificationService] getUnreadNotifications →', { userId, userRole, branchId, count: data?.length, data });
+
     // Filter out notifications targeted to a different branch
     const filtered = (data || []).filter(n =>
       !n.target_branch_id || !branchId || n.target_branch_id === branchId
@@ -77,9 +79,11 @@ export const NotificationService = {
       .single();
 
     if (error) {
-      console.error('Error creating notification:', error);
+      console.error('[NotificationService] Error creating notification:', error, { payload });
       throw error;
     }
+
+    console.log('[NotificationService] createNotification OK →', { payload, result: data });
 
     return {
       id: data.id,

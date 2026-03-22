@@ -98,6 +98,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user }) => {
     try {
       setFetchError(false);
       const data = await NotificationService.getUnreadNotifications(user.id, user.role, user.branchId);
+      console.log('[NotificationBell] fetchNotifications →', { userId: user.id, role: user.role, branchId: user.branchId, count: data.length });
       setNotifications(data);
     } catch (error) {
       console.error('Failed to fetch notifications', error);

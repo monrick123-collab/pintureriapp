@@ -47,6 +47,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [transferQty, setTransferQty] = useState(0);
+  const [initialStock, setInitialStock] = useState(0);
   const [consumptionQty, setConsumptionQty] = useState(0);
   const [consumptionReason, setConsumptionReason] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,13 +155,14 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
 
   const resetForm = () => {
     setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro', min_stock: 10, max_stock: 100, costPrice: 0, location: '', unit_measure: 'pza' });
+    setInitialStock(0);
     setSelectedProduct(null);
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await InventoryService.createProduct(formData as Omit<Product, 'id' | 'inventory'>);
+      await InventoryService.createProduct(formData as Omit<Product, 'id' | 'inventory'>, initialStock, selectedBranchId);
       await loadData();
       setIsAddModalOpen(false);
       resetForm();
@@ -174,6 +176,9 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     if (!selectedProduct) return;
     try {
       await InventoryService.updateProduct(selectedProduct.id, formData as Partial<Product>);
+      if (initialStock !== (selectedProduct.inventory?.[selectedBranchId] ?? 0)) {
+        await InventoryService.updateStock(selectedProduct.id, selectedBranchId, initialStock);
+      }
       await loadData();
       setIsEditModalOpen(false);
       resetForm();
@@ -203,6 +208,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       location: p.location || '',
       unit_measure: p.unit_measure || 'pza'
     });
+    setInitialStock(p.inventory?.[selectedBranchId] ?? 0);
     setIsEditModalOpen(true);
   };
 
@@ -303,14 +309,22 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="w-10 lg:hidden" />
             <div className="flex flex-col">
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sucursal</p>
-              <select
-                className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                value={selectedBranchId}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                disabled={isWarehouse || isStoreManager}
-              >
-                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
+              {isStoreManager ? (
+                <p className="text-base md:text-lg font-black text-primary">
+                  {loading
+                    ? 'Cargando...'
+                    : branches.find(b => b.id === user.branchId)?.name || user.branchId || 'Sin sucursal'}
+                </p>
+              ) : (
+                <select
+                  className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  disabled={isWarehouse}
+                >
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              )}
             </div>
           </div>
           <div className="flex gap-2 print:hidden">
@@ -612,6 +626,33 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                     <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Max Stock</label><input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" value={formData.max_stock || ''} onChange={e => setFormData({ ...formData, max_stock: parseInt(e.target.value) })} /></div>
                     <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Unidad Medida</label><input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder="pza, lto, kg" value={formData.unit_measure || ''} onChange={e => setFormData({ ...formData, unit_measure: e.target.value })} /></div>
                   </div>
+
+                  {isAddModalOpen && (
+                    <div className="grid grid-cols-1 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+                      <div className="col-span-1 text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Datos Adicionales</div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Descripción <span className="text-primary">(escribe "tambo" si es granel)</span></label>
+                        <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder='Ej: Pintura blanca tambo 200L' value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Stock Inicial (sucursal actual)</label>
+                        <input type="number" min={0} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" placeholder="0" value={initialStock || ''} onChange={e => setInitialStock(Math.max(0, parseInt(e.target.value) || 0))} />
+                      </div>
+                    </div>
+                  )}
+                  {isEditModalOpen && selectedProduct && (
+                    <div className="grid grid-cols-1 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+                      <div className="col-span-1 text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Datos Adicionales</div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Descripción <span className="text-primary">(escribe "tambo" si es granel)</span></label>
+                        <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20" placeholder='Ej: Pintura blanca tambo 200L' value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black uppercase text-slate-500">Stock actual (sucursal actual)</label>
+                        <input type="number" min={0} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={initialStock} onChange={e => setInitialStock(Math.max(0, parseInt(e.target.value) || 0))} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6 md:p-8 pt-4 shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex gap-4">

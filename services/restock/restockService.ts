@@ -105,14 +105,25 @@ export const RestockService = {
         if (error) throw error;
 
         try {
-            if (newStatus === 'shipped') {
-                const { data: reqData } = await supabase.from('restock_requests').select('branch_id').eq('id', requestId).single();
-                if (reqData) {
-                    const { data: bData } = await supabase.from('branches').select('name').eq('id', reqData.branch_id).single();
+            const { data: reqData } = await supabase.from('restock_requests').select('branch_id').eq('id', requestId).single();
+            if (reqData) {
+                const { data: bData } = await supabase.from('branches').select('name').eq('id', reqData.branch_id).single();
+                const branchName = bData?.name || 'Local';
+
+                if (newStatus === 'approved_warehouse') {
+                    await NotificationService.createNotification({
+                        targetRole: 'WAREHOUSE',
+                        title: 'Resurtido Aprobado — Proceder a Despacho',
+                        message: `El resurtido de la sucursal ${branchName} fue aprobado. Procede a preparar y enviar.`,
+                        actionUrl: '/restocks'
+                    });
+                }
+
+                if (newStatus === 'shipped') {
                     await NotificationService.createNotification({
                         targetRole: 'STORE_MANAGER',
                         title: 'Resurtido en Camino',
-                        message: `Un paquete de resurtido para la sucursal ${bData?.name || 'Local'} va en camino.`,
+                        message: `Un paquete de resurtido para la sucursal ${branchName} va en camino.`,
                         actionUrl: '/restocks'
                     });
                 }

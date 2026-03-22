@@ -1277,6 +1277,25 @@ const addToCart = (product: Product) => {
                                                                 >
                                                                     <span className="material-symbols-outlined text-lg">print</span>
                                                                 </Link>
+                                                                {isAdmin && sale.status !== 'cancelled' && (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => openEditSaleModal(sale)}
+                                                                            className="p-1 text-slate-400 hover:text-blue-500 transition-colors"
+                                                                            title="Editar Venta"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-lg">edit</span>
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleCancelSale(sale)}
+                                                                            disabled={cancelLoading}
+                                                                            className="p-1 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                                                            title="Cancelar Venta"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-lg">cancel</span>
+                                                                        </button>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>

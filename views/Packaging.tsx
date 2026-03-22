@@ -14,7 +14,6 @@ type PackageType = 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
 
 interface CalcLine {
     packageType: PackageType;
-    productId: string;
     qty: number;
 }
 
@@ -26,11 +25,19 @@ const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: s
 ];
 
 const INITIAL_CALC_LINES: CalcLine[] = [
-    { packageType: 'galon',        productId: '', qty: 0 },
-    { packageType: 'litro',        productId: '', qty: 0 },
-    { packageType: 'medio_litro',  productId: '', qty: 0 },
-    { packageType: 'cuarto_litro', productId: '', qty: 0 },
+    { packageType: 'galon',        qty: 0 },
+    { packageType: 'litro',        qty: 0 },
+    { packageType: 'medio_litro',  qty: 0 },
+    { packageType: 'cuarto_litro', qty: 0 },
 ];
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+    sent_to_branch:     { label: 'Enviado a Sucursal',    color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+    received_at_branch: { label: 'Recibido en Sucursal',  color: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400' },
+    processing:         { label: 'En Proceso',             color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
+    completed:          { label: 'Completado',             color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+    cancelled:          { label: 'Cancelado',              color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' },
+};
 
 const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const isAdmin = user.role === UserRole.ADMIN;
@@ -39,9 +46,9 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const isSub = user.role === UserRole.WAREHOUSE_SUB;
 
     // ─── Settings ───
-    const [settings, setSettings] = useState<PackagingSettings>({ galon_liters: 3.8, drum_liters: 200 });
+    const [settings, setSettings] = useState<PackagingSettings>({ galon_liters: 3.785, drum_liters: 200 });
     const [showSettings, setShowSettings] = useState(false);
-    const [settingsGalon, setSettingsGalon] = useState(3.8);
+    const [settingsGalon, setSettingsGalon] = useState(3.785);
     const [savingSettings, setSavingSettings] = useState(false);
 
     // ─── Tabs ───
@@ -61,6 +68,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [detailWaste, setDetailWaste] = useState<number | null>(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [noBranchWarning, setNoBranchWarning] = useState(false);
 
     // ─── Drums ───
     const [bulkProducts, setBulkProducts] = useState<Product[]>([]);
@@ -83,10 +91,15 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
     const totalCapacity = drumQty * settings.drum_liters;
     const totalUsed = calcLines.reduce((sum, l) => sum + l.qty * getLitersPerUnit(l.packageType), 0);
-    const merma = Math.max(0, totalCapacity - totalUsed);
+    const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
-    const activeLines = calcLines.filter(l => l.qty > 0 && l.productId);
+    const activeLines = calcLines.filter(l => l.qty > 0);
     const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId;
+
+    // Reset lines when tambo changes
+    useEffect(() => {
+        setCalcLines(INITIAL_CALC_LINES);
+    }, [bulkId]);
 
     // ─── Lifecycle ───
     useEffect(() => {
@@ -96,18 +109,46 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const loadData = async (sd = startDate, ed = endDate) => {
         try {
             setLoading(true);
+            setNoBranchWarning(false);
+
+            const needsBranch = !isAdmin && !isWarehouse;
+            if (needsBranch && !user.branchId) {
+                setNoBranchWarning(true);
+                setRequests([]);
+                const [prods, branchesData, settingsData] = await Promise.all([
+                    InventoryService.getProducts().catch(() => [] as any[]),
+                    InventoryService.getBranches().catch(() => []),
+                    PackagingService.getSettings().catch(() => ({ galon_liters: 3.785, drum_liters: 200 }))
+                ]);
+                const drumProds = prods.filter((p: any) =>
+                    (p.description || '').toLowerCase().includes('tambo') ||
+                    (p.sku || '').toUpperCase().includes('200L')
+                );
+                setBulkProducts(drumProds);
+                setAllProducts(prods);
+                setBranches(branchesData);
+                setSettings(settingsData);
+                setSettingsGalon(settingsData.galon_liters);
+                setLoading(false);
+                return;
+            }
+
+            const branchFilter = (isAdmin || isWarehouse) ? undefined : user.branchId;
             const [prods, requestsData, branchesData, settingsData] = await Promise.all([
-                InventoryService.getProducts(),
+                InventoryService.getProducts().catch(() => [] as any[]),
                 PackagingService.getPackagingRequests(
-                    (isAdmin || isWarehouse) ? undefined : user.branchId,
+                    branchFilter,
                     sd || undefined,
                     ed || undefined
-                ),
-                InventoryService.getBranches(),
-                PackagingService.getSettings()
+                ).catch(() => []),
+                InventoryService.getBranches().catch(() => []),
+                PackagingService.getSettings().catch(() => ({ galon_liters: 3.785, drum_liters: 200 }))
             ]);
 
-            const drumProds = prods.filter(p => (p.description || '').toLowerCase().includes('tambo') || p.sku.includes('200L'));
+            const drumProds = prods.filter((p: any) =>
+                (p.description || '').toLowerCase().includes('tambo') ||
+                (p.sku || '').toUpperCase().includes('200L')
+            );
             setBulkProducts(drumProds);
             setAllProducts(prods);
             setRequests(requestsData as any[]);
@@ -150,14 +191,18 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         if (!canSubmit) return;
         setSubmitting(true);
         try {
-            await PackagingService.submitPackagingOrderV3WithUser(
+            const selectedBranch = branches.find((b: any) => b.id === branchId);
+            const selectedProduct = bulkProducts.find(p => p.id === bulkId);
+            await PackagingService.createPackagingOrderV3(
                 branchId, bulkId, drumQty, user.id,
                 activeLines.map(l => ({
                     packageType: l.packageType,
-                    targetProductId: l.productId,
+                    targetProductId: '',
                     quantity: l.qty,
                     litersPerUnit: getLitersPerUnit(l.packageType)
-                }))
+                })),
+                selectedBranch?.name,
+                selectedProduct?.name
             );
             setCalcLines(INITIAL_CALC_LINES);
             setBulkId('');
@@ -169,6 +214,16 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
             alert('Error: ' + e.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleCompletePackaging = async (id: string, branchName?: string, productName?: string) => {
+        if (!confirm('¿Confirmar que el envasado está terminado? Se actualizará el inventario.')) return;
+        try {
+            await PackagingService.completePackagingOrder(id, user.id, branchName, productName);
+            await loadData();
+        } catch (e: any) {
+            alert('Error al completar envasado: ' + e.message);
         }
     };
 
@@ -279,14 +334,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                 </div>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setSettingsGalon(3.8)}
+                                        onClick={() => setSettingsGalon(3.785)}
                                         className={`flex-1 py-2 px-3 rounded-lg font-bold text-sm transition-all ${
-                                            settingsGalon === 3.8
+                                            settingsGalon === 3.785
                                                 ? 'bg-blue-500 text-white'
                                                 : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
                                         }`}
                                     >
-                                        3.8 L (Estándar)
+                                        3.785 L (Estándar)
                                     </button>
                                     <button
                                         onClick={() => setSettingsGalon(4.0)}
@@ -371,6 +426,28 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         ))}
                                     </div>
                                 </div>
+                                {/* Barra de capacidad */}
+                                {(() => {
+                                    const totalLiters = detailLines.reduce((sum, l) => sum + (l.litersSubtotal || 0), 0);
+                                    const drumCapacity = (detailOrder.quantity_drum || 1) * settings.drum_liters;
+                                    const pct = drumCapacity > 0 ? Math.min(100, (totalLiters / drumCapacity) * 100) : 0;
+                                    const remaining = Math.max(0, drumCapacity - totalLiters);
+                                    return (
+                                        <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                                                <span>Llenado</span>
+                                                <span>{totalLiters.toFixed(1)} / {drumCapacity.toFixed(1)} L ({pct.toFixed(0)}%)</span>
+                                            </div>
+                                            <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${pct > 100 ? 'bg-red-500' : 'bg-green-500'}`}
+                                                    style={{ width: `${Math.min(100, pct)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-1">Restante: {remaining.toFixed(1)} L</p>
+                                        </div>
+                                    );
+                                })()}
                                 {detailWaste !== null && (
                                     <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
                                         <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">Merma Registrada</p>
@@ -392,7 +469,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
 
                 {/* Content */}
                 <div className="flex-1 overflow-auto">
-                    {activeTab === 'new' ? (
+                    {activeTab === 'new' && (isAdmin || isWarehouse) ? (
                         // ─── Calculator Tab ───
                         <div className="p-8">
                             <div className="max-w-4xl mx-auto space-y-6">
@@ -475,26 +552,6 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     {litersPerUnit.toFixed(2)} L / unidad
                                                 </p>
 
-                                                <select
-                                                    value={line.productId}
-                                                    onChange={e =>
-                                                        setCalcLines(
-                                                            calcLines.map((l, i) =>
-                                                                i === idx ? { ...l, productId: e.target.value } : l
-                                                            )
-                                                        )
-                                                    }
-                                                    className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold mb-3 outline-none border dark:border-slate-700"
-                                                >
-                                                    <option value="">Selecciona producto...</option>
-                                                    {allProducts
-                                                        .filter(p => !(p.description || '').toLowerCase().includes('tambo') && !p.sku.includes('200L'))
-                                                        .map(p => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.name}
-                                                            </option>
-                                                        ))}
-                                                </select>
 
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <button
@@ -573,23 +630,57 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                     </div>
                                 )}
 
-                                <button
-                                    onClick={handleSubmitV3}
-                                    disabled={!canSubmit || submitting}
-                                    className={`w-full py-4 rounded-2xl font-black text-white uppercase transition-all ${
-                                        !canSubmit || isOverCapacity
-                                            ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed'
-                                            : 'bg-primary hover:scale-105 shadow-lg shadow-primary/30'
-                                    }`}
-                                >
-                                    {submitting ? 'Finalizando...' : 'Finalizar Envasado'}
-                                </button>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={handleSubmitV3}
+                                        disabled={!canSubmit || submitting}
+                                        className={`px-8 py-4 rounded-2xl font-black text-white uppercase transition-all ${
+                                            !canSubmit || isOverCapacity
+                                                ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed'
+                                                : 'bg-primary hover:scale-105 shadow-lg shadow-primary/30'
+                                        }`}
+                                    >
+                                        {submitting ? 'Enviando...' : 'Enviar Solicitud a Sucursal'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ) : activeTab === 'history' || isStoreManager ? (
                         // ─── History Tab ───
                         <div className="p-8">
                             <div className="max-w-6xl mx-auto space-y-4">
+                                {noBranchWarning && (
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-amber-500">warning</span>
+                                        <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                                            No tienes sucursal asignada. Contacta al administrador para que te asigne una sucursal.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Tarjeta de sucursal para STORE_MANAGER */}
+                                {isStoreManager && user.branchId && (() => {
+                                    const myBranch = branches.find(b => b.id === user.branchId);
+                                    const myTambos = bulkProducts.reduce((sum, p) => {
+                                        return sum + (drumInventory[p.id]?.[user.branchId!] || 0);
+                                    }, 0);
+                                    return (
+                                        <div className="bg-gradient-to-r from-primary/10 to-teal-500/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4">
+                                            <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                                                <span className="material-symbols-outlined text-primary text-2xl">store</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tu Sucursal</p>
+                                                <p className="text-xl font-black text-slate-800 dark:text-slate-200">{myBranch?.name || user.branchId}</p>
+                                            </div>
+                                            <div className="ml-auto text-right">
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tambos en Sucursal</p>
+                                                <p className="text-2xl font-black text-primary">{myTambos} <span className="text-sm font-bold text-slate-400">u</span></p>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border dark:border-slate-800 flex flex-wrap items-end gap-3">
                                     <div>
                                         <label className="text-xs font-black uppercase text-slate-500">Desde</label>
@@ -660,17 +751,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <span
-                                                                className={`inline-block px-2 py-1 rounded-lg text-xs font-bold ${
-                                                                    r.status === 'completed'
-                                                                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
-                                                                        : r.status === 'processing'
-                                                                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
-                                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                                                }`}
-                                                            >
-                                                                {r.status}
-                                                            </span>
+                                                            {(() => {
+                                                                const s = STATUS_LABELS[r.status] ?? { label: r.status, color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' };
+                                                                return (
+                                                                    <span className={`inline-block px-2 py-1 rounded-lg text-xs font-bold ${s.color}`}>
+                                                                        {s.label}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </td>
                                                         <td className="px-6 py-4 text-right space-x-2">
                                                             {r.isV3 && (
@@ -681,28 +769,40 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                                     Ver Detalle
                                                                 </button>
                                                             )}
-                                                            {(isWarehouse || isAdmin) && r.status === 'processing' && (
-                                                                <button
-                                                                    onClick={() => handleUpdateStatus(r.id, 'completed')}
-                                                                    className="text-xs font-bold text-primary hover:underline"
-                                                                >
-                                                                    Finalizar
-                                                                </button>
-                                                            )}
-                                                            {(isStoreManager || isAdmin) && !!user.branchId && user.branchId === r.branch_id && r.status === 'sent_to_branch' && (
+                                                            {/* Paso 1: Confirmar recepción de tambos */}
+                                                            {r.status === 'sent_to_branch' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
                                                                 <button
                                                                     onClick={() => handleConfirmReceipt(r.id)}
                                                                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold hover:bg-blue-600"
                                                                 >
-                                                                    ✅ Recibir
+                                                                    ✅ Confirmar Recepción de Tambos
                                                                 </button>
                                                             )}
+                                                            {/* Paso 2: Iniciar envasado */}
+                                                            {r.status === 'received_at_branch' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(r.id, 'processing')}
+                                                                    className="px-2 py-1 bg-amber-500 text-white rounded text-xs font-bold hover:bg-amber-600"
+                                                                >
+                                                                    ▶ Iniciar Envasado
+                                                                </button>
+                                                            )}
+                                                            {/* Paso 3: Completar envasado — llama al RPC y actualiza inventario */}
+                                                            {r.status === 'processing' && (isAdmin || (isStoreManager && !!user.branchId && user.branchId === r.branch_id)) && (
+                                                                <button
+                                                                    onClick={() => handleCompletePackaging(r.id, r.branches?.name, r.products?.name)}
+                                                                    className="px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
+                                                                >
+                                                                    ✅ Completar Envasado
+                                                                </button>
+                                                            )}
+                                                            {/* Autorizar venta (Admin) */}
                                                             {isAdmin && r.status === 'completed' && !r.stockReleased && (
                                                                 <button
                                                                     onClick={() => handleAuthorize(r.id)}
-                                                                    className="px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
+                                                                    className="px-2 py-1 bg-violet-500 text-white rounded text-xs font-bold hover:bg-violet-600"
                                                                 >
-                                                                    Autorizar
+                                                                    Autorizar Venta
                                                                 </button>
                                                             )}
                                                         </td>

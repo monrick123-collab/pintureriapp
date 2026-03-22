@@ -737,7 +737,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
 
                         {/* Top bar: Sucursal origen (admin) + destino + mode badge */}
                         <div className="mx-3 md:mx-8 mt-3 flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl px-4 md:px-6 py-3 shadow-sm shrink-0">
-                            {isAdmin && (
+                            {(isAdmin || !userBranchId) && (
                                 <div className="flex-1 min-w-[200px] max-w-xs">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Sucursal Origen</label>
                                     <select
@@ -838,7 +838,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 xl:grid-cols-3 gap-3 content-start custom-scrollbar">
                                     {filteredProducts.map(p => {
-                                        const stock = p.inventory[branchId] || 0;
+                                        const stock = p.inventory[fromBranchId] || 0;
                                         const inGiveCart = cart.some(c => c.id === p.id);
                                         const inReceiveCart = receivedCart.some(c => c.id === p.id);
                                         return (

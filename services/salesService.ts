@@ -675,37 +675,19 @@ export const SalesService = {
      */
     async addMunicipalPayment(
         accountId: string,
-        currentBalance: number,
         paymentType: 'abono' | 'pago_completo',
         amount: number,
         notes: string,
         userId: string
     ): Promise<void> {
-        const newBalance = paymentType === 'pago_completo' ? 0 : Math.max(0, currentBalance - amount);
-
-        const { error } = await supabase
-            .from('municipal_accounts')
-            .update({
-                balance: newBalance,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', accountId);
-
-        if (error) throw error;
-
-        // Registrar el pago en el historial
-        const { error: historyError } = await supabase
-            .from('municipal_payments')
-            .insert({
-                account_id: accountId,
-                amount,
-                type: paymentType,
-                notes,
-                registered_by: null,               // columna nullable; app usa clave anon sin sesiones JWT
-                created_at: new Date().toISOString()
-            });
-
-        if (historyError) throw historyError;      // FIX: lanzar la variable correcta (antes lanzaba `error` = null)
+        const { error } = await supabase.rpc('add_municipal_payment', {
+            p_account_id: accountId,
+            p_payment_type: paymentType,
+            p_amount: amount,
+            p_notes: notes,
+            p_user_id: userId,
+        });
+        if (error) throw new Error(error.message);
     },
 
     /**
@@ -919,46 +901,14 @@ export const SalesService = {
      * Agrega un cargo (venta a crédito) a una cuenta de mayoreo
      */
     async addWholesaleCharge(accountId: string, amount: number, saleId: string, notes?: string, userId?: string): Promise<void> {
-        // 1. Obtener cuenta actual
-        const { data: account, error: fetchError } = await supabase
-            .from('wholesale_accounts')
-            .select('balance, credit_limit')
-            .eq('id', accountId)
-            .single();
-
-        if (fetchError) throw fetchError;
-
-        const newBalance = (account.balance || 0) + amount;
-
-        // 2. Verificar que no exceda el límite
-        if (newBalance > account.credit_limit) {
-            throw new Error(`El cargo excede el límite de crédito. Límite: ${account.credit_limit}, Saldo actual: ${account.balance}, Cargo: ${amount}`);
-        }
-
-        // 3. Actualizar balance
-        const { error: updateError } = await supabase
-            .from('wholesale_accounts')
-            .update({
-                balance: newBalance,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', accountId);
-
-        if (updateError) throw updateError;
-
-        // 4. Registrar movimiento
-        const { error: historyError } = await supabase
-            .from('wholesale_payments')
-            .insert({
-                wholesale_account_id: accountId,
-                amount,
-                payment_type: 'cargo',
-                sale_id: saleId,
-                notes,
-                registered_by: userId || 'system'
-            });
-
-        if (historyError) throw historyError;
+        const { error } = await supabase.rpc('add_wholesale_charge', {
+            p_account_id: accountId,
+            p_amount: amount,
+            p_sale_id: saleId || null,
+            p_notes: notes || null,
+            p_user_id: userId || null,
+        });
+        if (error) throw new Error(error.message);
     },
 
     /**
@@ -971,43 +921,14 @@ export const SalesService = {
         notes: string,
         userId: string
     ): Promise<void> {
-        // 1. Obtener cuenta actual
-        const { data: account, error: fetchError } = await supabase
-            .from('wholesale_accounts')
-            .select('balance')
-            .eq('id', accountId)
-            .single();
-
-        if (fetchError) throw fetchError;
-
-        const newBalance = paymentType === 'pago_completo' 
-            ? 0 
-            : Math.max(0, (account.balance || 0) - amount);
-
-        // 2. Actualizar balance
-        const { error: updateError } = await supabase
-            .from('wholesale_accounts')
-            .update({
-                balance: newBalance,
-                last_payment_date: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', accountId);
-
-        if (updateError) throw updateError;
-
-        // 3. Registrar movimiento
-        const { error: historyError } = await supabase
-            .from('wholesale_payments')
-            .insert({
-                wholesale_account_id: accountId,
-                amount,
-                payment_type: paymentType,
-                notes,
-                registered_by: userId
-            });
-
-        if (historyError) throw historyError;
+        const { error } = await supabase.rpc('add_wholesale_payment', {
+            p_account_id: accountId,
+            p_payment_type: paymentType,
+            p_amount: amount,
+            p_notes: notes,
+            p_user_id: userId,
+        });
+        if (error) throw new Error(error.message);
     },
 
     /**

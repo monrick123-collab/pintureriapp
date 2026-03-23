@@ -52,6 +52,7 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
       productName: 'Pintura Blanca 1L',
       quantity: 2,
       price: 150,
+      total: 300,
     }];
 
     await SalesService.processSale(branchId, items, 300, 'cash', undefined, {
@@ -77,7 +78,7 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
     supabase.rpc.mockResolvedValue({ data: expectedId, error: null });
 
     const result = await SalesService.processSale('BR-TEST', [{
-      productId: 'p1', productName: 'Prod', quantity: 1, price: 100
+      productId: 'p1', productName: 'Prod', quantity: 1, price: 100, total: 100
     }], 100, 'cash', undefined, { subtotal: 100, iva: 0 });
 
     expect(result).toBe(expectedId);
@@ -92,7 +93,7 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
 
     await expect(
       SalesService.processSale('BR-TEST', [{
-        productId: 'prod-001', productName: 'Producto', quantity: 99999, price: 10
+        productId: 'prod-001', productName: 'Producto', quantity: 99999, price: 10, total: 999990
       }], 999990, 'cash', undefined, { subtotal: 999990, iva: 0 })
     ).rejects.toThrow('insufficient stock for product prod-001');
   });
@@ -101,8 +102,8 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
     supabase.rpc.mockResolvedValue({ data: 'sale-xyz', error: null });
 
     const items = [
-      { productId: 'p1', productName: 'Pintura A', quantity: 3, price: 100 },
-      { productId: 'p2', productName: 'Pintura B', quantity: 1, price: 250 },
+      { productId: 'p1', productName: 'Pintura A', quantity: 3, price: 100, total: 300 },
+      { productId: 'p2', productName: 'Pintura B', quantity: 1, price: 250, total: 250 },
     ];
 
     await SalesService.processSale('BR-TEST', items, 550, 'card', undefined, {
@@ -121,7 +122,7 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
     supabase.rpc.mockResolvedValue({ data: 'sale-w', error: null });
 
     await SalesService.processSale('BR-TEST', [{
-      productId: 'p1', productName: 'Cubeta', quantity: 5, price: 800
+      productId: 'p1', productName: 'Cubeta', quantity: 5, price: 800, total: 4000
     }], 4000, 'transfer', undefined, {
       subtotal: 4000, iva: 0, isWholesale: true, paymentType: 'credito', creditDays: 30
     });
@@ -143,7 +144,7 @@ describe('processSale() — unit tests con Supabase mockeado', () => {
     // Esto simula una venta con transferencia pendiente de aprobación
     // (activa el bloque de notificación en processSale)
     const result = await SalesService.processSale('BR-TEST', [{
-      productId: 'p1', productName: 'Prod', quantity: 1, price: 500
+      productId: 'p1', productName: 'Prod', quantity: 1, price: 500, total: 500
     }], 500, 'transfer', undefined, {
       subtotal: 500, iva: 0, isWholesale: true, paymentStatus: 'pending'
     });

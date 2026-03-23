@@ -44,7 +44,7 @@ export interface Product {
   price: number;
   stock: number;
   inventory: Record<string, number>;
-  image: string;
+  image?: string;
   status: 'available' | 'low' | 'out' | 'expired';
   wholesalePrice?: number;
   wholesaleMinQty?: number;

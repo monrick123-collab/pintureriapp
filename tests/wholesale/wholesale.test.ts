@@ -53,7 +53,7 @@ describe('processSale() — parámetros específicos de mayoreo', () => {
 
     await SalesService.processSale(
       'BR-TEST',
-      [{ productId: 'p1', productName: 'Cubeta 19L', quantity: 10, price: 950 }],
+      [{ productId: 'p1', productName: 'Cubeta 19L', quantity: 10, price: 950, total: 9500 }],
       11020,
       'transfer',
       'client-001',
@@ -82,7 +82,7 @@ describe('processSale() — parámetros específicos de mayoreo', () => {
 
     await SalesService.processSale(
       'BR-TEST',
-      [{ productId: 'p1', productName: 'Pintura Blanca 1L', quantity: 5, price: 800 }],
+      [{ productId: 'p1', productName: 'Pintura Blanca 1L', quantity: 5, price: 800, total: 4000 }],
       4640,
       'card',
       'client-002',
@@ -113,7 +113,7 @@ describe('processSale() — parámetros específicos de mayoreo', () => {
 
     await SalesService.processSale(
       'BR-TEST',
-      [{ productId: 'p1', productName: 'Barniz Marino', quantity: 3, price: 600 }],
+      [{ productId: 'p1', productName: 'Barniz Marino', quantity: 3, price: 600, total: 1800 }],
       2088,
       'transfer',
       'client-003',
@@ -141,7 +141,7 @@ describe('processSale() — parámetros específicos de mayoreo', () => {
 
     await SalesService.processSale(
       'BR-TEST',
-      [{ productId: 'p1', productName: 'Esmalte', quantity: 20, price: 300 }],
+      [{ productId: 'p1', productName: 'Esmalte', quantity: 20, price: 300, total: 6000 }],
       6960,
       'cash',
       'client-004',
@@ -332,7 +332,7 @@ describe('setWholesaleCreditLimit()', () => {
   });
 });
 
-describe('addWholesalePayment() — abonos y pagos completos', () => {
+describe('addWholesalePayment() — llama RPC atómico add_wholesale_payment', () => {
   let SalesService: typeof import('../../services/salesService').SalesService;
   let supabase: any;
 
@@ -344,86 +344,127 @@ describe('addWholesalePayment() — abonos y pagos completos', () => {
     supabase = supabaseModule.supabase;
   });
 
-  it('abono: reduce el saldo correctamente e inserta registro con payment_type="abono"', async () => {
-    // Call 1: leer saldo actual
-    const singleFn = vi.fn().mockResolvedValue({ data: { balance: 1000 }, error: null });
-    const eqRead = vi.fn().mockReturnValue({ single: singleFn });
-    const selectFn = vi.fn().mockReturnValue({ eq: eqRead });
-
-    // Call 2: actualizar saldo (1000 - 300 = 700)
-    const eqUpdate = vi.fn().mockResolvedValue({ error: null });
-    const updateFn = vi.fn().mockReturnValue({ eq: eqUpdate });
-
-    // Call 3: insertar movimiento
-    const insertFn = vi.fn().mockResolvedValue({ error: null });
-
-    supabase.from
-      .mockReturnValueOnce({ select: selectFn })
-      .mockReturnValueOnce({ update: updateFn })
-      .mockReturnValueOnce({ insert: insertFn });
+  it('abono: llama rpc con p_payment_type="abono" y parámetros correctos', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 700 }, error: null });
 
     await SalesService.addWholesalePayment('acc-789', 'abono', 300, 'Pago parcial', 'user-001');
 
-    expect(updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ balance: 700 })
-    );
-    expect(insertFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        wholesale_account_id: 'acc-789',
-        amount: 300,
-        payment_type: 'abono',
-        notes: 'Pago parcial',
-        registered_by: 'user-001',
-      })
-    );
+    expect(supabase.rpc).toHaveBeenCalledWith('add_wholesale_payment', {
+      p_account_id: 'acc-789',
+      p_payment_type: 'abono',
+      p_amount: 300,
+      p_notes: 'Pago parcial',
+      p_user_id: 'user-001',
+    });
   });
 
-  it('pago_completo: establece saldo en 0 independientemente del balance anterior', async () => {
-    const singleFn = vi.fn().mockResolvedValue({ data: { balance: 5000 }, error: null });
-    const eqRead = vi.fn().mockReturnValue({ single: singleFn });
-    const selectFn = vi.fn().mockReturnValue({ eq: eqRead });
-
-    const eqUpdate = vi.fn().mockResolvedValue({ error: null });
-    const updateFn = vi.fn().mockReturnValue({ eq: eqUpdate });
-
-    const insertFn = vi.fn().mockResolvedValue({ error: null });
-
-    supabase.from
-      .mockReturnValueOnce({ select: selectFn })
-      .mockReturnValueOnce({ update: updateFn })
-      .mockReturnValueOnce({ insert: insertFn });
+  it('pago_completo: llama rpc con p_payment_type="pago_completo"', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 0 }, error: null });
 
     await SalesService.addWholesalePayment('acc-789', 'pago_completo', 5000, 'Liquidación total', 'user-001');
 
-    expect(updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ balance: 0 })
-    );
-    expect(insertFn).toHaveBeenCalledWith(
-      expect.objectContaining({ payment_type: 'pago_completo' })
-    );
+    const args = supabase.rpc.mock.calls[0][1];
+    expect(args.p_payment_type).toBe('pago_completo');
+    expect(args.p_amount).toBe(5000);
+    expect(args.p_account_id).toBe('acc-789');
   });
 
-  it('abono no produce saldo negativo — mínimo 0 con Math.max()', async () => {
-    const singleFn = vi.fn().mockResolvedValue({ data: { balance: 100 }, error: null });
-    const eqRead = vi.fn().mockReturnValue({ single: singleFn });
-    const selectFn = vi.fn().mockReturnValue({ eq: eqRead });
+  it('lanza Error si el RPC retorna error', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'Cuenta mayoreo no encontrada' } });
 
-    const eqUpdate = vi.fn().mockResolvedValue({ error: null });
-    const updateFn = vi.fn().mockReturnValue({ eq: eqUpdate });
+    await expect(
+      SalesService.addWholesalePayment('acc-bad', 'abono', 300, 'Test', 'user-001')
+    ).rejects.toThrow('Cuenta mayoreo no encontrada');
+  });
+});
 
-    const insertFn = vi.fn().mockResolvedValue({ error: null });
+describe('addWholesaleCharge() — llama RPC atómico add_wholesale_charge', () => {
+  let SalesService: typeof import('../../services/salesService').SalesService;
+  let supabase: any;
 
-    supabase.from
-      .mockReturnValueOnce({ select: selectFn })
-      .mockReturnValueOnce({ update: updateFn })
-      .mockReturnValueOnce({ insert: insertFn });
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const salesModule = await import('../../services/salesService');
+    const supabaseModule = await import('../../services/supabase');
+    SalesService = salesModule.SalesService;
+    supabase = supabaseModule.supabase;
+  });
 
-    // Abono de 500 cuando el saldo es solo 100 → Math.max(0, 100-500) = 0
-    await SalesService.addWholesalePayment('acc-789', 'abono', 500, 'Sobrepago', 'user-001');
+  it('cargo: llama rpc con todos los parámetros correctos', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 1500 }, error: null });
 
-    expect(updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ balance: 0 })
-    );
+    await SalesService.addWholesaleCharge('acc-123', 1500, 'sale-456', 'Venta a crédito', 'user-001');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('add_wholesale_charge', {
+      p_account_id: 'acc-123',
+      p_amount: 1500,
+      p_sale_id: 'sale-456',
+      p_notes: 'Venta a crédito',
+      p_user_id: 'user-001',
+    });
+  });
+
+  it('sin notes/userId: envía null en p_notes y p_user_id', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 500 }, error: null });
+
+    await SalesService.addWholesaleCharge('acc-123', 500, 'sale-789');
+
+    const args = supabase.rpc.mock.calls[0][1];
+    expect(args.p_notes).toBeNull();
+    expect(args.p_user_id).toBeNull();
+  });
+
+  it('lanza Error si el RPC rechaza (límite excedido)', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'El cargo excede el límite de crédito' } });
+
+    await expect(
+      SalesService.addWholesaleCharge('acc-123', 999999, 'sale-000')
+    ).rejects.toThrow('El cargo excede el límite de crédito');
+  });
+});
+
+describe('addMunicipalPayment() — llama RPC atómico add_municipal_payment', () => {
+  let SalesService: typeof import('../../services/salesService').SalesService;
+  let supabase: any;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const salesModule = await import('../../services/salesService');
+    const supabaseModule = await import('../../services/supabase');
+    SalesService = salesModule.SalesService;
+    supabase = supabaseModule.supabase;
+  });
+
+  it('abono: llama rpc con p_payment_type="abono" y parámetros correctos', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 2000 }, error: null });
+
+    await SalesService.addMunicipalPayment('mun-001', 'abono', 500, 'Pago municipal', 'user-002');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('add_municipal_payment', {
+      p_account_id: 'mun-001',
+      p_payment_type: 'abono',
+      p_amount: 500,
+      p_notes: 'Pago municipal',
+      p_user_id: 'user-002',
+    });
+  });
+
+  it('pago_completo: llama rpc con p_payment_type="pago_completo"', async () => {
+    supabase.rpc.mockResolvedValue({ data: { new_balance: 0 }, error: null });
+
+    await SalesService.addMunicipalPayment('mun-001', 'pago_completo', 10000, 'Liquidación', 'user-002');
+
+    const args = supabase.rpc.mock.calls[0][1];
+    expect(args.p_payment_type).toBe('pago_completo');
+    expect(args.p_amount).toBe(10000);
+  });
+
+  it('lanza Error si el RPC falla', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'Cuenta municipal no encontrada' } });
+
+    await expect(
+      SalesService.addMunicipalPayment('mun-bad', 'abono', 100, 'Test', 'user-002')
+    ).rejects.toThrow('Cuenta municipal no encontrada');
   });
 });
 
@@ -693,5 +734,95 @@ describe('Integridad de ventas mayoreo existentes', () => {
 
     // Si hay error de RLS, la política anon no está configurada
     expect(error, `RLS bloqueó acceso a wholesale_accounts: ${error?.message}`).toBeNull();
+  });
+});
+
+// ─── Sección E — Integración: RPCs atómicos de crédito ───────────────────────
+// Valida que los RPCs existen en Supabase y responden correctamente.
+// Usa un UUID inexistente para provocar el error "cuenta no encontrada"
+// en lugar de "function does not exist" — lo que confirma que el RPC está activo.
+
+const FAKE_UUID = '00000000-0000-0000-0000-000000000000';
+
+describe('RPCs atómicos de crédito — existencia y acceso anon', () => {
+  it('add_wholesale_charge: RPC existe y es callable con clave anon', async () => {
+    const client = createTestClient();
+    const { error } = await client.rpc('add_wholesale_charge', {
+      p_account_id: FAKE_UUID,
+      p_amount: 100,
+    });
+
+    if (isNetworkTimeout(error)) {
+      console.log('  ⚠ Sin conexión a Supabase — test saltado');
+      return;
+    }
+
+    // El error debe ser de negocio ("no encontrada"), no de infraestructura ("function not found")
+    expect(error?.message, 'El RPC add_wholesale_charge no existe en Supabase').not.toContain('Could not find the function');
+    expect(error?.message).toContain('no encontrada');
+  });
+
+  it('add_wholesale_payment: RPC existe y es callable con clave anon', async () => {
+    const client = createTestClient();
+    const { error } = await client.rpc('add_wholesale_payment', {
+      p_account_id: FAKE_UUID,
+      p_payment_type: 'abono',
+      p_amount: 100,
+    });
+
+    if (isNetworkTimeout(error)) {
+      console.log('  ⚠ Sin conexión a Supabase — test saltado');
+      return;
+    }
+
+    expect(error?.message, 'El RPC add_wholesale_payment no existe en Supabase').not.toContain('Could not find the function');
+    expect(error?.message).toContain('no encontrada');
+  });
+
+  it('add_municipal_payment: RPC existe y es callable con clave anon', async () => {
+    const client = createTestClient();
+    const { error } = await client.rpc('add_municipal_payment', {
+      p_account_id: FAKE_UUID,
+      p_payment_type: 'abono',
+      p_amount: 100,
+    });
+
+    if (isNetworkTimeout(error)) {
+      console.log('  ⚠ Sin conexión a Supabase — test saltado');
+      return;
+    }
+
+    expect(error?.message, 'El RPC add_municipal_payment no existe en Supabase').not.toContain('Could not find the function');
+    expect(error?.message).toContain('no encontrada');
+  });
+
+  it('add_wholesale_charge: rechaza cargo que excede límite de crédito', async () => {
+    const client = createTestClient();
+
+    // Buscar una cuenta real con límite de crédito
+    const { data: accounts } = await client
+      .from('wholesale_accounts')
+      .select('id, credit_limit')
+      .gt('credit_limit', 0)
+      .limit(1);
+
+    if (!accounts || accounts.length === 0) {
+      console.log('  ⚠ No hay cuentas mayoreo con crédito — test saltado');
+      return;
+    }
+
+    const { id, credit_limit } = accounts[0];
+    const { error } = await client.rpc('add_wholesale_charge', {
+      p_account_id: id,
+      p_amount: credit_limit + 999999, // monto que con certeza excede el límite
+    });
+
+    if (isNetworkTimeout(error)) {
+      console.log('  ⚠ Sin conexión a Supabase — test saltado');
+      return;
+    }
+
+    expect(error, 'El RPC debió rechazar el cargo por exceder el límite').not.toBeNull();
+    expect(error?.message).toContain('límite de crédito');
   });
 });

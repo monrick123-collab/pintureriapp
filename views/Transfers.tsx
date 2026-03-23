@@ -9,6 +9,7 @@ import { exportToCSV } from '../utils/csvExport';
 import { useToast } from '../hooks/useToast';
 import { translateStatus, getStatusColor } from '../utils/formatters';
 import Badge from '../components/ui/Badge';
+import { NotificationService } from '../services/notificationService';
 
 interface TransfersProps {
     user: User;
@@ -165,6 +166,17 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setNotes('');
             loadData();
             toast.success('Traspaso iniciado', 'El traspaso fue creado correctamente.');
+            // Evento 1: notificar al Admin que hay un traspaso nuevo pendiente de aprobación
+            try {
+                const fromBranchName = allBranches.find(b => b.id === fromBranchId)?.name || fromBranchId;
+                const toBranchName   = allBranches.find(b => b.id === toBranchId)?.name   || toBranchId;
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Nuevo Traspaso Solicitado',
+                    message: `${fromBranchName} solicitó un traspaso de ${cart.length} artículo(s) a ${toBranchName}.`,
+                    actionUrl: '/transfers'
+                });
+            } catch (_) {}
         } catch (e: any) {
             console.error("Error en createStockTransfer:", e);
             toast.error('Error al crear traspaso', e.message || e.toString());
@@ -259,6 +271,17 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setNotes('');
             loadData();
             toast.success('Oferta enviada', 'La sucursal destino seleccionará qué productos desea recibir.');
+            // Evento 3: notificar al Admin que hay un trueque nuevo pendiente
+            try {
+                const fromBranchName = allBranches.find(b => b.id === fromBranchId)?.name || fromBranchId;
+                const toBranchName   = allBranches.find(b => b.id === toBranchId)?.name   || toBranchId;
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Nueva Oferta de Trueque',
+                    message: `${fromBranchName} propone un trueque de ${cart.length} artículo(s) con ${toBranchName}. Pendiente de revisión.`,
+                    actionUrl: '/transfers'
+                });
+            } catch (_) {}
         } catch (e: any) {
             console.error("Error en createBarterOffer:", e);
             toast.error('Error al crear oferta', e.message || e.toString());
@@ -283,6 +306,16 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setSelectionCart([]);
             loadData();
             toast.success('Selección enviada', 'El administrador revisará la solicitud de trueque.');
+            // Evento 4: notificar al Admin que la sucursal B respondió al trueque
+            try {
+                const folioShort = selectedBarter.id.slice(0, 8).toUpperCase();
+                await NotificationService.createNotification({
+                    targetRole: 'ADMIN',
+                    title: 'Trueque Respondido',
+                    message: `Una sucursal respondió al trueque #${folioShort} con ${selectionCart.length} artículo(s). Pendiente de aprobación.`,
+                    actionUrl: '/transfers'
+                });
+            } catch (_) {}
         } catch (e: any) {
             console.error("Error al seleccionar items:", e);
             toast.error('Error al enviar selección', e.message || e.toString());
@@ -356,6 +389,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsDetailModalOpen(false);
             loadData();
             toast.success('Traspaso aprobado', 'El traspaso está ahora en tránsito.');
+            // Evento 2: notificar al Encargado de la sucursal destino
+            try {
+                const t = selectedTransfer;
+                if (t) {
+                    const toBranchName = allBranches.find(b => b.id === t.toBranchId)?.name || '';
+                    await NotificationService.createNotification({
+                        targetRole: 'STORE_MANAGER',
+                        targetBranchId: t.toBranchId,
+                        title: 'Traspaso En Tránsito',
+                        message: `Tu sucursal recibirá un traspaso de ${t.items?.length ?? '?'} artículo(s). Estado: En Tránsito.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
         } catch (e: any) {
             toast.error('Error al aprobar', e.message || e.toString());
         } finally {
@@ -372,6 +419,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsBarterDetailOpen(false);
             loadData();
             toast.success('Trueque aprobado', 'El stock está reservado. La sucursal origen debe confirmar el envío.');
+            // Evento 5: notificar al Encargado origen que el trueque fue aprobado y debe enviar
+            try {
+                const b = selectedBarter;
+                if (b) {
+                    const toBranchName = allBranches.find(br => br.id === b.toBranchId)?.name || 'la otra sucursal';
+                    await NotificationService.createNotification({
+                        targetRole: 'STORE_MANAGER',
+                        targetBranchId: b.fromBranchId,
+                        title: 'Trueque Aprobado — Confirma Envío',
+                        message: `El trueque con ${toBranchName} fue aprobado. Confirma el envío de los productos a tu cargo.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
         } catch (e: any) {
             console.error("Error al aprobar trueque:", e);
             toast.error('Error al aprobar', e.message || e.toString());
@@ -388,6 +449,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             await InventoryService.rejectBarterTransfer(id);
             setIsBarterDetailOpen(false);
             loadData();
+            // Evento 6: notificar al Encargado origen que fue rechazado
+            try {
+                const b = selectedBarter;
+                if (b) {
+                    const toBranchName = allBranches.find(br => br.id === b.toBranchId)?.name || 'la sucursal destino';
+                    await NotificationService.createNotification({
+                        targetRole: 'STORE_MANAGER',
+                        targetBranchId: b.fromBranchId,
+                        title: 'Trueque Rechazado',
+                        message: `El trueque propuesto con ${toBranchName} fue rechazado por el administrador.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
         } catch (e: any) {
             console.error("Error al rechazar trueque:", e);
         } finally {
@@ -403,6 +478,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsBarterDetailOpen(false);
             loadData();
             toast.success('Envío confirmado', 'El trueque está en tránsito. Esperando confirmación de recepción.');
+            // Evento 7: notificar al Encargado destino que los productos van en camino
+            try {
+                const b = selectedBarter;
+                if (b) {
+                    const fromBranchName = allBranches.find(br => br.id === b.fromBranchId)?.name || 'la sucursal origen';
+                    await NotificationService.createNotification({
+                        targetRole: 'STORE_MANAGER',
+                        targetBranchId: b.toBranchId,
+                        title: 'Trueque En Camino',
+                        message: `${fromBranchName} confirmó el envío de tu trueque. Confirma la recepción al recibirlos.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
         } catch (e: any) {
             toast.error('Error al confirmar envío', e.message || e.toString());
         } finally {
@@ -418,6 +507,20 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsBarterDetailOpen(false);
             loadData();
             toast.success('Trueque completado', 'El inventario de ambas sucursales ha sido actualizado.');
+            // Evento 8: notificar al Admin que el trueque está cerrado
+            try {
+                const b = selectedBarter;
+                if (b) {
+                    const fromName = allBranches.find(br => br.id === b.fromBranchId)?.name || '?';
+                    const toName   = allBranches.find(br => br.id === b.toBranchId)?.name   || '?';
+                    await NotificationService.createNotification({
+                        targetRole: 'ADMIN',
+                        title: 'Trueque Completado',
+                        message: `El trueque entre ${fromName} y ${toName} fue completado. Inventarios actualizados.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
         } catch (e: any) {
             toast.error('Error al confirmar recepción', e.message || e.toString());
         } finally {

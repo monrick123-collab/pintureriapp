@@ -12,7 +12,7 @@ const mapDbProduct = (item: Record<string, any>): Product => ({
     brand: item.brand || item.products?.brand, // New field
     description: item.description || item.products?.description || '',
     price: parseFloat(item.price || item.products?.price || '0'),
-    image: item.image || item.products?.image || '',
+    image: item.image || item.products?.image || undefined,
     status: (item.status || item.products?.status || 'out') as 'available' | 'low' | 'out' | 'expired',
     stock: item.stock || 0,
     wholesalePrice: parseFloat(item.wholesale_price || item.products?.wholesale_price || '0'),
@@ -58,26 +58,20 @@ export const InventoryService = {
     async getProductsByBranch(branchId: string): Promise<Product[]> {
         if (branchId === 'ALL') return this.getProducts();
 
-        // 1. Traer TODOS los productos
-        const { data: allProds, error: prodError } = await supabase
-            .from('products')
-            .select('*');
-        if (prodError) throw prodError;
-
-        // 2. Traer el inventario de esa sucursal
-        const { data: invRows } = await supabase
+        const { data, error } = await supabase
             .from('inventory')
-            .select('product_id, stock')
+            .select('stock, products(*)')
             .eq('branch_id', branchId);
 
-        const stockMap: Record<string, number> = {};
-        (invRows || []).forEach(r => { stockMap[r.product_id] = r.stock; });
+        if (error) throw error;
 
-        return (allProds || []).map(item => ({
-            ...mapDbProduct(item),
-            stock: stockMap[item.id] || 0,
-            inventory: { [branchId]: stockMap[item.id] || 0 }
-        }));
+        return (data || [])
+            .filter((row: any) => row.products !== null)
+            .map((row: any) => ({
+                ...mapDbProduct(row.products),
+                stock: row.stock,
+                inventory: { [branchId]: row.stock }
+            }));
     },
 
     async createProduct(product: Omit<Product, 'id' | 'inventory'>, initialStock = 0, initialBranchId?: string): Promise<any> {
@@ -161,6 +155,7 @@ export const InventoryService = {
     },
 
     async updateStock(productId: string, branchId: string, newStock: number) {
+        if (newStock < 0) throw new Error('El stock no puede ser negativo');
         // Upsert: Si existe actualiza, si no crea
         const { error } = await supabase
             .from('inventory')
@@ -633,7 +628,7 @@ export const InventoryService = {
             createdBy: s.created_by,
             createdByName: s.created_by, // Fallback to ID/Email stored in column if available
             assignedAdminId: s.assigned_admin_id,
-            assignedAdminName: adminProfiles[s.assigned_admin_id] || null,
+            assignedAdminName: adminProfiles[s.assigned_admin_id] || undefined,
             status: s.status,
             estimatedArrival: s.estimated_arrival,
             totalAmount: s.total_amount,
@@ -725,85 +720,24 @@ export const InventoryService = {
     },
 
     async confirmSupplyOrderArrival(orderId: string, receivedItems?: { id: string, productId: string, status: string, receivedQuantity: number, notes?: string }[]): Promise<void> {
-        // 1. Get order items
-        const { data: order, error: fetchError } = await supabase
-            .from('supply_orders')
-            .select(`
-                *,
-                supply_order_items (*)
-            `)
-            .eq('id', orderId)
-            .single();
+        const p_items = receivedItems && receivedItems.length > 0
+            ? receivedItems.map(i => ({
+                id: i.id,
+                product_id: i.productId,
+                status: i.status,
+                received_quantity: i.receivedQuantity,
+                notes: i.notes ?? null,
+            }))
+            : null;
 
-        if (fetchError) throw fetchError;
-        if (order.status !== 'shipped') throw new Error("El pedido no está en estado 'Enviado'");
+        const { data, error } = await supabase.rpc('confirm_supply_order_arrival', {
+            p_order_id: orderId,
+            p_items,
+        });
 
-        let hasIncidents = false;
+        if (error) throw new Error(error.message);
 
-        if (receivedItems && receivedItems.length > 0) {
-            // Update each item
-            for (const rItem of receivedItems) {
-                if (rItem.status !== 'received_full') {
-                    hasIncidents = true;
-                }
-                const { error: itemUpdateError } = await supabase
-                    .from('supply_order_items')
-                    .update({ status: rItem.status, received_quantity: rItem.receivedQuantity, notes: rItem.notes || null })
-                    .eq('id', rItem.id);
-
-                if (itemUpdateError) throw itemUpdateError;
-            }
-        } else {
-            // Recibido completamente (flujo por defecto / retrocompatibilidad)
-            const { error: itemsUpdateError } = await supabase
-                .from('supply_order_items')
-                .update({ status: 'received_full' })
-                .eq('order_id', orderId);
-            if (itemsUpdateError) throw itemsUpdateError;
-        }
-
-        const finalStatus = hasIncidents ? 'received_with_incidents' : 'received';
-
-        // 2. Update status
-        const { error: updateError } = await supabase
-            .from('supply_orders')
-            .update({ status: finalStatus, updated_at: new Date().toISOString() })
-            .eq('id', orderId);
-
-        if (updateError) throw updateError;
-
-        // 3. Update Inventory for each item, but only the received quantity
-        const itemsToProcess = receivedItems || order.supply_order_items.map((i: any) => ({
-            productId: i.product_id,
-            receivedQuantity: i.quantity // If no specific items passed, assume full reception
-        }));
-
-        for (const item of itemsToProcess) {
-            // Solo aumentamos stock si quantity > 0
-            if (item.receivedQuantity > 0) {
-                const { data: currentInv } = await supabase
-                    .from('inventory')
-                    .select('*')
-                    .eq('branch_id', order.branch_id)
-                    .eq('product_id', item.productId)
-                    .single();
-
-                if (currentInv) {
-                    await supabase
-                        .from('inventory')
-                        .update({ stock: currentInv.stock + item.receivedQuantity, updated_at: new Date().toISOString() })
-                        .eq('id', currentInv.id);
-                } else {
-                    await supabase
-                        .from('inventory')
-                        .insert({
-                            branch_id: order.branch_id,
-                            product_id: item.productId,
-                            stock: item.receivedQuantity
-                        });
-                }
-            }
-        }
+        const hasIncidents = data?.has_incidents ?? false;
 
         try {
             await NotificationService.createNotification({
@@ -1733,26 +1667,10 @@ export const InventoryService = {
     },
 
     async acceptCounterOffer(barterId: string): Promise<void> {
-        // Move counter offer items to received items and set to pending_approval
-        const { data: counterItems } = await supabase
-            .from('barter_counter_offers')
-            .select('*')
-            .eq('barter_id', barterId);
-
-        if (counterItems && counterItems.length > 0) {
-            const receivedRows = counterItems.map((i: any) => ({
-                barter_id: i.barter_id,
-                product_id: i.product_id,
-                quantity: i.quantity
-            }));
-
-            await supabase.from('barter_received_items').insert(receivedRows);
-        }
-
-        await supabase
-            .from('barter_transfers')
-            .update({ status: 'pending_approval', updated_at: new Date().toISOString() })
-            .eq('id', barterId);
+        const { error } = await supabase.rpc('accept_barter_counter_offer', {
+            p_barter_id: barterId,
+        });
+        if (error) throw new Error(error.message);
     },
 
     async cancelBarterTransfer(barterId: string): Promise<void> {

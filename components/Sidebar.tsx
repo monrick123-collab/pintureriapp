@@ -203,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <div className="flex items-center gap-3">
             <div
               className="size-9 rounded-xl bg-slate-200 dark:bg-slate-700 bg-center bg-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0"
-              style={{ backgroundImage: `url(${user.avatar})` }}
+              style={user.avatar ? { backgroundImage: `url(${user.avatar})` } : {}}
             />
             <div className="flex flex-col overflow-hidden mr-auto">
               <p className="text-sm font-black text-slate-900 dark:text-white truncate leading-none">{user.name}</p>

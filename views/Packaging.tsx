@@ -15,6 +15,7 @@ type PackageType = 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
 interface CalcLine {
     packageType: PackageType;
     qty: number;
+    targetProductId: string;
 }
 
 const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: string; colorText: string }[] = [
@@ -25,10 +26,10 @@ const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: s
 ];
 
 const INITIAL_CALC_LINES: CalcLine[] = [
-    { packageType: 'galon',        qty: 0 },
-    { packageType: 'litro',        qty: 0 },
-    { packageType: 'medio_litro',  qty: 0 },
-    { packageType: 'cuarto_litro', qty: 0 },
+    { packageType: 'galon',        qty: 0, targetProductId: '' },
+    { packageType: 'litro',        qty: 0, targetProductId: '' },
+    { packageType: 'medio_litro',  qty: 0, targetProductId: '' },
+    { packageType: 'cuarto_litro', qty: 0, targetProductId: '' },
 ];
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -94,7 +95,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
     const activeLines = calcLines.filter(l => l.qty > 0);
-    const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId;
+    const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId && activeLines.every(l => !!l.targetProductId);
 
     // Reset lines when tambo changes
     useEffect(() => {
@@ -197,7 +198,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                 branchId, bulkId, drumQty, user.id,
                 activeLines.map(l => ({
                     packageType: l.packageType,
-                    targetProductId: '',
+                    targetProductId: l.targetProductId,
                     quantity: l.qty,
                     litersPerUnit: getLitersPerUnit(l.packageType)
                 })),
@@ -548,10 +549,30 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                         return (
                                             <div key={def.type} className={`${def.colorBg} border border-slate-200 dark:border-slate-700 rounded-2xl p-5`}>
                                                 <h3 className={`font-black text-lg mb-1 ${def.colorText}`}>{def.label}</h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-bold">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 font-bold">
                                                     {litersPerUnit.toFixed(2)} L / unidad
                                                 </p>
 
+                                                <div className="mb-4">
+                                                    <select
+                                                        value={line.targetProductId}
+                                                        onChange={e =>
+                                                            setCalcLines(
+                                                                calcLines.map((l, i) =>
+                                                                    i === idx ? { ...l, targetProductId: e.target.value } : l
+                                                                )
+                                                            )
+                                                        }
+                                                        className={`w-full p-2 text-xs font-bold rounded-lg outline-none border dark:border-slate-700 bg-white dark:bg-slate-800 ${line.qty > 0 && !line.targetProductId ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                    >
+                                                        <option value="">Selecciona SKU destino...</option>
+                                                        {allProducts.map(p => (
+                                                            <option key={p.id} value={p.id}>
+                                                                {p.sku} - {p.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
 
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <button

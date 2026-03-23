@@ -331,7 +331,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         if (isNaN(amount) || amount <= 0) { alert('Monto inválido.'); return; }
         try {
             setLoading(true);
-            await SalesService.addMunicipalPayment(selectedAccount.id, selectedAccount.balance, paymentFormType, amount, paymentNotes, user.id);
+            await SalesService.addMunicipalPayment(selectedAccount.id, paymentFormType, amount, paymentNotes, user.id);
             setPaymentAmount(''); setPaymentNotes('');
             await loadData();
             // Refresh selected account

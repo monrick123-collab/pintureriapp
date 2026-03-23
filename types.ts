@@ -123,6 +123,7 @@ export interface SupplyOrderItem {
   totalPrice: number;
   status?: 'pending' | 'received_full' | 'received_partial' | 'damaged';
   received_quantity?: number;
+  notes?: string;
 }
 
 export interface SupplyOrder {

@@ -23,7 +23,9 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const [search, setSearch] = useState('');
     const [selectedSheet, setSelectedSheet] = useState<RestockSheet | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [activeTab, setActiveTab] = useState<'new' | 'history'>(
+        (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB) ? 'history' : 'new'
+    );
 
     // Diferences Modal States
     const [isDifferencesModalOpen, setIsDifferencesModalOpen] = useState(false);
@@ -46,7 +48,9 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
     const myBranchId = user.branchId || 'BR-MAIN';
     // State for filtering history
-    const [selectedBranchId, setSelectedBranchId] = useState<string>(myBranchId);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>(
+        (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB) ? 'all' : myBranchId
+    );
     // State for selecting target branch when creating a new request
     const [targetBranchId, setTargetBranchId] = useState<string>(myBranchId);
 
@@ -229,8 +233,9 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
     const translateStatus = (status: string) => {
         const dict: Record<string, string> = {
             'pending': 'Pendiente',
+            'shipped': 'En Camino',
             'in_transit': 'En Tránsito',
-            'completed': 'Completado',
+            'completed': 'Recibido',
             'cancelled': 'Cancelado'
         };
         return dict[status] || status;
@@ -276,12 +281,17 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1">
                             {([
                                 { key: 'new', label: 'Nueva Solicitud', icon: 'add_circle' },
-                                { key: 'history', label: 'Historial', icon: 'list' }
-                            ] as const).map(tab => (
+                                { key: 'history', label: isWarehouse ? 'Solicitudes de Sucursales' : 'Historial', icon: isWarehouse ? 'inbox' : 'list' }
+                            ] as const).filter(tab => !(isWarehouse && tab.key === 'new')).map(tab => (
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
                                     className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>
                                     <span className="hidden sm:inline">{tab.label}</span>
+                                    {isWarehouse && tab.key === 'history' && sheets.filter(s => s.status === 'pending').length > 0 && (
+                                        <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                                            {sheets.filter(s => s.status === 'pending').length}
+                                        </span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -377,7 +387,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                             s.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
                                                                 'bg-amber-500/10 text-amber-500'
                                                             }`}>
-                                                            {s.status === 'pending' ? 'Pendiente' : s.status === 'completed' ? 'Recibido' : 'Cancelado'}
+                                                            {translateStatus(s.status)}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">

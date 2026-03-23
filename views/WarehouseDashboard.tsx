@@ -30,7 +30,11 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
     // Incident Modal States
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
     const [selectedSupplyOrder, setSelectedSupplyOrder] = useState<any>(null);
-    const [receiveItems, setReceiveItems] = useState<{ id: string, productId: string, status: 'received_full' | 'received_partial' | 'damaged', receivedQuantity: number, originalQuantity: number, name: string }[]>([]);
+    const [receiveItems, setReceiveItems] = useState<{ id: string, productId: string, status: 'received_full' | 'received_partial' | 'damaged', receivedQuantity: number, originalQuantity: number, name: string, notes: string }[]>([]);
+
+    // Detail Modal States
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [detailOrder, setDetailOrder] = useState<SupplyOrder | null>(null);
 
     const navigate = useNavigate();
 
@@ -111,12 +115,8 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                 quantity: c.quantity,
                 unitPrice: c.product.price
             }));
-            if (!user.branchId) {
-                alert("Error: No tienes una sucursal asignada.");
-                setLoading(false);
-                return;
-            }
-            await InventoryService.createSupplyOrder(user.branchId, user.id, items);
+            const branchId = user.branchId || 'BR-MAIN';
+            await InventoryService.createSupplyOrder(branchId, user.id, items);
             setIsSupplyModalOpen(false);
             loadInitialData();
             alert("Pedido a administración creado correctamente.");
@@ -136,9 +136,15 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
             name: i.productName || 'Producto',
             status: 'received_full',
             receivedQuantity: i.quantity,
-            originalQuantity: i.quantity
+            originalQuantity: i.quantity,
+            notes: ''
         })));
         setIsReceiveModalOpen(true);
+    };
+
+    const handleOpenDetailModal = (order: SupplyOrder) => {
+        setDetailOrder(order);
+        setIsDetailModalOpen(true);
     };
 
     const handleSaveReceive = async () => {
@@ -348,12 +354,12 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                                             >
                                                                 Recibir Pedido
                                                             </button>
-                                                        ) : order.status === 'received_with_incidents' && isAdmin ? (
+                                                        ) : (order.status === 'received' || order.status === 'received_with_incidents') ? (
                                                             <button
-                                                                onClick={() => {/* Lógica futura de auditoría */ }}
-                                                                className="px-4 py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all"
+                                                                onClick={() => handleOpenDetailModal(order)}
+                                                                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
                                                             >
-                                                                Auditar Incidencias
+                                                                Ver Recepción
                                                             </button>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase">
@@ -617,8 +623,8 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-4 items-center">
-                                        <div className="flex-1">
+                                    <div className="flex gap-4 items-center flex-wrap">
+                                        <div className="flex-1 min-w-[140px]">
                                             <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Estado</label>
                                             <select
                                                 className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl outline-none font-bold text-xs border border-slate-200 dark:border-slate-700"
@@ -639,8 +645,8 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                             </select>
                                         </div>
 
-                                        <div className="w-32">
-                                            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Recibido Real</label>
+                                        <div className="w-28">
+                                            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Recibidos</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -656,6 +662,30 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                                 }}
                                             />
                                         </div>
+
+                                        {item.status !== 'received_full' && (
+                                            <div className="w-28">
+                                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Con Detalle</label>
+                                                <div className="w-full p-2 bg-red-50 dark:bg-red-900/20 rounded-xl text-center font-black text-xs text-red-600 border border-red-200 dark:border-red-900/40">
+                                                    {item.originalQuantity - item.receivedQuantity}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Comentarios</label>
+                                        <textarea
+                                            rows={2}
+                                            placeholder="Describe el detalle de la incidencia (opcional)..."
+                                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium resize-none outline-none focus:ring-2 focus:ring-primary/20"
+                                            value={item.notes}
+                                            onChange={(e) => {
+                                                const updated = [...receiveItems];
+                                                updated[index].notes = e.target.value;
+                                                setReceiveItems(updated);
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             ))}
@@ -674,6 +704,71 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                 className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase"
                             >
                                 {loading ? 'Enviando...' : 'Confirmar Recepción'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal Ver Recepción (solo lectura) */}
+            {isDetailModalOpen && detailOrder && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black mb-1">Detalle de Recepción</h3>
+                                    <p className="text-primary font-black uppercase text-[10px] tracking-widest">Folio S-{detailOrder.folio}</p>
+                                </div>
+                                <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                                    detailOrder.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                    {translateStatus(detailOrder.status)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar space-y-4">
+                            {detailOrder.items?.map(item => {
+                                const received = item.received_quantity ?? item.quantity;
+                                const damaged = item.quantity - received;
+                                return (
+                                    <div key={item.id} className={`p-4 rounded-2xl border ${
+                                        item.status === 'received_full' ? 'border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10' :
+                                        item.status === 'received_partial' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-900/10' :
+                                        'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10'
+                                    }`}>
+                                        <div className="flex justify-between items-start mb-3">
+                                            <p className="font-bold text-sm text-slate-900 dark:text-white">{item.productName || 'Producto'}</p>
+                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${
+                                                item.status === 'received_full' ? 'bg-green-100 text-green-700' :
+                                                item.status === 'received_partial' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>
+                                                {item.status === 'received_full' ? 'Completo' :
+                                                 item.status === 'received_partial' ? 'Incompleto' : 'Dañado'}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-6 text-xs">
+                                            <span className="text-slate-500">Solicitado: <span className="font-black text-slate-700 dark:text-slate-300">{item.quantity}</span></span>
+                                            <span className="text-slate-500">Recibidos: <span className="font-black text-green-700">{received}</span></span>
+                                            {damaged > 0 && (
+                                                <span className="text-slate-500">Con detalle: <span className="font-black text-red-600">{damaged}</span></span>
+                                            )}
+                                        </div>
+                                        {item.notes && (
+                                            <p className="mt-3 text-xs text-slate-500 italic bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2">"{item.notes}"</p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50">
+                            <button
+                                onClick={() => setIsDetailModalOpen(false)}
+                                className="w-full py-4 font-black text-slate-400 uppercase text-xs hover:text-slate-600 transition-colors"
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </div>

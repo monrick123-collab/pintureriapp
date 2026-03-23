@@ -543,7 +543,9 @@ export const InventoryService = {
                 message: `La sucursal ${branchName} creó una nueva hoja de resurtido.`,
                 actionUrl: '/restocks'
             });
-        } catch (e) { console.error('Notification failed (non-blocking)', e); }
+        } catch (e) { 
+            console.error('Notification failed (non-blocking)', e); 
+        }
 
         return sheet.id;
     },
@@ -596,6 +598,7 @@ export const InventoryService = {
                 *,
                 branches (name),
                 supply_order_items (
+                    id,
                     product_id,
                     quantity,
                     unit_price,
@@ -612,6 +615,16 @@ export const InventoryService = {
         const { data, error } = await query as { data: any[] | null, error: any };
         if (error) throw error;
 
+        const adminIds = [...new Set((data || []).map((s: any) => s.assigned_admin_id).filter(Boolean))];
+        let adminProfiles: Record<string, string> = {};
+        if (adminIds.length > 0) {
+            const { data: profs } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', adminIds);
+            if (profs) profs.forEach((p: any) => { adminProfiles[p.id] = p.full_name; });
+        }
+
         return (data || []).map(s => ({
             id: s.id,
             folio: s.folio,
@@ -620,7 +633,7 @@ export const InventoryService = {
             createdBy: s.created_by,
             createdByName: s.created_by, // Fallback to ID/Email stored in column if available
             assignedAdminId: s.assigned_admin_id,
-            assignedAdminName: s.assigned_admin_id,
+            assignedAdminName: adminProfiles[s.assigned_admin_id] || null,
             status: s.status,
             estimatedArrival: s.estimated_arrival,
             totalAmount: s.total_amount,
@@ -634,6 +647,7 @@ export const InventoryService = {
                 totalPrice: i.total_price,
                 status: i.status || 'pending',
                 received_quantity: i.received_quantity || 0,
+                notes: i.notes || null,
                 productName: i.products?.name,
                 productImage: i.products?.image
             }))
@@ -667,6 +681,15 @@ export const InventoryService = {
         const { error: iError } = await supabase.from('supply_order_items').insert(orderItems);
         if (iError) throw iError;
 
+        try {
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nuevo Pedido de Bodega',
+                message: `Bodega Principal solicitó un nuevo pedido de suministros.`,
+                actionUrl: '/supply-orders'
+            });
+        } catch(e) { console.error(e); }
+
         return order.id;
     },
 
@@ -681,9 +704,27 @@ export const InventoryService = {
             .eq('id', orderId);
 
         if (error) throw error;
+
+        try {
+            if (status === 'processing') {
+                await NotificationService.createNotification({
+                    targetRole: 'WAREHOUSE',
+                    title: 'Pedido en Proceso',
+                    message: 'Tu pedido a administración está siendo preparado.',
+                    actionUrl: '/warehouse'
+                });
+            } else if (status === 'shipped') {
+                await NotificationService.createNotification({
+                    targetRole: 'WAREHOUSE',
+                    title: 'Pedido Enviado',
+                    message: 'Tu pedido ha sido enviado y está en camino.',
+                    actionUrl: '/warehouse'
+                });
+            }
+        } catch(e) { console.error(e); }
     },
 
-    async confirmSupplyOrderArrival(orderId: string, receivedItems?: { id: string, productId: string, status: string, receivedQuantity: number }[]): Promise<void> {
+    async confirmSupplyOrderArrival(orderId: string, receivedItems?: { id: string, productId: string, status: string, receivedQuantity: number, notes?: string }[]): Promise<void> {
         // 1. Get order items
         const { data: order, error: fetchError } = await supabase
             .from('supply_orders')
@@ -707,7 +748,7 @@ export const InventoryService = {
                 }
                 const { error: itemUpdateError } = await supabase
                     .from('supply_order_items')
-                    .update({ status: rItem.status, received_quantity: rItem.receivedQuantity })
+                    .update({ status: rItem.status, received_quantity: rItem.receivedQuantity, notes: rItem.notes || null })
                     .eq('id', rItem.id);
 
                 if (itemUpdateError) throw itemUpdateError;
@@ -763,6 +804,17 @@ export const InventoryService = {
                 }
             }
         }
+
+        try {
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: hasIncidents ? 'Recepción con Incidencias' : 'Pedido Recibido',
+                message: hasIncidents
+                    ? 'Bodega confirmó recepción con diferencias. Revisar incidencias.'
+                    : 'Bodega confirmó la recepción completa del pedido.',
+                actionUrl: '/supply-orders'
+            });
+        } catch(e) { console.error(e); }
     },
 
     // --- PRICE REQUESTS (Punto 4) ---

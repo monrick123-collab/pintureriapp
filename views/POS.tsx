@@ -258,7 +258,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const totalCard = historySales.filter(s => s.paymentMethod === 'card').reduce((acc, s) => acc + s.total, 0);
   const totalTransfer = historySales.filter(s => s.paymentMethod === 'transfer').reduce((acc, s) => acc + s.total, 0);
   const addToCart = (product: Product) => {
-    const localStock = product.stock || 0;
+    const localStock = product.inventory ? (product.inventory[currentBranchId] || 0) : 0;
     const inCart = cart.find(i => i.id === product.id)?.quantity || 0;
 
     if (inCart >= localStock) {

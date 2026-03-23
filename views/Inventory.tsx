@@ -23,6 +23,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [requests, setRequests] = useState<RestockRequest[]>([]);
+  const [bulkInventory, setBulkInventory] = useState<any[]>([]);
 
   // Initialize branch: Store Manager and Warehouse restricted to their branch
   const [selectedBranchId, setSelectedBranchId] = useState<string>(
@@ -30,7 +31,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       ? (user.branchId || 'BR-MAIN')
       : 'BR-MAIN'
   );
-  const [viewMode, setViewMode] = useState<'products' | 'requests' | 'consumption'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'requests' | 'consumption' | 'bulk'>('products');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [consumptionHistory, setConsumptionHistory] = useState<InternalConsumption[]>([]);
@@ -125,6 +126,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       if (viewMode === 'consumption') {
         const history = await InventoryService.getInternalConsumptionHistory(selectedBranchId);
         setConsumptionHistory(history);
+      }
+
+      if (viewMode === 'bulk') {
+        const bulkData = await InventoryService.getBulkInventory(selectedBranchId);
+        setBulkInventory(bulkData);
       }
     } catch (error) {
       console.error("Error loading inventory:", error);
@@ -367,6 +373,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             <div className="flex justify-between items-end border-b border-slate-200 dark:border-slate-800 pb-1 print:hidden">
               <div className="flex gap-4">
                 <button onClick={() => setViewMode('products')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'products' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Existencias</button>
+                <button onClick={() => setViewMode('bulk')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'bulk' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Materia Prima (Granel)</button>
                 <button onClick={() => setViewMode('requests')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'requests' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Peticiones</button>
                 <button onClick={() => setViewMode('consumption')} className={`pb-3 text-sm font-bold transition-all ${viewMode === 'consumption' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}>Consumo Local</button>
               </div>
@@ -528,6 +535,43 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : viewMode === 'bulk' ? (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left min-w-[700px]">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
+                      <tr className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                        <th className="px-8 py-5">Producto a Granel</th>
+                        <th className="px-6 py-5 text-center">Volumen Disponible (Lts)</th>
+                        <th className="px-8 py-5 text-right">Última Actualización</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-slate-700">
+                      {bulkInventory.length === 0 ? (
+                        <tr><td colSpan={3} className="p-12 text-center text-slate-400 italic">No hay inventario a granel disponible.</td></tr>
+                      ) : (
+                        bulkInventory.map(item => (
+                          <tr key={item.id}>
+                            <td className="px-8 py-5 flex items-center gap-3">
+                              <div className="size-10 bg-slate-100 rounded-xl p-1"><span className="material-symbols-outlined text-slate-400 w-full h-full flex items-center justify-center">water_drop</span></div>
+                              <div>
+                                <span className="font-bold text-sm dark:text-white block">{item.product?.name || 'Producto Desconocido'}</span>
+                                <span className="text-xs text-slate-400 font-mono block">{item.product?.sku}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5 text-center font-black text-blue-600 text-lg">
+                              {item.availableLiters?.toFixed(4)} <span className="text-xs font-bold text-slate-400">Lts</span>
+                            </td>
+                            <td className="px-8 py-5 text-right text-[10px] text-slate-400 font-bold uppercase">
+                              {new Date(item.updatedAt).toLocaleDateString()} {new Date(item.updatedAt).toLocaleTimeString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

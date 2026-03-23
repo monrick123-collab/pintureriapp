@@ -245,7 +245,15 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
 
     const addToCart = (p: Product) => {
         setCart(prev => {
+            const localStock = p.inventory ? (p.inventory[branchId] || 0) : 0;
             const ex = prev.find(i => i.id === p.id);
+            const inCart = ex ? ex.quantity : 0;
+
+            if (inCart >= localStock) {
+                alert("Stock insuficiente: No hay suficiente stock en esta sucursal");
+                return prev;
+            }
+
             if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
             return [...prev, { ...p, quantity: 1 }];
         });

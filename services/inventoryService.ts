@@ -29,6 +29,27 @@ const mapDbProduct = (item: Record<string, any>): Product => ({
 });
 
 export const InventoryService = {
+    // Obtener inventario a granel por sucursal
+    async getBulkInventory(branchId: string): Promise<any[]> {
+        let query = supabase
+            .from('branch_bulk_inventory')
+            .select('id, branch_id, product_id, available_liters, updated_at, products(*)');
+        if (branchId !== 'ALL') {
+            query = query.eq('branch_id', branchId);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        return (data || []).map(row => ({
+            id: row.id,
+            branchId: row.branch_id,
+            productId: row.product_id,
+            availableLiters: parseFloat(row.available_liters || '0'),
+            updatedAt: row.updated_at,
+            product: row.products ? mapDbProduct(row.products) : undefined
+        }));
+    },
+
     // Obtener todos los productos con su stock TOTAL (suma de sucursales)
     async getProducts(): Promise<Product[]> {
         const { data, error } = await supabase

@@ -61,6 +61,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [drumQty, setDrumQty] = useState(1);
     const [calcLines, setCalcLines] = useState<CalcLine[]>(INITIAL_CALC_LINES);
     const [submitting, setSubmitting] = useState(false);
+    const [availableBulkLiters, setAvailableBulkLiters] = useState(0);
 
     // ─── History & Details ───
     const [requests, setRequests] = useState<any[]>([]);
@@ -90,7 +91,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
         return 0.25;
     };
 
-    const totalCapacity = drumQty * settings.drum_liters;
+    const totalCapacity = (drumQty * settings.drum_liters) + availableBulkLiters;
     const totalUsed = calcLines.reduce((sum, l) => sum + l.qty * getLitersPerUnit(l.packageType), 0);
     const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
@@ -101,6 +102,21 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     useEffect(() => {
         setCalcLines(INITIAL_CALC_LINES);
     }, [bulkId]);
+
+    // Fetch bulk inventory when bulkId or branchId changes
+    useEffect(() => {
+        if (bulkId && branchId) {
+            InventoryService.getBulkInventory(branchId).then(data => {
+                const item = data.find(d => d.productId === bulkId);
+                setAvailableBulkLiters(item ? item.availableLiters : 0);
+                if (item && item.availableLiters > 0 && drumQty === 1) {
+                    setDrumQty(0); // Auto-set drums to 0 if there is bulk available
+                }
+            }).catch(console.error);
+        } else {
+            setAvailableBulkLiters(0);
+        }
+    }, [bulkId, branchId]);
 
     // ─── Lifecycle ───
     useEffect(() => {
@@ -510,19 +526,19 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-xs font-black uppercase text-slate-500">Tambos</label>
+                                            <label className="text-xs font-black uppercase text-slate-500">Tambos Cerrados (Adicionales)</label>
                                             <div className="mt-1 flex items-center gap-2">
                                                 <button
-                                                    onClick={() => setDrumQty(Math.max(1, drumQty - 1))}
+                                                    onClick={() => setDrumQty(Math.max(0, drumQty - 1))}
                                                     className="px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg font-black hover:bg-slate-300 dark:hover:bg-slate-600"
                                                 >
                                                     −
                                                 </button>
                                                 <input
                                                     type="number"
-                                                    min="1"
+                                                    min="0"
                                                     value={drumQty}
-                                                    onChange={e => setDrumQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    onChange={e => setDrumQty(Math.max(0, parseInt(e.target.value) || 0))}
                                                     className="flex-1 text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg font-black"
                                                 />
                                                 <button
@@ -534,9 +550,29 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
-                                        Capacidad total: <span className="text-primary font-black">{totalCapacity.toLocaleString()} L</span>
-                                    </p>
+
+                                    {availableBulkLiters > 0 && (
+                                        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+                                            <span className="material-symbols-outlined text-blue-500">water_drop</span>
+                                            <div>
+                                                <p className="text-blue-800 dark:text-blue-300 font-bold text-sm">
+                                                    Tienes <span className="font-black text-lg">{availableBulkLiters.toFixed(2)} L</span> disponibles de este producto a granel en tu sucursal.
+                                                </p>
+                                                <p className="text-blue-600 dark:text-blue-400 text-xs mt-1">
+                                                    Si el remanente es suficiente, no necesitas contabilizar tambos nuevos.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
+                                            Capacidad total utilizable: <span className="text-primary font-black">{totalCapacity.toLocaleString()} L</span>
+                                        </p>
+                                        <p className="text-xs text-slate-500 font-bold">
+                                            ({drumQty} {drumQty === 1 ? 'tambo' : 'tambos'} + remanente a granel)
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Cards Grid */}

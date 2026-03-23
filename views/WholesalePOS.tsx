@@ -356,7 +356,15 @@ useEffect(() => {
 
 const addToCart = (product: Product) => {
         setCart(prev => {
+            const localStock = product.inventory ? (product.inventory[currentBranchId] || 0) : 0;
             const existing = prev.find(item => item.id === product.id);
+            const inCart = existing ? existing.quantity : 0;
+
+            if (inCart >= localStock) {
+                toast.warning("Stock insuficiente", "No hay suficiente stock en esta sucursal");
+                return prev;
+            }
+
             if (existing) {
                 return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
             }

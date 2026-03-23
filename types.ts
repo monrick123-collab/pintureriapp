@@ -58,6 +58,15 @@ export interface Product {
   unit_measure?: string;
 }
 
+export interface BulkInventoryItem {
+  id: string;
+  branchId: string;
+  productId: string;
+  availableLiters: number;
+  updatedAt?: string;
+  product?: Product;
+}
+
 export type ExpenseCategory = 'renta' | 'servicios' | 'salarios' | 'suministros' | 'otros';
 
 export interface Expense {

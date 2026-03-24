@@ -389,22 +389,64 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             setIsDetailModalOpen(false);
             loadData();
             toast.success('Traspaso aprobado', 'El traspaso está ahora en tránsito.');
-            // Evento 2: notificar al Encargado de la sucursal destino
+            // Evento 2: notificar al Encargado de la sucursal destino y a Bodega
             try {
                 const t = selectedTransfer;
                 if (t) {
                     const toBranchName = allBranches.find(b => b.id === t.toBranchId)?.name || '';
+                    const fromBranchName = allBranches.find(b => b.id === t.fromBranchId)?.name || '';
+                    const folio = `#T-${String(t.folio).padStart(4, '0')}`;
                     await NotificationService.createNotification({
                         targetRole: 'STORE_MANAGER',
                         targetBranchId: t.toBranchId,
                         title: 'Traspaso En Tránsito',
-                        message: `Tu sucursal recibirá un traspaso de ${t.items?.length ?? '?'} artículo(s). Estado: En Tránsito.`,
+                        message: `Tu sucursal recibirá un traspaso ${folio} de ${fromBranchName}. Confirma la recepción cuando lleguen los productos.`,
+                        actionUrl: '/transfers'
+                    });
+                    await NotificationService.createNotification({
+                        targetRole: 'WAREHOUSE',
+                        title: 'Traspaso Aprobado — Despachar',
+                        message: `El traspaso ${folio} hacia ${toBranchName} fue aprobado. Prepara y envía los productos.`,
                         actionUrl: '/transfers'
                     });
                 }
             } catch (_) {}
         } catch (e: any) {
             toast.error('Error al aprobar', e.message || e.toString());
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmTransferReceipt = async (transferId: string) => {
+        if (!confirm('¿Confirmar recepción de los productos? El inventario se actualizará ahora.')) return;
+        try {
+            setLoading(true);
+            await TransferService.confirmTransferReceipt(transferId);
+            setIsDetailModalOpen(false);
+            loadData();
+            toast.success('Recepción confirmada', 'El inventario ha sido actualizado.');
+            try {
+                const t = selectedTransfer;
+                if (t) {
+                    const fromBranchName = allBranches.find(b => b.id === t.fromBranchId)?.name || '';
+                    const folio = `#T-${String(t.folio).padStart(4, '0')}`;
+                    await NotificationService.createNotification({
+                        targetRole: 'ADMIN',
+                        title: 'Traspaso Completado',
+                        message: `La sucursal destino confirmó la recepción del traspaso ${folio} de ${fromBranchName}. Inventario actualizado.`,
+                        actionUrl: '/transfers'
+                    });
+                    await NotificationService.createNotification({
+                        targetRole: 'WAREHOUSE',
+                        title: 'Traspaso Recibido',
+                        message: `Tu traspaso ${folio} fue recibido por la sucursal destino. Inventario actualizado.`,
+                        actionUrl: '/transfers'
+                    });
+                }
+            } catch (_) {}
+        } catch (e: any) {
+            toast.error('Error al confirmar recepción', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -726,7 +768,14 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                                             {(item.data as StockTransfer).status === 'pending' ? 'Pendiente' : (item.data as StockTransfer).status === 'in_transit' ? 'En Tránsito' : (item.data as StockTransfer).status === 'completed' ? 'Completado' : 'Cancelado'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
+                                                    <td className="px-6 py-4 text-right flex items-center gap-2 justify-end">
+                                                        {(item.data as StockTransfer).status === 'in_transit' &&
+                                                         ((item.data as StockTransfer).toBranchId === branchId || isAdmin) && (
+                                                            <button onClick={() => handleViewTransfer(item.data as StockTransfer)} className="px-3 py-1.5 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-all flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">inventory_2</span>
+                                                                Recibir
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => handleViewTransfer(item.data as StockTransfer)} className="p-2 text-slate-400 hover:text-primary transition-colors">
                                                             <span className="material-symbols-outlined">visibility</span>
                                                         </button>
@@ -1088,6 +1137,35 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                             </div>
 
                             <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6 flex-1">
+                                {/* Indicador de progreso */}
+                                <div className="flex items-center">
+                                    {[
+                                        { key: 'pending', label: 'Pendiente' },
+                                        { key: 'in_transit', label: 'En Tránsito' },
+                                        { key: 'completed', label: 'Completado' },
+                                    ].map((step, i, arr) => {
+                                        const order = ['pending', 'in_transit', 'completed'];
+                                        const currentIdx = order.indexOf(selectedTransfer.status);
+                                        const isDone = currentIdx > i;
+                                        const isActive = currentIdx === i;
+                                        return (
+                                            <React.Fragment key={step.key}>
+                                                <div className="flex flex-col items-center">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${isDone ? 'bg-green-500 text-white' : isActive ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                                        {isDone ? '✓' : i + 1}
+                                                    </div>
+                                                    <span className={`text-[9px] font-black mt-1 ${isActive ? 'text-primary' : 'text-slate-400'}`}>
+                                                        {step.label}
+                                                    </span>
+                                                </div>
+                                                {i < arr.length - 1 && (
+                                                    <div className={`flex-1 h-0.5 mx-2 mb-4 ${isDone ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border dark:border-slate-800">
                                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Origen</span>
@@ -1154,6 +1232,37 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-lg shadow-green-500/20 hover:scale-[1.02] transition-all disabled:opacity-50"
                                     >
                                         Aprobar Traspaso
+                                    </button>
+                                </div>
+                            )}
+                            {selectedTransfer.status === 'in_transit' &&
+                             (branchId === selectedTransfer.toBranchId || isAdmin) && (
+                                <div className="p-6 border-t dark:border-slate-700 bg-green-50 dark:bg-green-900/10 space-y-3">
+                                    <p className="text-[10px] font-black uppercase text-green-700 dark:text-green-400 tracking-widest">
+                                        Formato de recepción — Productos esperados
+                                    </p>
+                                    <ul className="text-sm text-slate-700 dark:text-slate-200 divide-y dark:divide-slate-700">
+                                        {selectedTransfer.items?.map((item: any) => (
+                                            <li key={item.id} className="flex justify-between py-2">
+                                                <span>
+                                                    {item.productName}
+                                                    <span className="text-slate-400 text-xs ml-1">({item.productSku})</span>
+                                                </span>
+                                                <span className="font-bold">{item.quantity} uds</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                        Verifica las cantidades recibidas y confirma para actualizar el inventario.
+                                    </p>
+                                    <button
+                                        onClick={() => handleConfirmTransferReceipt(selectedTransfer.id)}
+                                        disabled={loading}
+                                        className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-lg shadow-green-500/20 hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">inventory_2</span>
+                                        Confirmar Recepción
                                     </button>
                                 </div>
                             )}

@@ -2,7 +2,12 @@ import { supabase } from './supabase';
 import { DiscountRequest } from '../types';
 
 export const DiscountService = {
-    async requestDiscount(requesterId: string, requesterName: string, branchId: string, amount: number, type: 'percentage' | 'fixed', reason: string): Promise<string> {
+    async requestDiscount(
+        requesterId: string, requesterName: string, branchId: string,
+        amount: number, type: 'percentage' | 'fixed', reason: string,
+        items?: Array<{id: string; name: string; sku: string; price: number;
+            wholesalePrice?: number; quantity: number; category: string; image?: string}>
+    ): Promise<string> {
         const { data, error } = await supabase
             .from('discount_requests')
             .insert([{
@@ -12,7 +17,8 @@ export const DiscountService = {
                 amount: amount,
                 type: type,
                 reason: reason,
-                status: 'pending'
+                status: 'pending',
+                items: items || null
             }])
             .select()
             .single();
@@ -77,6 +83,28 @@ export const DiscountService = {
             .subscribe();
     },
 
+    async getApprovedRequestsWithItems(branchId: string): Promise<DiscountRequest[]> {
+        const { data, error } = await supabase
+            .from('discount_requests')
+            .select('*')
+            .eq('branch_id', branchId)
+            .eq('status', 'approved')
+            .not('items', 'is', null)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(this.mapDbRequest);
+    },
+
+    async markAsUsed(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('discount_requests')
+            .update({ status: 'used' })
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
     mapDbRequest(r: Record<string, any>): DiscountRequest {
         return {
             id: r.id,
@@ -87,6 +115,7 @@ export const DiscountService = {
             type: r.type,
             status: r.status,
             reason: r.reason,
+            items: r.items || undefined,
             createdAt: r.created_at
         };
     }

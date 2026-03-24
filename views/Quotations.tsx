@@ -67,12 +67,21 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
     }
   };
 
+  // Multiplicador derivado del porcentaje extra del cliente municipio
+  const extraMultiplier = 1 + ((selectedClient?.extraPercentage || 0) / 100);
+
   const addItem = (p: Product) => {
+    const adjustedPrice = parseFloat((p.price * extraMultiplier).toFixed(2));
     setItems(prev => {
       const existing = prev.find(i => i.id === p.id);
       if (existing) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { ...p, quantity: 1 }];
+      return [...prev, { ...p, price: adjustedPrice, quantity: 1 }];
     });
+  };
+
+  const handleSelectClient = (client: Client | null) => {
+    setSelectedClient(client);
+    if (items.length > 0) setItems([]); // Limpiar carrito al cambiar cliente (precios cambian)
   };
 
   const updateQty = (id: string, delta: number) => {
@@ -224,6 +233,12 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </h4>
           <div className="space-y-3">
             <p className="text-xl font-black text-slate-900 leading-tight">{selectedClient?.name || 'Cliente de Mostrador'}</p>
+            {(selectedClient?.extraPercentage || 0) > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                <span className="material-symbols-outlined text-[11px]">percent</span>
+                +{selectedClient?.extraPercentage}% porcentaje municipal
+              </span>
+            )}
             <div className="pt-2 space-y-2">
               <div className="flex items-center gap-3 text-slate-500 font-medium text-xs">
                 <span className="material-symbols-outlined text-sm text-primary/50">mail</span>
@@ -522,7 +537,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                   className="flex-1 bg-transparent border-none text-xs font-black uppercase p-2 focus:ring-0 outline-none cursor-pointer"
                   onChange={e => {
                     const client = clients.find(c => c.id === e.target.value);
-                    setSelectedClient(client || null);
+                    handleSelectClient(client || null);
                   }}
                 >
                   <option value="">Consumidor Final</option>

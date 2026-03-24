@@ -542,6 +542,8 @@ export const SalesService = {
             total: number;
             notes?: string;
             transferReference?: string;
+            clientId?: string | null;
+            appliedExtraPct?: number;
         }
     ): Promise<string> {
         // 1. Obtener el siguiente folio municipal con fallback robusto
@@ -594,7 +596,8 @@ export const SalesService = {
                 notes: saleData.notes || null,
                 payment_status: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? 'pending' : 'approved',
                 pending_since: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? new Date().toISOString() : null,
-                transfer_reference: saleData.transferReference || null
+                transfer_reference: saleData.transferReference || null,
+                applied_extra_pct: saleData.appliedExtraPct || 0
             })
             .select()
             .single();
@@ -604,15 +607,40 @@ export const SalesService = {
             throw saleError;
         }
 
-        // 3. Crear los items de la venta
-        const saleItems = items.map(item => ({
-            sale_id: sale.id, // Nota: La tabla usa sale_id, no municipal_sale_id
-            product_id: item.productId,
-            product_name: item.productName,
-            quantity: item.quantity,
-            unit_price: item.price,
-            total_price: item.quantity * item.price
-        }));
+        // 3. Obtener porcentaje extra real desde DB (no confiar en el frontend)
+        let validatedMultiplier = 1;
+        if (saleData.clientId) {
+            const { data: clientData } = await supabase
+                .from('clients')
+                .select('extra_percentage')
+                .eq('id', saleData.clientId)
+                .single();
+            const extraPct = clientData?.extra_percentage || 0;
+            validatedMultiplier = 1 + (extraPct / 100);
+        }
+
+        // Obtener precios base desde products para re-validar con el multiplicador
+        const productIds = items.map(i => i.productId);
+        const { data: productsData } = await supabase
+            .from('products')
+            .select('id, price')
+            .in('id', productIds);
+        const basePriceMap: Record<string, number> = {};
+        (productsData || []).forEach((p: any) => { basePriceMap[p.id] = parseFloat(p.price) || 0; });
+
+        // 4. Crear los items de la venta con precio validado por el backend
+        const saleItems = items.map(item => {
+            const basePrice = basePriceMap[item.productId] || item.price;
+            const validatedPrice = parseFloat((basePrice * validatedMultiplier).toFixed(2));
+            return {
+                sale_id: sale.id,
+                product_id: item.productId,
+                product_name: item.productName,
+                quantity: item.quantity,
+                unit_price: validatedPrice,
+                total_price: parseFloat((validatedPrice * item.quantity).toFixed(2))
+            };
+        });
 
         const { error: itemsError } = await supabase
             .from('municipal_sale_items')

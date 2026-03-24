@@ -321,8 +321,9 @@ export interface DiscountRequest {
   branchId: string;
   amount: number;
   type: 'percentage' | 'fixed';
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'used';
   reason?: string;
+  items?: any[];
   createdAt: string;
 }
 

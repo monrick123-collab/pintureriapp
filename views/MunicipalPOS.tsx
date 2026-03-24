@@ -82,6 +82,9 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [editNotes, setEditNotes] = useState('');
     const [editLoading, setEditLoading] = useState(false);
 
+    // Cliente seleccionado (para porcentaje extra)
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
     // Accounts / credit
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
@@ -254,8 +257,11 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 return prev;
             }
 
+            // Aplicar porcentaje extra del cliente municipio al precio unitario
+            const adjustedPrice = parseFloat((p.price * extraMultiplier).toFixed(2));
+
             if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-            return [...prev, { ...p, quantity: 1 }];
+            return [...prev, { ...p, price: adjustedPrice, quantity: 1 }];
         });
     };
     const updateQty = (id: string, delta: number) => {
@@ -316,7 +322,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
             await SalesService.createMunicipalSale(
                 branchId,
                 cart.map(i => ({ productId: i.id, productName: i.name, quantity: i.quantity, price: i.price })),
-                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference }
+                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference, clientId: selectedClient?.id || null, appliedExtraPct: selectedClient?.extraPercentage || 0 }
             );
             setShowSuccess(true);
             setTimeout(() => {
@@ -391,8 +397,13 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         } catch (e: any) { alert('Error: ' + e.message); }
     };
 
+    // Multiplicador derivado del porcentaje extra del cliente
+    const extraMultiplier = 1 + ((selectedClient?.extraPercentage || 0) / 100);
+
     // Select a client and auto-fill municipality fields
     const handleSelectClient = (client: Client) => {
+        setSelectedClient(client);
+        setCart([]); // Limpiar carrito: los precios cambian según el cliente
         setMunicipality(client.name);
         setContactName(client.name);
         setSocialReason(client.name);
@@ -518,6 +529,15 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                     </div>
                                 )}
                             </div>
+                            {/* Badge porcentaje extra activo */}
+                            {(selectedClient?.extraPercentage || 0) > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl">
+                                    <span className="material-symbols-outlined text-amber-500 text-sm">percent</span>
+                                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                                        +{selectedClient?.extraPercentage}% porcentaje municipal aplicado a todos los precios
+                                    </span>
+                                </div>
+                            )}
                             {/* Blocked warning */}
                             {blockedWarning && (
                                 <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-red-600 dark:text-red-400 text-xs font-bold">{blockedWarning}</div>

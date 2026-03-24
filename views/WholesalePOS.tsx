@@ -373,10 +373,19 @@ const addToCart = (product: Product) => {
     };
 
     const updateQuantity = (id: string, delta: number) => {
-        setCart(prev => prev.map(item => {
-            if (item.id === id) return { ...item, quantity: Math.max(0, item.quantity + delta) };
-            return item;
-        }).filter(item => item.quantity > 0));
+        setCart(prev => {
+            return prev.map(item => {
+                if (item.id !== id) return item;
+                if (delta > 0) {
+                    const localStock = item.inventory?.[currentBranchId] ?? 0;
+                    if (item.quantity >= localStock) {
+                        toast.warning('Stock insuficiente', `Solo hay ${localStock} unidad${localStock !== 1 ? 'es' : ''} disponible${localStock !== 1 ? 's' : ''} de este producto.`);
+                        return item;
+                    }
+                }
+                return { ...item, quantity: Math.max(0, item.quantity + delta) };
+            }).filter(item => item.quantity > 0);
+        });
     };
 
     const filteredProducts = products.filter(p => {
@@ -595,6 +604,17 @@ const addToCart = (product: Product) => {
             }
         }
 
+        // 4. Validación pre-envío: stock suficiente para cada ítem
+        const itemsSinStock = cart.filter(item => {
+            const stockDisponible = item.inventory?.[currentBranchId] ?? 0;
+            return item.quantity > stockDisponible;
+        });
+        if (itemsSinStock.length > 0) {
+            const nombres = itemsSinStock.map(i => i.name).join(', ');
+            toast.warning('Stock insuficiente', `Ajusta las cantidades de: ${nombres}`);
+            return;
+        }
+
         try {
             setLoading(true);
             const saleItems: SaleItem[] = cart.map(item => ({
@@ -661,9 +681,21 @@ const addToCart = (product: Product) => {
                 setPendingPromotionRequestId(null);
             }, 2000);
         } catch (e: any) {
-            console.error(e);
-            const msg = e?.message || "Verifique la conexión.";
-            toast.error("Error en venta", msg);
+            console.error('[WholesalePOS] Error en venta:', e);
+            const rawMsg: string = e?.message || '';
+            let friendlyMsg: string;
+
+            if (rawMsg.includes('inventory_stock_non_negative')) {
+                friendlyMsg = 'La venta no se pudo concretar porque un producto se agotó mientras procesabas la venta. Actualiza el carrito e intenta de nuevo.';
+            } else if (rawMsg.includes('sales_client_id_fkey') || rawMsg.includes('client_id')) {
+                friendlyMsg = 'El cliente seleccionado ya no está disponible. Selecciona otro cliente e intenta de nuevo.';
+            } else if (rawMsg.includes('promotion_request')) {
+                friendlyMsg = 'La promoción aplicada ya no está vigente. Quita el descuento e intenta de nuevo.';
+            } else {
+                friendlyMsg = rawMsg || 'Verifique la conexión e intente de nuevo.';
+            }
+
+            toast.error('Error al procesar la venta', friendlyMsg);
         } finally {
             setLoading(false);
         }
@@ -786,22 +818,40 @@ const addToCart = (product: Product) => {
                     
                                             <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 transition-all">
-                                                    {filteredProducts.map(p => (
-                                                        <div key={p.id} className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md" onClick={() => addToCart(p)}>
+                                                    {filteredProducts.map(p => {
+                                                        const localStock = p.inventory?.[currentBranchId] ?? 0;
+                                                        const isOut = localStock === 0;
+                                                        return (
+                                                        <div
+                                                            key={p.id}
+                                                            onClick={!isOut ? () => addToCart(p) : undefined}
+                                                            className={`group bg-white dark:bg-slate-800 rounded-2xl border transition-all overflow-hidden shadow-sm ${isOut ? 'opacity-50 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-200 dark:border-slate-700 hover:border-primary hover:shadow-md'}`}
+                                                        >
                                                             <div className="aspect-square bg-slate-50 dark:bg-slate-900/50 p-4 relative">
-                                                                <img src={p.image || undefined} className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                                                <img src={p.image || undefined} className={`w-full h-full object-contain ${!isOut ? 'group-hover:scale-110' : ''} transition-transform`} />
                                                                 <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded text-[9px] font-black text-slate-500 uppercase">{p.brand}</div>
+                                                                {isOut && (
+                                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                                        <span className="bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow">Agotado</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="p-4">
                                                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest truncate">{p.sku}</p>
                                                                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate mb-2">{p.name}</p>
                                                                 <div className="flex justify-between items-end">
                                                                     <p className="text-lg font-black text-primary">${(p.wholesalePrice || p.price).toLocaleString()}</p>
-                                                                    <span className="text-[9px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Mayoreo</span>
+                                                                    <div className="flex flex-col items-end gap-1">
+                                                                        <span className="text-[9px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Mayoreo</span>
+                                                                        <span className={`text-[9px] font-bold ${isOut ? 'text-red-500' : localStock <= 5 ? 'text-amber-500' : 'text-slate-400'}`}>
+                                                                            {isOut ? 'Sin stock' : `Disp.: ${localStock}${localStock <= 5 ? ' ⚠' : ''}`}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
@@ -842,7 +892,12 @@ const addToCart = (product: Product) => {
                                                                         value={item.quantity === 0 ? '' : item.quantity}
                                                                         onChange={(e) => {
                                                                             const val = parseInt(e.target.value) || 0;
-                                                                            setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, val) } : i));
+                                                                            const localStock = item.inventory?.[currentBranchId] ?? 0;
+                                                                            const capped = Math.min(Math.max(0, val), localStock);
+                                                                            if (val > localStock) {
+                                                                                toast.warning('Stock insuficiente', `Máximo disponible: ${localStock} unidades.`);
+                                                                            }
+                                                                            setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: capped } : i).filter(i => i.quantity > 0));
                                                                         }}
                                                                         onBlur={(e) => {
                                                                             if (!e.target.value || parseInt(e.target.value) === 0) {

@@ -40,6 +40,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [activeDiscountRequest, setActiveDiscountRequest] = useState<DiscountRequest | null>(null);
   const [appliedDiscount, setAppliedDiscount] = useState<{ amount: number, type: 'percentage' | 'fixed' } | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [pendingDiscountSales, setPendingDiscountSales] = useState<DiscountRequest[]>([]);
+  const [pendingDiscountRequestId, setPendingDiscountRequestId] = useState<string | null>(null);
 
   // --- BILLING STATES (reemplaza el patrón document.getElementById) ---
   const [billingBank, setBillingBank] = useState('');
@@ -76,7 +78,32 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   // --- POS EFFECTS ---
   useEffect(() => {
     loadProducts();
+    if (!isAdmin && currentBranchId) {
+      loadPendingDiscountSales();
+    }
   }, [currentBranchId]);
+
+  const loadPendingDiscountSales = async () => {
+    try {
+      const requests = await DiscountService.getApprovedRequestsWithItems(currentBranchId);
+      setPendingDiscountSales(requests);
+    } catch (e) {
+      console.error('Error loading pending discount sales:', e);
+    }
+  };
+
+  const handleCompleteFromDiscount = (req: DiscountRequest) => {
+    if (!req.items?.length) {
+      setAppliedDiscount({ amount: req.amount, type: req.type });
+      setPendingDiscountRequestId(req.id);
+      toast.info('Sin productos guardados', 'Agrega los productos manualmente al carrito.');
+      return;
+    }
+    setAppliedDiscount({ amount: req.amount, type: req.type });
+    setPendingDiscountRequestId(req.id);
+    setCart(req.items.map((i: any) => ({ ...i })));
+    setActiveTab('pos');
+  };
 
   const loadProducts = async () => {
     try {
@@ -292,6 +319,16 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   });
 
   const handleRequestDiscount = async () => {
+    // Admin bypass: aplicar descuento directamente sin crear solicitud
+    if (isAdmin) {
+      setAppliedDiscount({ amount: parseFloat(discountValue), type: discountType });
+      setIsDiscountModalOpen(false);
+      setDiscountValue('');
+      setDiscountReason('');
+      toast.success("Descuento aplicado", "Descuento de administrador aplicado directamente.");
+      return;
+    }
+
     try {
       setLoading(true);
       const requestId = await DiscountService.requestDiscount(
@@ -300,7 +337,12 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         currentBranchId,
         parseFloat(discountValue),
         discountType,
-        discountReason
+        discountReason,
+        cart.map(item => ({
+          id: item.id, name: item.name, sku: item.sku,
+          price: item.price, wholesalePrice: item.wholesalePrice,
+          quantity: item.quantity, category: item.category, image: item.image
+        }))
       );
 
       // Subscribe to updates for this request
@@ -380,7 +422,16 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         { subtotal, discountAmount, iva }
       );
 
+      // Marcar solicitud de descuento como usada (si aplica)
+      if (pendingDiscountRequestId) {
+        try { await DiscountService.markAsUsed(pendingDiscountRequestId); } catch {}
+        setPendingDiscountRequestId(null);
+        loadPendingDiscountSales();
+      }
+
       setShowSuccess(true);
+      setAppliedDiscount(null);
+      setActiveDiscountRequest(null);
 
       // Refresh inventory from DB
       await loadProducts();
@@ -456,6 +507,23 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <option value="">— Selecciona sucursal para vender —</option>
                       {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
+                  )}
+                  {pendingDiscountSales.length > 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 space-y-2">
+                      <p className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">verified</span>
+                        {pendingDiscountSales.length} descuento(s) aprobado(s) — ventas en espera
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {pendingDiscountSales.map(req => (
+                          <button key={req.id} onClick={() => handleCompleteFromDiscount(req)}
+                            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[10px] font-black uppercase tracking-wide rounded-lg transition-colors flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-xs">shopping_cart_checkout</span>
+                            Retomar venta — {req.amount}{req.type === 'percentage' ? '%' : '$'} desc.
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                   <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-12 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                     <div className="flex items-center justify-center px-4 text-slate-400">
@@ -709,6 +777,9 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                           setBillingSocial('');
                           setBillingInvoice('');
                           setBillingError('');
+                          setAppliedDiscount(null);
+                          setActiveDiscountRequest(null);
+                          setPendingDiscountRequestId(null);
                         }}
                         className="mt-6 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
                       >
@@ -723,7 +794,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
             {isDiscountModalOpen && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                 <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden p-8">
-                  <h2 className="text-xl font-black mb-6">Solicitar Descuento</h2>
+                  <h2 className="text-xl font-black mb-6">{isAdmin ? 'Aplicar Descuento' : 'Solicitar Descuento'}</h2>
                   <div className="space-y-4">
                     <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
                       {(['percentage', 'fixed'] as const).map(type => (
@@ -746,6 +817,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                         placeholder={discountType === 'percentage' ? 'Ej: 10' : 'Ej: 50'}
                       />
                     </div>
+                    {!isAdmin && (
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-500">Motivo</label>
                       <textarea
@@ -755,14 +827,15 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                         placeholder="Escriba la razón para este descuento..."
                       />
                     </div>
+                    )}
                     <div className="flex gap-4 pt-4">
                       <button onClick={() => setIsDiscountModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400">Cancelar</button>
                       <button
                         onClick={handleRequestDiscount}
-                        disabled={!discountValue || !discountReason || loading}
+                        disabled={!discountValue || (!isAdmin && !discountReason) || loading}
                         className="flex-1 py-3 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
                       >
-                        {loading ? 'Enviando...' : 'Solicitar'}
+                        {loading ? 'Enviando...' : (isAdmin ? 'Aplicar' : 'Solicitar')}
                       </button>
                     </div>
                   </div>

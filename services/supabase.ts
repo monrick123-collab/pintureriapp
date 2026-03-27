@@ -6,9 +6,11 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    if (import.meta.env.DEV) {
-        console.warn('⚠️ Alerta: Faltan las variables de entorno de Supabase (VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY). Verifica tu archivo .env');
+    const msg = '⚠️ Alerta: Faltan las variables de entorno de Supabase (VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY). Verifica tu archivo .env';
+    if (import.meta.env.PROD) {
+        throw new Error(msg);
     }
+    console.warn(msg);
 }
 
 export const supabase = createClient(

@@ -25,16 +25,20 @@ export const CoinService = {
     },
 
     async createCoinChangeRequest(branchId: string, userId: string, amount: number, breakdown?: Record<string, number>, collectedBy?: string): Promise<void> {
-        const { data: folio } = await supabase.rpc('get_next_folio', {
+        const { data: folio, error: folioError } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'coin_change'
         });
+
+        if (folioError || !folio) {
+            throw new Error(`Error al generar folio de cambio de moneda: ${folioError?.message || 'folio vacío'}`);
+        }
 
         const { error } = await supabase
             .from('coin_change_requests')
             .insert({
                 branch_id: branchId,
-                folio: folio || 0,
+                folio: folio,
                 amount: amount,
                 requester_id: userId,
                 collected_by: collectedBy || null,

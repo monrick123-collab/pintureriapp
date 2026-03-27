@@ -5,6 +5,7 @@ import { User, Product, RestockSheet, UserRole, CartItem, Branch, RestockItemWit
 import { InventoryService } from '../services/inventoryService';
 import { ShippingService, CARRIER_OPTIONS } from '../services/shippingService';
 import { exportToCSV } from '../utils/csvExport';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface RestocksProps {
     user: User;
@@ -46,7 +47,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
-    const myBranchId = user.branchId || 'BR-MAIN';
+    const myBranchId = user.branchId || WAREHOUSE_BRANCH_ID;
     // State for filtering history
     const [selectedBranchId, setSelectedBranchId] = useState<string>(
         (user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB) ? 'all' : myBranchId
@@ -67,7 +68,7 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                     sd,
                     ed
                 ),
-                InventoryService.getProductsByBranch('BR-MAIN'),
+                InventoryService.getProductsByBranch(WAREHOUSE_BRANCH_ID),
                 InventoryService.getBranches()
             ]);
             setSheets(s);

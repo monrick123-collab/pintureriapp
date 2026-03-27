@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { User, RestockSheet, Branch, Product, UserRole, SupplyOrder } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface WarehouseDashboardProps {
     user: User;
@@ -115,7 +116,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                 quantity: c.quantity,
                 unitPrice: c.product.price
             }));
-            const branchId = user.branchId || 'BR-MAIN';
+            const branchId = user.branchId || WAREHOUSE_BRANCH_ID;
             await InventoryService.createSupplyOrder(branchId, user.id, items);
             setIsSupplyModalOpen(false);
             loadInitialData();
@@ -729,7 +730,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
 
                         <div className="flex-1 overflow-y-auto p-3 md:p-8 custom-scrollbar space-y-4">
                             {detailOrder.items?.map(item => {
-                                const received = item.received_quantity ?? item.quantity;
+                                const received = item.receivedQuantity ?? item.quantity;
                                 const damaged = item.quantity - received;
                                 return (
                                     <div key={item.id} className={`p-4 rounded-2xl border ${

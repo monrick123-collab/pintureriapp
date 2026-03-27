@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { InventoryService } from '../services/inventoryService';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 const PACKAGE_PRIORITY: Record<string, number> = {
     'cubeta': 1,
@@ -109,7 +110,7 @@ const ShippingNote: React.FC = () => {
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Origen (Bodega)</h3>
                             <p className="text-sm font-black text-slate-900">Bodega Principal (Hub)</p>
-                            <p className="text-[10px] text-slate-500">ID: BR-MAIN</p>
+                            <p className="text-[10px] text-slate-500">ID: {WAREHOUSE_BRANCH_ID}</p>
                         </div>
                         <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
                             <h3 className="text-[9px] font-black text-primary/60 uppercase tracking-widest mb-2">Destino (Sucursal)</h3>

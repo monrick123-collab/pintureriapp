@@ -8,6 +8,8 @@ export const SupplyService = {
             .select(`
                 *,
                 branches (name),
+                creator:profiles!created_by (name),
+                admin:profiles!assigned_admin_id (name),
                 supply_order_items (
                     product_id,
                     quantity,
@@ -31,9 +33,9 @@ export const SupplyService = {
             branchId: s.branch_id,
             branchName: s.branches?.name,
             createdBy: s.created_by,
-            createdByName: s.created_by,
+            createdByName: (s.creator as any)?.name || s.created_by,
             assignedAdminId: s.assigned_admin_id,
-            assignedAdminName: s.assigned_admin_id,
+            assignedAdminName: (s.admin as any)?.name || s.assigned_admin_id,
             status: s.status,
             estimatedArrival: s.estimated_arrival,
             totalAmount: s.total_amount,
@@ -46,7 +48,7 @@ export const SupplyService = {
                 unitPrice: i.unit_price,
                 totalPrice: i.total_price,
                 status: i.status || 'pending',
-                received_quantity: i.received_quantity || 0,
+                receivedQuantity: i.received_quantity || 0,
                 productName: i.products?.name,
                 productImage: i.products?.image
             }))

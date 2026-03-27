@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Product } from '../types';
 import { ProductService } from '../services/productService';
 import { StockService } from '../services/inventory/stockService';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface ProductStore {
   products: Product[];
@@ -29,7 +30,7 @@ export const useProductStore = create<ProductStore>((set, get) => ({
   products: [],
   loading: false,
   error: null,
-  currentBranchId: 'BR-MAIN',
+  currentBranchId: WAREHOUSE_BRANCH_ID,
 
   setCurrentBranch: (branchId: string) => {
     set({ currentBranchId: branchId });

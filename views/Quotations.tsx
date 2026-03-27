@@ -7,6 +7,7 @@ import { ClientService } from '../services/clientService';
 import { DiscountService } from '../services/discountService';
 import { DiscountRequest, Quotation } from '../types';
 import { quotationService } from '../services/quotationService';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface QuotationsProps {
   user: User;
@@ -35,7 +36,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [folio, setFolio] = useState<number>(0);
 
   // Use branch-specific prefix
-  const branchPrefix = user.branchId === 'BR-MAIN' ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
+  const branchPrefix = user.branchId === WAREHOUSE_BRANCH_ID ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
   const quoteNumber = `${branchPrefix}-${(folio || 0).toString().padStart(4, '0')}`;
   const date = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -127,7 +128,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         iva,
         total,
         status: 'pending',
-        branchId: user.branchId || 'BR-MAIN',
+        branchId: user.branchId || WAREHOUSE_BRANCH_ID,
         createdBy: user.id
       });
     } catch (e) {

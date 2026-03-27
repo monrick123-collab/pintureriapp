@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User, InternalSupply, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
+import { supabase } from '../services/supabase';
 
 interface SuppliesProps {
     user: User;
@@ -48,7 +49,6 @@ const Supplies: React.FC<SuppliesProps> = ({ user, onLogout }) => {
 
     const handleMarkShipped = async (id: string) => {
         try {
-            const { supabase } = await import('../services/supabase');
             const { error } = await supabase
                 .from('internal_supplies')
                 .update({ status: 'shipped', shipped_at: new Date().toISOString(), shipped_by: user.id })

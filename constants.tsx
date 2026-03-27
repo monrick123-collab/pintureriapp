@@ -1,6 +1,9 @@
 
 import { Product, UserRole, User, FinancialInvoice, Client, Branch } from './types';
 
+/** ID de la sucursal principal (bodega/hub). Único punto de verdad. */
+export const WAREHOUSE_BRANCH_ID = 'BR-MAIN';
+
 export const MOCK_USER: User = {
   id: '4829',
   name: 'Juan Pérez',
@@ -16,7 +19,7 @@ export const MOCK_WAREHOUSE_USER: User = {
   email: 'bodega@pintamax.com',
   role: UserRole.WAREHOUSE,
   avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-  branchId: 'BR-MAIN' // Bodega Principal
+  branchId: WAREHOUSE_BRANCH_ID
 };
 
 export const MOCK_FINANCE_USER: User = {
@@ -25,11 +28,11 @@ export const MOCK_FINANCE_USER: User = {
   email: 'contador@pintamax.com',
   role: UserRole.FINANCE,
   avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-  branchId: 'BR-MAIN'
+  branchId: WAREHOUSE_BRANCH_ID
 };
 
 export const MOCK_BRANCHES: Branch[] = [
-  { id: 'BR-MAIN', name: 'Bodega Principal (Hub)', address: 'Zona Industrial Vallejo', manager: 'Ing. Roberto Maya', phone: '555-1000', status: 'active', type: 'warehouse' },
+  { id: WAREHOUSE_BRANCH_ID, name: 'Bodega Principal (Hub)', address: 'Zona Industrial Vallejo', manager: 'Ing. Roberto Maya', phone: '555-1000', status: 'active', type: 'warehouse' },
   { id: 'BR-CENTRO', name: 'Sucursal Centro', address: 'Av. Juárez 45, Col. Centro', manager: 'Marta Sánchez', phone: '555-2000', status: 'active', type: 'store' },
   { id: 'BR-NORTE', name: 'Sucursal Norte', address: 'Plaza Satélite Local 12', manager: 'Pedro Infante', phone: '555-3000', status: 'active', type: 'store' },
   { id: 'BR-SUR', name: 'Sucursal Sur', address: 'Perisur Nivel 2', manager: 'Lucía Méndez', phone: '555-4000', status: 'active', type: 'store' },
@@ -44,7 +47,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Cubeta Plástica',
     price: 1200,
     stock: 215,
-    inventory: { 'BR-MAIN': 150, 'BR-CENTRO': 25, 'BR-NORTE': 30, 'BR-SUR': 10 },
+    inventory: { [WAREHOUSE_BRANCH_ID]: 150, 'BR-CENTRO': 25, 'BR-NORTE': 30, 'BR-SUR': 10 },
     status: 'available',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBobmQqh7Oa-jCojPhZs2_OvCvYURSMCC234KOWH1jg7Y2v1JDVIkLDGS73_8Pw_MF5O9AFhzP5634IzRTi6751LKCFkTX8RMDSmuRt070NxV7uAJY_Y_lL8jQg9Cn3tb1FdapQ3ZlNw6RH0uBlW81TvAguAHYzgdgVRRDqAs2BbMA2ZvjrXHdMugbJtuNteTSUxpU3h4HJNM1cwjumKUUPA_NVh0K010111Qx4XQ47_techIsApQvH9qirTIEiIbERvz963hv16vc'
   },
@@ -56,7 +59,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Aerosol 400ml',
     price: 150,
     stock: 62,
-    inventory: { 'BR-MAIN': 50, 'BR-CENTRO': 2, 'BR-NORTE': 5, 'BR-SUR': 5 },
+    inventory: { [WAREHOUSE_BRANCH_ID]: 50, 'BR-CENTRO': 2, 'BR-NORTE': 5, 'BR-SUR': 5 },
     status: 'low',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD5QR295XwP06xhH63Cjm_jPucbojbpEifsdY6GPRF3tnJT8RYGrKfgtCAXfcJf-Z6tMKBWOqynt_g2-RsxhnpaVz6usz87xBggEdqea3NDaPb0_JR2pqW36XdKrPcnKPG53sqvoHDo04t77Rx1wQexQffGyiMD8oRRETHDGh7x2diXpyEwM1TwioIQLKKoweCKHATUWp9PY6rcj7H6Q_jQMkjQHZiwOjrpVtY_OmSI-N381n3h3dD7zRFJXBJiUNmdj4tGHVDXnUI'
   },
@@ -68,7 +71,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Accesorio profesional',
     price: 120,
     stock: 300,
-    inventory: { 'BR-MAIN': 200, 'BR-CENTRO': 40, 'BR-NORTE': 30, 'BR-SUR': 30 },
+    inventory: { [WAREHOUSE_BRANCH_ID]: 200, 'BR-CENTRO': 40, 'BR-NORTE': 30, 'BR-SUR': 30 },
     status: 'available',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB11Gi_wQTPw3sylUt2iydydD_mPZColvfmo3Aipyb4P3lQzPgnrnbhYx8OTOv0djHKcRqp8UrNMzJ98eDFpTvNKeIihlNGRdMBUpxNbPlv9fZODXD8Ubh1TCg0ZQwaCooAwzSfhghzqM4v_3XOXyr9j8nRGXAdFIQ8PEmJtw_DyDUKv_QcaLoB6keV6XddX_v_Qybl-3ocH48eG3HF4E1dosLEi_1NsMd7AiGi8RGkmib7IJ9UIriiQFQ0Dsn3pfeGveBUCKOq-Y8'
   }

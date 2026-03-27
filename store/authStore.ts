@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../types';
+import { supabase } from '../services/supabase';
 
 interface AuthStore {
   user: User | null;
@@ -35,7 +36,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     localStorage.removeItem('pintamax_user');
     // Also sign out from Supabase Auth
     try {
-      const { supabase } = await import('../services/supabase');
       await supabase.auth.signOut();
     } catch (_) {}
     set({ user: null });

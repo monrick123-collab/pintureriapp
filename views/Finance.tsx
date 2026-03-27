@@ -6,6 +6,7 @@ import { User, Expense, ExpenseCategory, PriceRequest } from '../types';
 import { AccountingService } from '../services/accountingService';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface FinanceProps {
   user: User;
@@ -30,7 +31,7 @@ const Finance: React.FC<FinanceProps> = ({ user, onLogout }) => {
     description: '',
     amount: 0,
     category: 'otros' as ExpenseCategory,
-    branchId: 'BR-MAIN'
+    branchId: WAREHOUSE_BRANCH_ID
   });
 
   useEffect(() => {

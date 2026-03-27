@@ -662,7 +662,7 @@ export const InventoryService = {
                 unitPrice: i.unit_price,
                 totalPrice: i.total_price,
                 status: i.status || 'pending',
-                received_quantity: i.received_quantity || 0,
+                receivedQuantity: i.received_quantity || 0,
                 notes: i.notes || null,
                 productName: i.products?.name,
                 productImage: i.products?.image
@@ -849,14 +849,18 @@ export const InventoryService = {
     // --- RETURNS FLOW (Punto 6) ---
 
     async createReturnRequest(branchId: string, items: { productId: string, quantity: number, reason: string }[], transportedBy: string, receivedBy: string): Promise<void> {
-        const { data: folio } = await supabase.rpc('get_next_folio', {
+        const { data: folio, error: folioError } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'return'
         });
 
+        if (folioError || !folio) {
+            throw new Error(`Error al generar folio de devolución: ${folioError?.message || 'folio vacío'}`);
+        }
+
         const returnRows = items.map(item => ({
             branch_id: branchId,
-            folio: folio || 0,
+            folio: folio,
             product_id: item.productId,
             quantity: item.quantity,
             reason: item.reason,
@@ -1118,16 +1122,20 @@ export const InventoryService = {
     },
 
     async createCoinChangeRequest(branchId: string, userId: string, amount: number, breakdown?: Record<string, number>): Promise<void> {
-        const { data: folio } = await supabase.rpc('get_next_folio', {
+        const { data: folio, error: folioError } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'coin_change'
         });
+
+        if (folioError || !folio) {
+            throw new Error(`Error al generar folio de cambio de moneda: ${folioError?.message || 'folio vacío'}`);
+        }
 
         const { error } = await supabase
             .from('coin_change_requests')
             .insert({
                 branch_id: branchId,
-                folio: folio || 0,
+                folio: folio,
                 amount: amount,
                 requester_id: userId,
                 status: 'pending',

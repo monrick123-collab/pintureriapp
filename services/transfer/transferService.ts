@@ -109,7 +109,15 @@ export const TransferService = {
         }));
 
         const { error: iError } = await supabase.from('stock_transfer_items').insert(transferItems);
-        if (iError) throw iError;
+        if (iError) {
+            // Cleanup: eliminar el transfer huérfano
+            try {
+                await supabase.from('stock_transfers').delete().eq('id', transfer.id);
+            } catch (cleanupErr) {
+                console.error('Error limpiando transfer huérfano:', transfer.id, cleanupErr);
+            }
+            throw iError;
+        }
     },
 
     async updateTransferStatus(transferId: string, status: 'pending' | 'in_transit' | 'completed' | 'cancelled'): Promise<void> {

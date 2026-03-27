@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { User, UserRole, Branch } from '../types';
 import { AccountingService } from '../services/accountingService';
 import { InventoryService } from '../services/inventoryService';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface CashCutProps {
     user: User;
@@ -14,7 +15,7 @@ const CashCut: React.FC<CashCutProps> = ({ user, onLogout }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState(user.branchId || 'BR-MAIN');
+    const [selectedBranch, setSelectedBranch] = useState(user.branchId || WAREHOUSE_BRANCH_ID);
 
     // Manejar Timezones locamente para evitar que pase de día antes de tiempo
     const sysDate = new Date();

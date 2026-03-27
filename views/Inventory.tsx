@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { User, Product, Branch, RestockRequest, UserRole, InternalConsumption } from '../types';
-import { MOCK_BRANCHES } from '../constants';
+import { MOCK_BRANCHES, WAREHOUSE_BRANCH_ID } from '../constants';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 import AuthorizationModal from '../components/AuthorizationModal';
@@ -28,8 +28,8 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   // Initialize branch: Store Manager and Warehouse restricted to their branch
   const [selectedBranchId, setSelectedBranchId] = useState<string>(
     (isWarehouse || isStoreManager)
-      ? (user.branchId || 'BR-MAIN')
-      : 'BR-MAIN'
+      ? (user.branchId || WAREHOUSE_BRANCH_ID)
+      : WAREHOUSE_BRANCH_ID
   );
   const [viewMode, setViewMode] = useState<'products' | 'requests' | 'consumption' | 'bulk'>('products');
   const [search, setSearch] = useState('');
@@ -72,7 +72,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
       try {
         setLookupLoading(true);
         // Traemos todos los productos de todas las sucursales (usando 'BR-MAIN' que tiene el catálogo global)
-        const all = await InventoryService.getProductsByBranch('BR-MAIN');
+        const all = await InventoryService.getProductsByBranch(WAREHOUSE_BRANCH_ID);
         setLookupProducts(all);
       } catch (e) {
         console.error(e);
@@ -487,7 +487,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                       Solicitar Precio
                                     </button>
                                   )}
-                                  {selectedBranchId !== 'BR-MAIN' && <button onClick={() => { setSelectedProduct(p); setIsRequestModalOpen(true) }} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase">Resurtir</button>}
+                                  {selectedBranchId !== WAREHOUSE_BRANCH_ID && <button onClick={() => { setSelectedProduct(p); setIsRequestModalOpen(true) }} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase">Resurtir</button>}
                                   {isAdmin && (
                                     <>
                                       <button onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-blue-500"><span className="material-symbols-outlined">edit</span></button>

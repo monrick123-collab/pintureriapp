@@ -9,6 +9,7 @@ import { PromotionService } from '../services/promotionService';
 import { translateStatus } from '../utils/formatters';
 import { Link } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface WholesalePOSProps {
     user: User;
@@ -70,7 +71,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
     const [pendingPromotionRequestId, setPendingPromotionRequestId] = useState<string | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedHistoryBranch, setSelectedHistoryBranch] = useState<string>(
-        (user.role === UserRole.ADMIN || isWarehouse) ? 'ALL' : (user.branchId || 'BR-MAIN')
+        (user.role === UserRole.ADMIN || isWarehouse) ? 'ALL' : (user.branchId || WAREHOUSE_BRANCH_ID)
     );
     const [historyPeriod, setHistoryPeriod] = useState<Period>('today');
     const [customStart, setCustomStart] = useState('');

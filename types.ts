@@ -131,7 +131,7 @@ export interface SupplyOrderItem {
   unitPrice: number;
   totalPrice: number;
   status?: 'pending' | 'received_full' | 'received_partial' | 'damaged';
-  received_quantity?: number;
+  receivedQuantity?: number;
   notes?: string;
 }
 

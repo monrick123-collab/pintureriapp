@@ -3,14 +3,18 @@ import { NotificationService } from '../notificationService';
 
 export const ReturnService = {
     async createReturnRequest(branchId: string, items: { productId: string, quantity: number, reason: string }[], transportedBy: string, receivedBy: string): Promise<void> {
-        const { data: folio } = await supabase.rpc('get_next_folio', {
+        const { data: folio, error: folioError } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,
             p_folio_type: 'return'
         });
 
+        if (folioError || !folio) {
+            throw new Error(`Error al generar folio de devolución: ${folioError?.message || 'folio vacío'}`);
+        }
+
         const returnRows = items.map(item => ({
             branch_id: branchId,
-            folio: folio || 0,
+            folio: folio,
             product_id: item.productId,
             quantity: item.quantity,
             reason: item.reason,

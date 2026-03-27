@@ -325,7 +325,18 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 <select
                   className="bg-transparent border-none text-base md:text-lg font-black focus:ring-0 p-0 cursor-pointer text-primary outline-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
                   value={selectedBranchId}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedBranchId(e.target.value);
+                    setSelectedProduct(null);
+                    setIsEditModalOpen(false);
+                    setIsRequestModalOpen(false);
+                    setIsConsumptionModalOpen(false);
+                    setIsAddModalOpen(false);
+                    setInitialStock(0);
+                    setTransferQty(0);
+                    setConsumptionQty(0);
+                    setConsumptionReason('');
+                  }}
                   disabled={isWarehouse}
                 >
                   {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

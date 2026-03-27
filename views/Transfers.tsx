@@ -158,7 +158,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                 productId: c.id,
                 quantity: c.quantity
             }));
-            await InventoryService.createStockTransfer(fromBranchId, toBranchId, notes, items);
+            await TransferService.createStockTransfer(fromBranchId, toBranchId, notes, items);
             setIsModalOpen(false);
             setActiveTab('history');
             setCart([]);

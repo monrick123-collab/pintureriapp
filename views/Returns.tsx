@@ -439,8 +439,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
                                                 value={selectedFormBranch}
                                                 onChange={e => {
                                                     setSelectedFormBranch(e.target.value);
+                                                    setCart([]);
                                                     setSelectedProductId('');
                                                     setSelectedProductDisplay(null);
+                                                    setQuantity(1);
+                                                    setReason('uso_tienda');
                                                     if (e.target.value) loadProductsForBranch(e.target.value);
                                                     else setProducts([]);
                                                 }}

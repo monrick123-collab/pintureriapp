@@ -54,8 +54,8 @@ const isFinance  = user.role === UserRole.FINANCE;
 | POS Mayoreo | `views/WholesalePOS.tsx` | `services/salesService.ts` |
 | POS Municipal | `views/MunicipalPOS.tsx` | `services/salesService.ts` |
 | Inventario | `views/Inventory.tsx` | `services/inventoryService.ts` |
-| Devoluciones | `views/Returns.tsx` | `services/return/returnService.ts` |
-| Traspasos | `views/Transfers.tsx` | `services/transfer/transferService.ts` |
+| Devoluciones | `views/Returns.tsx` | `services/inventoryService.ts` (activo) — `returnService.ts` es código muerto |
+| Traspasos | `views/Transfers.tsx` | `services/transfer/transferService.ts` (activo, con cleanup de huérfanos) |
 | Resurtidos | `views/Restocks.tsx` | `services/restock/restockService.ts` |
 | Envasado | `views/Packaging.tsx` | `services/packaging/packagingService.ts` |
 | Cambio Moneda | `views/CoinChange.tsx` | `services/coin/coinService.ts` |

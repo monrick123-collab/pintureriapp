@@ -483,3 +483,19 @@ return (data || []).map((r: any) => ({
 7. Para secuencias: `GRANT USAGE, SELECT ON SEQUENCE ... TO anon`
 8. **NO usar** `TO authenticated` en políticas — la app usa `anon`, no sesiones JWT
 9. Si agregas columna nullable a tabla existente, verificar si hay RPCs que inserten en esa tabla (actualizar firma del RPC)
+
+---
+
+## Deuda técnica conocida
+
+### Servicios muertos en el codebase
+`services/return/returnService.ts` y `services/supply/supplyService.ts` son código muerto. El servicio activo para devoluciones y suministros es `services/inventoryService.ts`. Los archivos muertos siguen existiendo y pueden causar confusión al buscar la implementación correcta.
+
+### packaging_order_lines con RLS deshabilitado
+La tabla `packaging_order_lines` tiene `DISABLE ROW LEVEL SECURITY` como workaround permanente a un bug de schema cache de PostgREST (commit `aaadced`). No re-habilitar sin verificar primero que PostgREST ha recargado el schema. La tabla no contiene datos sensibles, por lo que el riesgo es bajo.
+
+### Notificaciones filtradas client-side
+`notificationService.ts` trae hasta 50 notificaciones y filtra `target_branch_id` en JavaScript, no en la query de DB. Esto funciona con volumen bajo, pero no escala si el volumen de notificaciones crece. Riesgo: si se sube el límite o se quita el filtro JS, notificaciones podrían llegar a roles equivocados.
+
+### Timezone -06:00 hardcodeado en RPCs de corte de caja
+El RPC `get_daily_cash_cut_data` y las queries en `CashCut.tsx` usan timezone `-06:00` hardcodeado (México Central). Funciona correctamente para la operación actual, pero no es portable si la empresa opera en otra zona horaria. Dos bugs de timezone ya fueron corregidos en producción (`migration_cash_cut_tz_fix.sql`, `migration_fix_cashcut_tz_again.sql`).

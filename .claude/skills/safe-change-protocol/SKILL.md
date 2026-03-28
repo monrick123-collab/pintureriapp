@@ -4,6 +4,21 @@ Cuando se active esta skill, sigue este protocolo antes y durante cualquier camb
 
 ---
 
+## Módulos de ALTO RIESGO
+
+Antes de tocar cualquiera de estos módulos, leer el archivo completo y hacer regression-check post-cambio:
+
+### Packaging (`views/Packaging.tsx` / `services/packaging/packagingService.ts`)
+Dos implementaciones coexistiendo: legacy (1 presentación) y v3 (multi-línea). Código de ambas vive en el mismo servicio. FK ambigua a `products` (`bulk_product_id` + `target_product_id`). `packaging_order_lines` tiene RLS deshabilitado. Cualquier cambio requiere probar ambos flujos.
+
+### Barter/Trueque (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`)
+Lógica bidireccional compleja con 8 estados posibles. `approveBarterTransfer` tiene compensating rollback explícito — si se modifica, verificar que el rollback siga siendo correcto. El RPC `process_barter_transfer_bidirectional` toca inventario de dos sucursales simultáneamente. No hay rollback manual si falla a mitad.
+
+### process_sale RPC (`migrations/migration_merged_process_sale.sql`)
+Genera folios con `MAX(folio)+1` en vez de `get_next_folio()`. Race condition teórica bajo ventas concurrentes desde la misma sucursal. Además, overridea `payment_status` silenciosamente para `cash`/`transfer`. Cualquier cambio al RPC debe mantener ambos comportamientos o documentar explícitamente la desviación.
+
+---
+
 ## Checklist PRE-cambio
 
 Antes de escribir código, responde estas preguntas:

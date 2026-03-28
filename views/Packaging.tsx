@@ -322,6 +322,8 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 setShowAuth(true);
                                             } else {
                                                 setActiveTab(tab.key);
+                                                setDetailOrder(null);
+                                                setShowSettings(false);
                                             }
                                         }}
                                         className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${
@@ -407,7 +409,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-2xl w-full shadow-xl max-h-[80vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-black">Detalle de Orden</h2>
-                                <button onClick={() => setDetailOrder(null)} className="text-slate-400 hover:text-slate-600">
+                                <button onClick={() => { setDetailOrder(null); setDetailLines([]); setDetailWaste(null); }} className="text-slate-400 hover:text-slate-600">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </div>
@@ -512,7 +514,14 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                             <label className="text-xs font-black uppercase text-slate-500">Sucursal</label>
                                             <select
                                                 value={branchId}
-                                                onChange={e => setBranchId(e.target.value)}
+                                                onChange={e => {
+                                                    setBranchId(e.target.value);
+                                                    setCalcLines([]);
+                                                    setDrumQty(1);
+                                                    setBulkId('');
+                                                    setDetailOrder(null);
+                                                    setShowSettings(false);
+                                                }}
                                                 className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg outline-none font-bold"
                                             >
                                                 <option value="">Selecciona...</option>

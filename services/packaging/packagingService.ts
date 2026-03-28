@@ -360,7 +360,7 @@ export const PackagingService = {
             .from('packaging_order_lines')
             .select(`
                 *,
-                products (name, sku)
+                products:target_product_id (name, sku)
             `)
             .eq('order_id', orderId)
             .order('created_at');

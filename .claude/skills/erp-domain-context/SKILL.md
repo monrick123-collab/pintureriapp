@@ -59,7 +59,8 @@ const isFinance  = user.role === UserRole.FINANCE;
 | Resurtidos | `views/Restocks.tsx` | `services/restock/restockService.ts` |
 | Envasado | `views/Packaging.tsx` | `services/packaging/packagingService.ts` |
 | Cambio Moneda | `views/CoinChange.tsx` | `services/coin/coinService.ts` |
-| Suministros | `views/Supplies.tsx` | `services/supply/supplyService.ts` |
+| Suministros internos | `views/Supplies.tsx` | `services/inventoryService.ts` (activo) — `supplyService.ts` es código muerto |
+| Pedidos a Admin (Supply Orders) | `views/WarehouseDashboard.tsx` | `services/inventoryService.ts` (activo, RPC atómico) — `supplyService.ts` es código muerto |
 | Corte Caja | `views/CashCut.tsx` | `services/inventoryService.ts` (RPC) |
 | Clientes/CRM | `views/Clients.tsx` | `services/clientService.ts` |
 | Cotizaciones | `views/Quotations.tsx` | `services/quotationService.ts` |
@@ -739,3 +740,19 @@ Al envasar:
 ```
 
 **Fuente:** `services/inventoryService.ts` `getBulkInventory()`; `services/packaging/packagingService.ts`.
+
+---
+
+## Pendientes conocidos
+
+### Packaging — MUY FRÁGIL
+Dos implementaciones coexistiendo: legacy (1 presentación, estado inicial `'sent_to_branch'`) y v3 (multi-línea, estado inicial `'processing'`). Ambas viven en `services/packaging/packagingService.ts`. FK ambigua a `products` (`bulk_product_id` + `target_product_id`). `packaging_order_lines` tiene RLS deshabilitado como workaround permanente. Requiere revisión dedicada para determinar si el flujo legacy puede eliminarse.
+
+### Barter/Trueque — MUY FRÁGIL
+8 estados posibles con lógica bidireccional en `views/Transfers.tsx` (tab Trueque) y `services/inventoryService.ts`. `approveBarterTransfer` tiene compensating rollback — si se modifica, verificar que el rollback siga siendo correcto. El RPC `process_barter_transfer_bidirectional` toca inventario de dos sucursales simultáneamente; no hay rollback manual si falla a mitad. Edge cases en estados `counter_proposed` y `pending_selection` pendientes de revisión.
+
+### MunicipalPOS — FRÁGIL
+Sistema completamente separado de POS retail con tablas propias (`municipal_sales`, `municipal_sale_items`, `municipal_accounts`, `municipal_payments`). `extraPercentage` del cliente puede ser 0 (no asumir que siempre hay porcentaje). `municipal_sales.updated_at` puede no existir en todas las instancias (workaround en `paymentExpiryService.ts:54`). Las ventas municipales NO usan `SalesService.approvePayment()` — tienen su propio método.
+
+### process_sale RPC — Race condition teórica en folios
+El RPC `process_sale` genera folios con `MAX(folio)+1` dentro de la transacción, en vez de usar `get_next_folio()`. Bajo `READ COMMITTED`, dos transacciones concurrentes podrían calcular el mismo folio. No ha causado problemas por baja concurrencia, pero es deuda técnica a considerar si el volumen crece.

@@ -745,8 +745,8 @@ Al envasar:
 
 ## Pendientes conocidos
 
-### Packaging — MUY FRÁGIL
-Dos implementaciones coexistiendo: legacy (1 presentación, estado inicial `'sent_to_branch'`) y v3 (multi-línea, estado inicial `'processing'`). Ambas viven en `services/packaging/packagingService.ts`. FK ambigua a `products` (`bulk_product_id` + `target_product_id`). `packaging_order_lines` tiene RLS deshabilitado como workaround permanente. Requiere revisión dedicada para determinar si el flujo legacy puede eliminarse.
+### Packaging — Revisado y corregido (`a61ca0b`)
+4 fixes de UI state aplicados: reset de form al cambiar sucursal, cierre de modales al cambiar tab, FK explícita `products:target_product_id` en `getOrderLines`, limpieza de `detailLines`/`detailWaste` al cerrar modal. Dos implementaciones coexisten (legacy + v3) en `services/packaging/packagingService.ts`. **Lo que NO tocar:** compensating rollback en `submitPackagingOrderV3`/`completePackagingOrder`, mapeo camelCase/snake_case (está completo y correcto), RPC `complete_packaging_v2` con `FOR UPDATE`, RLS deshabilitado en `packaging_order_lines` (workaround permanente a PostgREST schema cache).
 
 ### Barter/Trueque — MUY FRÁGIL
 8 estados posibles con lógica bidireccional en `views/Transfers.tsx` (tab Trueque) y `services/inventoryService.ts`. `approveBarterTransfer` tiene compensating rollback — si se modifica, verificar que el rollback siga siendo correcto. El RPC `process_barter_transfer_bidirectional` toca inventario de dos sucursales simultáneamente; no hay rollback manual si falla a mitad. Edge cases en estados `counter_proposed` y `pending_selection` pendientes de revisión.

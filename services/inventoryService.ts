@@ -1423,10 +1423,14 @@ export const InventoryService = {
 
         if (reserveError) {
             // Compensating rollback: revertir aprobación para evitar barter atascado
-            await supabase
-                .from('barter_transfers')
-                .update({ status: 'pending_approval', authorized_by: null, authorized_at: null, updated_at: new Date().toISOString() })
-                .eq('id', barterId);
+            try {
+                await supabase
+                    .from('barter_transfers')
+                    .update({ status: 'pending_approval', authorized_by: null, authorized_at: null, updated_at: new Date().toISOString() })
+                    .eq('id', barterId);
+            } catch (rollbackError) {
+                console.error('[CRITICAL] Barter rollback failed for', barterId, rollbackError);
+            }
             throw reserveError;
         }
 

@@ -507,6 +507,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             } catch (_) {}
         } catch (e: any) {
             console.error("Error al rechazar trueque:", e);
+            toast.error('Error al rechazar', e.message || e.toString());
         } finally {
             setLoading(false);
         }
@@ -693,7 +694,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 { key: 'history', label: 'Historial', icon: 'list' },
                                 { key: 'barter_pending', label: 'Ofertas Pendientes', icon: 'inbox', badge: pendingBarters.length },
                             ] as const).map(tab => (
-                                <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setIsDetailModalOpen(false); setIsBarterDetailOpen(false); setIsSelectionModalOpen(false); }}
+                                <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setIsDetailModalOpen(false); setIsBarterDetailOpen(false); setIsSelectionModalOpen(false); setSelectedBarter(null); setBarterWithInventory(null); setCart([]); setReceivedCart([]); setSelectionCart([]); setNotes(''); setSuggestions([]); }}
                                     className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all relative ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
                                     {'badge' in tab && tab.badge > 0 && (
@@ -1290,7 +1291,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         )}
                                     </p>
                                 </div>
-                                <button onClick={() => setIsBarterDetailOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                <button onClick={() => { setIsBarterDetailOpen(false); setSelectedBarter(null); setBarterWithInventory(null); }} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </div>
@@ -1440,7 +1441,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                         {barterWithInventory.fromBranchName} ofrece productos. Selecciona qué deseas recibir de su inventario.
                                     </p>
                                 </div>
-                                <button onClick={() => { setIsSelectionModalOpen(false); setSelectionCart([]); }} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                <button onClick={() => { setIsSelectionModalOpen(false); setSelectionCart([]); setBarterWithInventory(null); }} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </div>

@@ -138,7 +138,11 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                 { key: 'new', label: 'Nuevo', icon: 'add_circle' },
                                 { key: 'history', label: 'Historial', icon: 'list' }
                             ] as const).map(tab => (
-                                <button key={tab.key} onClick={() => setActiveTab(tab.key as 'new' | 'history')}
+                                <button key={tab.key} onClick={() => {
+                                        setActiveTab(tab.key as 'new' | 'history');
+                                        setBreakdown({});
+                                        setCollectedBy('');
+                                    }}
                                     className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>
                                     <span className="hidden sm:inline">{tab.label}</span>
@@ -273,7 +277,11 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                             required
                                             className="mt-1 w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none border border-slate-200 dark:border-slate-700 font-bold"
                                             value={selectedBranchId}
-                                            onChange={e => setSelectedBranchId(e.target.value)}
+                                            onChange={e => {
+                                            setSelectedBranchId(e.target.value);
+                                            setBreakdown({});
+                                            setCollectedBy('');
+                                        }}
                                         >
                                             <option value="">Selecciona sucursal...</option>
                                             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

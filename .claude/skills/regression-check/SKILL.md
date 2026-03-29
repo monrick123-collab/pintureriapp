@@ -28,9 +28,10 @@ Basado en el historial de bugs reales (138 commits de fix). Antes de tocar cualq
 - `target_product_id` puede ser null (orden v3 sin producto destino definido). No asumir que siempre tiene valor.
 - Flujo legacy empieza en `'sent_to_branch'`, flujo v3 empieza en `'processing'`. Son estados iniciales diferentes.
 
-**Trueque/Barter (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`)**
-- Flujo más complejo del sistema: **8 estados posibles** con lógica bidireccional.
-- `approveBarterTransfer` tiene compensating rollback explícito — si se modifica, asegurarse de que el rollback sigue siendo correcto.
+**Trueque/Barter (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`)** — Revisado (`08b4159`)
+- Flujo más complejo del sistema: **9 estados reales** con lógica bidireccional.
+- `approveBarterTransfer` tiene compensating rollback con try/catch (fix `08b4159`). UI state resets aplicados en tab/modal.
+- **Precauciones vigentes:** `confirmBarterReception` setea `received_by` antes del RPC (inconsistente si falla). `cancelBarterTransfer` no es atómico (2 llamadas separadas). Ambos requieren migración de DB para resolver.
 - El RPC `process_barter_transfer_bidirectional` toca inventario de **dos sucursales simultáneamente**. No hay forma de deshacerlo manualmente si falla a mitad.
 - Estados `counter_proposed` y `pending_selection` requieren que la sucursal correcta actúe. Verificar siempre quién puede hacer qué en cada estado.
 

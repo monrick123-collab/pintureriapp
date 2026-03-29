@@ -11,8 +11,11 @@ Antes de tocar cualquiera de estos módulos, leer el archivo completo y hacer re
 ### Packaging (`views/Packaging.tsx` / `services/packaging/packagingService.ts`)
 Dos implementaciones coexistiendo: legacy (1 presentación) y v3 (multi-línea). Código de ambas vive en el mismo servicio. FK ambigua a `products` (`bulk_product_id` + `target_product_id`). `packaging_order_lines` tiene RLS deshabilitado. Cualquier cambio requiere probar ambos flujos.
 
-### Barter/Trueque (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`)
-Lógica bidireccional compleja con 8 estados posibles. `approveBarterTransfer` tiene compensating rollback explícito — si se modifica, verificar que el rollback siga siendo correcto. El RPC `process_barter_transfer_bidirectional` toca inventario de dos sucursales simultáneamente. No hay rollback manual si falla a mitad.
+### Barter/Trueque (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`) — Revisado (`08b4159`)
+Lógica bidireccional compleja con 9 estados. Rollback de `approveBarterTransfer` ahora tiene try/catch protector. UI state resets aplicados en tab change y modal close. **Precaución vigente:** `confirmBarterReception` setea `received_by` antes del RPC atómico (si RPC falla, campo queda inconsistente). `cancelBarterTransfer` no es atómico (2 llamadas separadas). Ambos requieren cambio de DB para resolver — no tocar sin migración.
+
+### MunicipalPOS — CRÍTICO: ventas NO descuentan inventario (`salesService.ts:523-676`)
+`createMunicipalSale()` inserta en `municipal_sales` + `municipal_sale_items` pero NUNCA descuenta stock de `inventory`. Sin embargo, `cancel_municipal_sale` RPC SÍ revierte stock (`stock + quantity`) y `edit_municipal_sale` RPC SÍ descuenta/revierte. Cancelar una venta que nunca descontó stock causa stock inflado. **Requiere RPC `process_municipal_sale` atómico antes de usar en producción. NO aplicar fix no atómico (INSERT sale + UPDATE inventory separados).**
 
 ### process_sale RPC (`migrations/migration_merged_process_sale.sql`)
 Genera folios con `MAX(folio)+1` en vez de `get_next_folio()`. Race condition teórica bajo ventas concurrentes desde la misma sucursal. Además, overridea `payment_status` silenciosamente para `cash`/`transfer`. Cualquier cambio al RPC debe mantener ambos comportamientos o documentar explícitamente la desviación.

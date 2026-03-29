@@ -330,7 +330,9 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                 setMunicipality(''); setDepartment(''); setContactName('');
                 setSocialReason(''); setRfc(''); setInvoiceNumber('');
                 setDeliveryReceiver(''); setAuthorizedExitBy(''); setNotes('');
-                setTransferReference('');
+                setTransferReference(''); setSelectedClient(null);
+                setPaymentType('contado'); setPaymentMethod('cash');
+                setCreditDays(30); setBlockedWarning(null);
                 loadData();
             }, 2000);
         } catch (e: any) {
@@ -394,7 +396,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
             const updated = await SalesService.getMunicipalAccounts(isAdmin ? undefined : branchId);
             setAccounts(updated);
             setSelectedAccount(updated.find((a: any) => a.id === selectedAccount.id) || null);
-        } catch (e: any) { alert('Error: ' + e.message); }
+        } catch (e: any) { alert('Error: ' + e.message); } finally { setLoading(false); }
     };
 
     // Multiplicador derivado del porcentaje extra del cliente
@@ -440,7 +442,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             { key: 'history', label: 'Historial' },
                             { key: 'accounts', label: 'Cuentas de Crédito' },
                         ] as const).map(tab => (
-                            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                            <button key={tab.key} onClick={() => { setActiveTab(tab.key); setIsPaymentModalOpen(false); setSelectedHistorySale(null); setIsEditModalOpen(false); setIsAccountModalOpen(false); setSelectedAccount(null); }}
                                 className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                 {tab.label}
                             </button>
@@ -456,7 +458,16 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             {isAdmin && (
                                 <select
                                     value={adminPosBranchId}
-                                    onChange={e => { setAdminPosBranchId(e.target.value); setCart([]); }}
+                                    onChange={e => {
+                                        setAdminPosBranchId(e.target.value);
+                                        setCart([]);
+                                        setMunicipality(''); setDepartment(''); setContactName('');
+                                        setSocialReason(''); setRfc(''); setInvoiceNumber('');
+                                        setDeliveryReceiver(''); setAuthorizedExitBy('');
+                                        setNotes(''); setTransferReference('');
+                                        setSelectedClient(null); setBlockedWarning(null);
+                                        setPaymentType('contado'); setPaymentMethod('cash');
+                                    }}
                                     className="w-full h-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-sm font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">— Selecciona sucursal para vender —</option>

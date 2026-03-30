@@ -14,8 +14,8 @@ Dos implementaciones coexistiendo: legacy (1 presentación) y v3 (multi-línea).
 ### Barter/Trueque (`views/Transfers.tsx` tab Trueque / `services/inventoryService.ts`) — Revisado (`08b4159`)
 Lógica bidireccional compleja con 9 estados. Rollback de `approveBarterTransfer` ahora tiene try/catch protector. UI state resets aplicados en tab change y modal close. **Precaución vigente:** `confirmBarterReception` setea `received_by` antes del RPC atómico (si RPC falla, campo queda inconsistente). `cancelBarterTransfer` no es atómico (2 llamadas separadas). Ambos requieren cambio de DB para resolver — no tocar sin migración.
 
-### MunicipalPOS — CRÍTICO: ventas NO descuentan inventario (`salesService.ts:523-676`)
-`createMunicipalSale()` inserta en `municipal_sales` + `municipal_sale_items` pero NUNCA descuenta stock de `inventory`. Sin embargo, `cancel_municipal_sale` RPC SÍ revierte stock (`stock + quantity`) y `edit_municipal_sale` RPC SÍ descuenta/revierte. Cancelar una venta que nunca descontó stock causa stock inflado. **Requiere RPC `process_municipal_sale` atómico antes de usar en producción. NO aplicar fix no atómico (INSERT sale + UPDATE inventory separados).**
+### MunicipalPOS — Resuelto (`29633ed`): RPC `process_municipal_sale` atómico
+`createMunicipalSale()` ahora usa RPC `process_municipal_sale` que inserta venta + items + descuenta inventario en una transacción. Patrón idéntico a `process_sale` (UPDATE WHERE stock >= quantity). `cancel_municipal_sale` y `edit_municipal_sale` siguen funcionando correctamente (ahora la asunción de que el stock fue descontado es válida).
 
 ### process_sale RPC (`migrations/migration_merged_process_sale.sql`)
 Genera folios con `MAX(folio)+1` en vez de `get_next_folio()`. Race condition teórica bajo ventas concurrentes desde la misma sucursal. Además, overridea `payment_status` silenciosamente para `cash`/`transfer`. Cualquier cambio al RPC debe mantener ambos comportamientos o documentar explícitamente la desviación.

@@ -546,133 +546,69 @@ export const SalesService = {
             appliedExtraPct?: number;
         }
     ): Promise<string> {
-        // 1. Obtener el siguiente folio municipal con fallback robusto
-        let folio = 1;
-        try {
-            const { data: folioData, error: folioError } = await supabase.rpc('get_next_folio', {
-                p_branch_id: branchId,
-                p_folio_type: 'municipal'
-            });
-            
-            if (folioError) {
-                console.warn('RPC get_next_folio error, using fallback:', folioError.message);
-                // Fallback: obtener el máximo folio actual + 1
-                const { data: maxFolio } = await supabase
-                    .from('municipal_sales')
-                    .select('folio')
-                    .eq('branch_id', branchId)
-                    .order('folio', { ascending: false })
-                    .limit(1)
-                    .single();
-                folio = (maxFolio?.folio ?? 0) + 1;
-            } else {
-                folio = folioData ?? 1;
-            }
-        } catch (e) {
-            console.warn('Folio generation failed, using timestamp fallback');
-            folio = Math.floor(Date.now() / 1000) % 100000; // últimos 5 dígitos del timestamp
-        }
-
-        // 2. Crear la venta municipal
-        const { data: sale, error: saleError } = await supabase
-            .from('municipal_sales')
-            .insert({
-                branch_id: branchId,
-                folio: folio,
-                municipality: saleData.municipality,
-                department: saleData.department || null,
-                contact_name: saleData.contactName || null,
-                social_reason: saleData.socialReason || null,
-                rfc: saleData.rfc || null,
-                invoice_number: saleData.invoiceNumber || null,
-                authorized_exit_by: saleData.authorizedExitBy || null,
-                delivery_receiver: saleData.deliveryReceiver,
-                payment_type: saleData.paymentType,
-                payment_method: saleData.paymentMethod,
-                credit_days: saleData.creditDays || 0,
-                subtotal: saleData.subtotal,
-                iva: saleData.iva,
-                total: saleData.total,
-                notes: saleData.notes || null,
-                payment_status: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? 'pending' : 'approved',
-                pending_since: (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') ? new Date().toISOString() : null,
-                transfer_reference: saleData.transferReference || null,
-                applied_extra_pct: saleData.appliedExtraPct || 0
-            })
-            .select()
-            .single();
-
-        if (saleError) {
-            console.error('Error creating municipal sale:', saleError);
-            throw saleError;
-        }
-
-        // 3. Obtener porcentaje extra real desde DB (no confiar en el frontend)
-        let validatedMultiplier = 1;
-        if (saleData.clientId) {
-            const { data: clientData } = await supabase
-                .from('clients')
-                .select('extra_percentage')
-                .eq('id', saleData.clientId)
-                .single();
-            const extraPct = clientData?.extra_percentage || 0;
-            validatedMultiplier = 1 + (extraPct / 100);
-        }
-
-        // Obtener precios base desde products para re-validar con el multiplicador
-        const productIds = items.map(i => i.productId);
-        const { data: productsData } = await supabase
-            .from('products')
-            .select('id, price')
-            .in('id', productIds);
-        const basePriceMap: Record<string, number> = {};
-        (productsData || []).forEach((p: any) => { basePriceMap[p.id] = parseFloat(p.price) || 0; });
-
-        // 4. Crear los items de la venta con precio validado por el backend
-        const saleItems = items.map(item => {
-            const basePrice = basePriceMap[item.productId] || item.price;
-            const validatedPrice = parseFloat((basePrice * validatedMultiplier).toFixed(2));
-            return {
-                sale_id: sale.id,
-                product_id: item.productId,
-                product_name: item.productName,
-                quantity: item.quantity,
-                unit_price: validatedPrice,
-                total_price: parseFloat((validatedPrice * item.quantity).toFixed(2))
-            };
+        // RPC atómico: inserta venta + items + descuenta inventario en una transacción
+        const { data: saleId, error } = await supabase.rpc('process_municipal_sale', {
+            p_branch_id: branchId,
+            p_items: JSON.stringify(items.map(i => ({
+                product_id: i.productId,
+                product_name: i.productName,
+                quantity: i.quantity,
+                price: i.price
+            }))),
+            p_municipality: saleData.municipality,
+            p_total: saleData.total,
+            p_subtotal: saleData.subtotal,
+            p_iva: saleData.iva,
+            p_discount_amount: 0,
+            p_department: saleData.department || null,
+            p_contact_name: saleData.contactName || null,
+            p_social_reason: saleData.socialReason || null,
+            p_rfc: saleData.rfc || null,
+            p_invoice_number: saleData.invoiceNumber || null,
+            p_authorized_exit_by: saleData.authorizedExitBy || null,
+            p_delivery_receiver: saleData.deliveryReceiver || null,
+            p_payment_type: saleData.paymentType,
+            p_payment_method: saleData.paymentMethod,
+            p_credit_days: saleData.creditDays || 0,
+            p_notes: saleData.notes || null,
+            p_transfer_reference: saleData.transferReference || null,
+            p_client_id: saleData.clientId || null,
+            p_applied_extra_pct: saleData.appliedExtraPct || 0
         });
 
-        const { error: itemsError } = await supabase
-            .from('municipal_sale_items')
-            .insert(saleItems);
-
-        if (itemsError) {
-            console.error('Error creating municipal sale items:', itemsError);
-            throw itemsError;
+        if (error) {
+            console.error('Error en process_municipal_sale:', error);
+            throw error;
         }
 
-        // 4. Crear notificación si el pago está pendiente
+        // Notificación si el pago está pendiente (no-bloqueante)
         if (saleData.paymentMethod === 'transfer' || saleData.paymentMethod === 'cash') {
             try {
                 const amountFormatted = new Intl.NumberFormat('es-MX', {
                     style: 'currency',
                     currency: 'MXN'
                 }).format(saleData.total);
-                
+
+                // Obtener folio de la venta recién creada para la notificación
+                const { data: saleRecord } = await supabase
+                    .from('municipal_sales')
+                    .select('folio')
+                    .eq('id', saleId)
+                    .single();
+                const folio = saleRecord?.folio ?? 0;
+
                 await NotificationService.createNotification({
                     targetRole: 'ADMIN',
                     title: `Pago Pendiente de Aprobación - Municipal`,
                     message: `Venta municipal #M-${String(folio).padStart(4, '0')} por ${amountFormatted} requiere aprobación. Método: ${saleData.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'}`,
                     actionUrl: `/admin/pending-payments`
                 });
-                
-                console.log(`Notificación creada para venta municipal pendiente: ${sale.id}`);
             } catch (notifError) {
                 console.error("Error creando notificación para pago pendiente municipal:", notifError);
             }
         }
 
-        return sale.id;
+        return saleId;
     },
 
     /**

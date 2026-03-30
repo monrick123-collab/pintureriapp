@@ -4,6 +4,7 @@ import { AiService } from '../services/aiService';
 import { InventoryService } from '../services/inventoryService';
 import { FinanceService } from '../services/financeService';
 import { Product, UserRole } from '../types';
+import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface Message {
     id: string;
@@ -68,7 +69,7 @@ const AiAssistant: React.FC = () => {
 
             const responseText = await AiService.sendMessage(userMsg.text, {
                 products,
-                branchId: 'BR-MAIN', // TODO: Get dynamic branch ID
+                branchId: currentUser?.branchId || WAREHOUSE_BRANCH_ID,
                 userRole: currentUser?.role || 'POS',
                 financeContext
             });

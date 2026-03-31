@@ -14,7 +14,7 @@ Eres un experto en el ERP PinturaMax. Cuando se active esta skill, proporciona c
 | Estado global | Zustand 5 (solo auth — `store/authStore.ts`) |
 | Backend/DB | Supabase (PostgreSQL + RLS con clave `anon`) |
 | Gráficas | Recharts 2 |
-| AI | Google Gemini (`@google/generative-ai`), Groq SDK |
+| AI | Groq SDK |
 
 ---
 

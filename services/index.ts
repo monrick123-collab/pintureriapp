@@ -21,4 +21,3 @@ export { AccountingService } from './accountingService';
 export { UserService } from './userService';
 export { quotationService } from './quotationService';
 export { AiService } from './aiService';
-export { analyzeInventory, analyzeFinances } from './geminiService';

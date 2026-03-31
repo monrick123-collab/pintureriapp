@@ -2,12 +2,15 @@ import { supabase } from './supabase';
 import { Quotation } from '../types';
 
 export const quotationService = {
-    async getQuotations() {
-        const { data, error } = await supabase
+    async getQuotations(branchId?: string) {
+        let query = supabase
             .from('quotations')
             .select('*')
             .order('created_at', { ascending: false });
 
+        if (branchId) query = query.eq('branch_id', branchId);
+
+        const { data, error } = await query;
         if (error) throw error;
         return data as Quotation[];
     },

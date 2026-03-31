@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, Product, Client, CartItem } from '../types';
+import { User, Product, Client, CartItem, SaleItem } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { ClientService } from '../services/clientService';
 import { DiscountService } from '../services/discountService';
+import { SalesService } from '../services/salesService';
 import { DiscountRequest, Quotation } from '../types';
 import { quotationService } from '../services/quotationService';
+import { supabase } from '../services/supabase';
 import { WAREHOUSE_BRANCH_ID } from '../constants';
 
 interface QuotationsProps {
@@ -35,6 +37,14 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [paymentType, setPaymentType] = useState<'contado' | 'credito'>('contado');
   const [folio, setFolio] = useState<number>(0);
 
+  // Conversión de cotización a venta
+  const [convertingQuotation, setConvertingQuotation] = useState<Quotation | null>(null);
+  const [convertPaymentMethod, setConvertPaymentMethod] = useState<string>('cash');
+  const [convertTransferRef, setConvertTransferRef] = useState('');
+  const [converting, setConverting] = useState(false);
+  const [stockCheck, setStockCheck] = useState<{productName: string, requested: number, available: number}[]>([]);
+  const [stockCheckLoading, setStockCheckLoading] = useState(false);
+
   // Use branch-specific prefix
   const branchPrefix = user.branchId === WAREHOUSE_BRANCH_ID ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
   const quoteNumber = `${branchPrefix}-${(folio || 0).toString().padStart(4, '0')}`;
@@ -47,11 +57,15 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
   const fetchNextFolio = async () => {
     try {
-      // En una implementación real, esto vendría de la DB. 
-      // Usaremos un valor aleatorio o simulado si no hay servicio.
-      setFolio(Math.floor(Math.random() * 9000) + 1000);
+      const { data, error } = await supabase.rpc('get_next_folio', {
+        p_branch_id: user.branchId || WAREHOUSE_BRANCH_ID,
+        p_folio_type: 'quotation'
+      });
+      if (error) throw error;
+      setFolio(data ?? 1);
     } catch (e) {
-      console.error(e);
+      console.error('Error obteniendo folio:', e);
+      setFolio(Math.floor(Date.now() / 1000) % 100000);
     }
   };
 
@@ -109,7 +123,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
 
   const loadQuotationHistory = async () => {
     try {
-      const data = await quotationService.getQuotations();
+      const data = await quotationService.getQuotations(user.branchId);
       setQuotationHistory(data);
     } catch (e) {
       console.error('Error cargando historial de cotizaciones:', e);
@@ -139,6 +153,13 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
     setTimeout(() => {
         window.print();
         if (wasDark) document.documentElement.classList.add('dark');
+        // Reset después de imprimir
+        setItems([]);
+        setSelectedClient(null);
+        setAppliedDiscount(null);
+        setActiveDiscountRequest(null);
+        setPaymentType('contado');
+        fetchNextFolio();
     }, 150);
   };
 
@@ -183,6 +204,78 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
       alert("Error al solicitar descuento.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openConvertModal = async (q: Quotation) => {
+    setConvertingQuotation(q);
+    setConvertPaymentMethod('cash');
+    setConvertTransferRef('');
+    setStockCheckLoading(true);
+    try {
+      const productIds = (q.items as any[]).map((i: any) => i.id || i.productId);
+      const { data: inventory } = await supabase
+        .from('inventory')
+        .select('product_id, stock')
+        .eq('branch_id', q.branchId)
+        .in('product_id', productIds);
+      const stockMap: Record<string, number> = {};
+      (inventory || []).forEach((row: any) => { stockMap[row.product_id] = row.stock; });
+      setStockCheck((q.items as any[]).map((item: any) => ({
+        productName: item.name || item.productName,
+        requested: item.quantity,
+        available: stockMap[item.id || item.productId] ?? 0
+      })));
+    } catch (e) {
+      console.error('Error verificando stock:', e);
+      setStockCheck([]);
+    } finally {
+      setStockCheckLoading(false);
+    }
+  };
+
+  const handleConvertToSale = async () => {
+    if (!convertingQuotation) return;
+    const q = convertingQuotation;
+    setConverting(true);
+    try {
+      const saleItems: SaleItem[] = (q.items as any[]).map((item: any) => ({
+        productId: item.id || item.productId,
+        productName: item.name || item.productName,
+        quantity: item.quantity,
+        price: item.price || item.unitPrice || 0,
+        total: (item.price || item.unitPrice || 0) * (item.quantity || 0)
+      }));
+
+      const saleId = await SalesService.processSale(
+        q.branchId,
+        saleItems,
+        q.total,
+        convertPaymentMethod,
+        q.clientId || undefined,
+        {
+          subtotal: q.subtotal,
+          discountAmount: q.discountAmount,
+          iva: q.iva,
+          paymentType: 'contado',
+          transferReference: convertPaymentMethod === 'transfer' ? convertTransferRef : undefined
+        }
+      );
+
+      await quotationService.linkToSale(q.id, saleId);
+      alert(`Venta creada exitosamente (ID: ${saleId.substring(0, 8)})`);
+      setConvertingQuotation(null);
+      setStockCheck([]);
+      loadQuotationHistory();
+    } catch (err: any) {
+      const msg = err?.message || 'Error desconocido';
+      if (msg.includes('Stock insuficiente')) {
+        alert(`No se pudo convertir: ${msg}`);
+      } else {
+        alert(`Error al crear venta: ${msg}`);
+      }
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -503,9 +596,9 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                         <td className="px-6 py-4 text-right">
                           {q.status === 'pending' && (
                             <button
-                              onClick={async () => { await quotationService.markAsSaleClosed(q.id); loadQuotationHistory(); }}
-                              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase"
-                            >Marcar Venta</button>
+                              onClick={() => openConvertModal(q)}
+                              className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-[10px] font-black uppercase"
+                            >Convertir a Venta</button>
                           )}
                         </td>
                       </tr>
@@ -766,6 +859,109 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de conversión a venta */}
+        {convertingQuotation && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl md:rounded-[32px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="p-8 border-b dark:border-slate-700">
+                <h2 className="text-xl font-black">Convertir Cotización a Venta</h2>
+                <p className="text-sm text-slate-500 mt-1">Folio #{convertingQuotation.folio.toString().padStart(4, '0')} — {convertingQuotation.clientName || 'Consumidor Final'}</p>
+              </div>
+              <div className="p-8 overflow-y-auto space-y-6">
+                {/* Tabla de verificación de stock */}
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Verificación de Stock</p>
+                  {stockCheckLoading ? (
+                    <div className="flex items-center justify-center py-6"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+                  ) : (
+                    <div className="border dark:border-slate-700 rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black text-slate-400 uppercase">
+                          <tr>
+                            <th className="px-4 py-2">Producto</th>
+                            <th className="px-4 py-2 text-center">Solicitado</th>
+                            <th className="px-4 py-2 text-center">Disponible</th>
+                            <th className="px-4 py-2 text-center w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y dark:divide-slate-700">
+                          {stockCheck.map((s, i) => (
+                            <tr key={i} className={s.available < s.requested ? 'bg-amber-50 dark:bg-amber-900/10' : ''}>
+                              <td className="px-4 py-2 font-bold truncate max-w-[200px]">{s.productName}</td>
+                              <td className="px-4 py-2 text-center font-black">{s.requested}</td>
+                              <td className={`px-4 py-2 text-center font-black ${s.available < s.requested ? 'text-amber-600' : 'text-green-600'}`}>{s.available}</td>
+                              <td className="px-4 py-2 text-center">{s.available < s.requested && <span className="material-symbols-outlined text-amber-500 text-sm">warning</span>}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {stockCheck.some(s => s.available < s.requested) && (
+                    <div className="mt-3 flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                      <span className="material-symbols-outlined text-amber-500 text-lg">warning</span>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Algunos productos tienen stock insuficiente. La venta podría fallar al procesar.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Selector de método de pago */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Método de Pago</p>
+                  <select
+                    value={convertPaymentMethod}
+                    onChange={e => setConvertPaymentMethod(e.target.value)}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-sm outline-none focus:border-primary transition-all"
+                  >
+                    <option value="cash">Efectivo</option>
+                    <option value="card">Tarjeta</option>
+                    <option value="transfer">Transferencia</option>
+                  </select>
+                </div>
+
+                {convertPaymentMethod === 'transfer' && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Referencia de Transferencia</p>
+                    <input
+                      type="text"
+                      value={convertTransferRef}
+                      onChange={e => setConvertTransferRef(e.target.value)}
+                      className="w-full p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-primary transition-all"
+                      placeholder="Ej: REF-12345"
+                    />
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-4 border-t dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total de la Venta</span>
+                  <span className="text-2xl font-black text-primary">${(convertingQuotation.total || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="p-8 border-t dark:border-slate-700 flex gap-4">
+                <button
+                  onClick={() => { setConvertingQuotation(null); setStockCheck([]); }}
+                  className="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest"
+                  disabled={converting}
+                >Cancelar</button>
+                <button
+                  onClick={handleConvertToSale}
+                  disabled={converting || stockCheckLoading || (convertPaymentMethod === 'transfer' && !convertTransferRef)}
+                  className={`flex-1 py-4 font-black rounded-2xl shadow-xl uppercase text-xs tracking-widest disabled:opacity-50 transition-all ${
+                    stockCheck.some(s => s.available < s.requested)
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                      : 'bg-primary hover:bg-primary/90 text-white shadow-primary/20'
+                  }`}
+                >
+                  {converting ? 'Procesando...' : stockCheck.some(s => s.available < s.requested) ? 'Confirmar de todas formas' : 'Confirmar Venta'}
+                </button>
               </div>
             </div>
           </div>

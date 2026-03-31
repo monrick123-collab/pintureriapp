@@ -1,46 +1,46 @@
 
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
-import Login from './views/Login';
-import POS from './views/POS';
-import Dashboard from './views/Dashboard';
-import Finance from './views/Finance';
-import Inventory from './views/Inventory';
-import UserManagement from './views/UserManagement';
-import Clients from './views/Clients';
-import Branches from './views/Branches';
-import Quotations from './views/Quotations';
-import Returns from './views/Returns';
-import ReturnNote from './views/ReturnNote';
-import CoinChangeNote from './views/CoinChangeNote';
-import Supplies from './views/Supplies';
-import AiAssistant from './components/AiAssistant';
-import Packaging from './views/Packaging';
 import Toast from './components/ui/Toast';
-
-import WarehouseDashboard from './views/WarehouseDashboard';
-import ShippingNote from './views/ShippingNote';
-import WholesalePOS from './views/WholesalePOS';
-
-import WholesaleNote from './views/WholesaleNote';
-import MunicipalPOS from './views/MunicipalPOS';
-import FinanceDashboard from './views/FinanceDashboard';
-import SupplierManagement from './views/SupplierManagement';
-import AccountsPayable from './views/AccountsPayable';
-import Leasing from './views/Leasing';
-import Restocks from './views/Restocks';
-import Transfers from './views/Transfers';
-import CoinChange from './views/CoinChange';
-import CashCut from './views/CashCut';
-import AdminCashCuts from './views/AdminCashCuts';
-import AdminPromotionRequests from './views/AdminPromotionRequests';
-import RestockNote from './views/RestockNote';
-import AdminHistory from './views/AdminHistory';
-import AdminPendingPayments from './views/AdminPendingPayments';
+import Login from './views/Login';
 import { UserRole } from './types';
 import { useAuthStore } from './store/authStore';
 import { supabase } from './services/supabase';
+
+// Lazy imports — Vite genera un chunk separado por cada vista
+const POS = lazy(() => import('./views/POS'));
+const Dashboard = lazy(() => import('./views/Dashboard'));
+const Finance = lazy(() => import('./views/Finance'));
+const Inventory = lazy(() => import('./views/Inventory'));
+const UserManagement = lazy(() => import('./views/UserManagement'));
+const Clients = lazy(() => import('./views/Clients'));
+const Branches = lazy(() => import('./views/Branches'));
+const Quotations = lazy(() => import('./views/Quotations'));
+const Returns = lazy(() => import('./views/Returns'));
+const ReturnNote = lazy(() => import('./views/ReturnNote'));
+const CoinChangeNote = lazy(() => import('./views/CoinChangeNote'));
+const Supplies = lazy(() => import('./views/Supplies'));
+const AiAssistant = lazy(() => import('./components/AiAssistant'));
+const Packaging = lazy(() => import('./views/Packaging'));
+const WarehouseDashboard = lazy(() => import('./views/WarehouseDashboard'));
+const ShippingNote = lazy(() => import('./views/ShippingNote'));
+const WholesalePOS = lazy(() => import('./views/WholesalePOS'));
+const WholesaleNote = lazy(() => import('./views/WholesaleNote'));
+const MunicipalPOS = lazy(() => import('./views/MunicipalPOS'));
+const FinanceDashboard = lazy(() => import('./views/FinanceDashboard'));
+const SupplierManagement = lazy(() => import('./views/SupplierManagement'));
+const AccountsPayable = lazy(() => import('./views/AccountsPayable'));
+const Leasing = lazy(() => import('./views/Leasing'));
+const Restocks = lazy(() => import('./views/Restocks'));
+const Transfers = lazy(() => import('./views/Transfers'));
+const CoinChange = lazy(() => import('./views/CoinChange'));
+const CashCut = lazy(() => import('./views/CashCut'));
+const AdminCashCuts = lazy(() => import('./views/AdminCashCuts'));
+const AdminPromotionRequests = lazy(() => import('./views/AdminPromotionRequests'));
+const RestockNote = lazy(() => import('./views/RestockNote'));
+const AdminHistory = lazy(() => import('./views/AdminHistory'));
+const AdminPendingPayments = lazy(() => import('./views/AdminPendingPayments'));
 
 const App: React.FC = () => {
   const { user, setUser, login, logout } = useAuthStore();
@@ -107,6 +107,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <ErrorBoundary>
       <div className="min-h-screen">
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />} />
 
@@ -160,6 +161,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         {user && <AiAssistant />}
+        </Suspense>
         <Toast />
       </div>
       </ErrorBoundary>

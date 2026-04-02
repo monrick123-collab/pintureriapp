@@ -22,6 +22,8 @@ export const translateStatus = (status: string): string => {
         // Pedidos a Administración (Supply Orders)
         'processing': 'Procesando',
         'received': 'Recibido',
+        'received_with_incidents': 'Con Incidencias',
+        'incident_reviewed': 'Incidencia Revisada',
 
         // Gastos
         'renta': 'Renta',
@@ -97,6 +99,8 @@ export const getStatusColor = (
         pending_selection: 'warning',
         pending_approval: 'warning',
         counter_proposed: 'warning',
+        received_with_incidents: 'warning',
+        incident_reviewed: 'success',
         rejected: 'danger',
         out: 'danger',
         overdue: 'danger',

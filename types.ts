@@ -119,7 +119,7 @@ export interface RestockRequest {
 }
 
 // New interfaces for Supply Orders (Point 2)
-export type SupplyStatus = 'pending' | 'processing' | 'shipped' | 'received' | 'received_with_incidents' | 'cancelled';
+export type SupplyStatus = 'pending' | 'processing' | 'shipped' | 'received' | 'received_with_incidents' | 'incident_reviewed' | 'cancelled';
 
 export interface SupplyOrderItem {
   id: string;

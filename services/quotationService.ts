@@ -29,7 +29,18 @@ export const quotationService = {
     async createQuotation(quotation: Omit<Quotation, 'id' | 'folio' | 'createdAt'>) {
         const { data, error } = await supabase
             .from('quotations')
-            .insert([quotation])
+            .insert([{
+                client_id: quotation.clientId || null,
+                client_name: quotation.clientName,
+                items: quotation.items,
+                subtotal: quotation.subtotal,
+                discount_amount: quotation.discountAmount,
+                iva: quotation.iva,
+                total: quotation.total,
+                status: quotation.status,
+                branch_id: quotation.branchId,
+                created_by: quotation.createdBy || null,
+            }])
             .select()
             .single();
 

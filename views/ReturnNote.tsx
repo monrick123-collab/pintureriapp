@@ -107,16 +107,25 @@ const ReturnNote: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                         <div className="text-xs">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="text-xs">
+                            <p className="font-black text-slate-400 text-[9px] uppercase tracking-widest">Sucursal / Bodega Destino</p>
+                            <p className="font-bold text-slate-800 uppercase">
+                                {returnData.destination_branch_name || returnData.destination_branch_id || '---'}
+                            </p>
+                        </div>
+                        <div className="text-xs text-right">
+                            <p className="font-black text-slate-400 text-[9px] uppercase tracking-widest">Estatus Sistema</p>
+                            <p className="font-bold text-slate-800 uppercase">{returnData.status.replace(/_/g, ' ')}</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-6">
+                        <div className="text-xs">
                             <p className="font-black text-slate-400 text-[9px] uppercase tracking-widest">Motivo de Devolución</p>
                             <div className="inline-block mt-0.5 px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black text-slate-700 uppercase">
                                 {translateReason(returnData.reason)}
                             </div>
-                        </div>
-                        <div className="text-xs text-right">
-                             <p className="font-black text-slate-400 text-[9px] uppercase tracking-widest">Estatus Sistema</p>
-                             <p className="font-bold text-slate-800 uppercase">{returnData.status.replace(/_/g, ' ')}</p>
                         </div>
                     </div>
 

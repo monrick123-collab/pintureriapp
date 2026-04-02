@@ -449,7 +449,7 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
         if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
@@ -897,8 +897,8 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -917,6 +917,20 @@ export const InventoryService = {
             .single();
 
         if (error) throw error;
+        if (!data) return null;
+
+        // destination_branch_id es TEXT sin FK formal — se resuelve con query separada
+        if (data.destination_branch_id) {
+            const { data: destBranch } = await supabase
+                .from('branches')
+                .select('name')
+                .eq('id', data.destination_branch_id)
+                .single();
+            data.destination_branch_name = destBranch?.name ?? null;
+        } else {
+            data.destination_branch_name = null;
+        }
+
         return data;
     },
 
@@ -1037,8 +1051,8 @@ export const InventoryService = {
         if (branchId) query = query.eq('branch_id', branchId);
 
         // Filtro por rango de fechas (basado en created_at)
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -1108,8 +1122,8 @@ export const InventoryService = {
             .order('created_at', { ascending: false });
 
         if (branchId) query = query.eq('branch_id', branchId);
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -1159,8 +1173,8 @@ export const InventoryService = {
         if (branchId) {
             query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
         }
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -1273,8 +1287,8 @@ export const InventoryService = {
         if (branchId) {
             query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
         }
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
+        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00.000-06:00`);
+        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
         if (error) throw error;

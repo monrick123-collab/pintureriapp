@@ -44,6 +44,8 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [converting, setConverting] = useState(false);
   const [stockCheck, setStockCheck] = useState<{productName: string, requested: number, available: number}[]>([]);
   const [stockCheckLoading, setStockCheckLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
 
   // Use branch-specific prefix
   const branchPrefix = user.branchId === WAREHOUSE_BRANCH_ID ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
@@ -130,8 +132,9 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
     }
   };
 
-  const handlePrint = async () => {
-    // Save quotation to DB before printing
+  const handleSave = async () => {
+    if (items.length === 0) return;
+    setSaving(true);
     try {
       await quotationService.createQuotation({
         clientId: selectedClient?.id,
@@ -145,21 +148,34 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         branchId: user.branchId || WAREHOUSE_BRANCH_ID,
         createdBy: user.id
       });
+      setSavedSuccessfully(true);
+      setIsPreviewOpen(true);
     } catch (e) {
       console.error('Error guardando cotización:', e);
+      alert('Error al guardar la cotización');
     }
+    setSaving(false);
+  };
+
+  const closePreview = () => {
+    setIsPreviewOpen(false);
+    if (savedSuccessfully) {
+      setItems([]);
+      setSelectedClient(null);
+      setAppliedDiscount(null);
+      setActiveDiscountRequest(null);
+      setPaymentType('contado');
+      fetchNextFolio();
+      setSavedSuccessfully(false);
+    }
+  };
+
+  const handlePrint = () => {
     const wasDark = document.documentElement.classList.contains('dark');
     if (wasDark) document.documentElement.classList.remove('dark');
     setTimeout(() => {
-        window.print();
-        if (wasDark) document.documentElement.classList.add('dark');
-        // Reset después de imprimir
-        setItems([]);
-        setSelectedClient(null);
-        setAppliedDiscount(null);
-        setActiveDiscountRequest(null);
-        setPaymentType('contado');
-        fetchNextFolio();
+      window.print();
+      if (wasDark) document.documentElement.classList.add('dark');
     }, 150);
   };
 
@@ -327,12 +343,6 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
           </h4>
           <div className="space-y-3">
             <p className="text-xl font-black text-slate-900 leading-tight">{selectedClient?.name || 'Cliente de Mostrador'}</p>
-            {(selectedClient?.extraPercentage || 0) > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                <span className="material-symbols-outlined text-[11px]">percent</span>
-                +{selectedClient?.extraPercentage}% porcentaje municipal
-              </span>
-            )}
             <div className="pt-2 space-y-2">
               <div className="flex items-center gap-3 text-slate-500 font-medium text-xs">
                 <span className="material-symbols-outlined text-sm text-primary/50">mail</span>
@@ -525,18 +535,10 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                 <button
                   disabled={items.length === 0}
                   onClick={() => setIsPreviewOpen(true)}
-                  className="flex h-10 px-3 md:px-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs rounded-xl hover:bg-slate-100 transition-all items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-lg">visibility</span>
-                  <span className="hidden md:inline">VISTA PREVIA</span>
-                </button>
-                <button
-                  disabled={items.length === 0}
-                  onClick={handlePrint}
                   className="h-10 px-6 bg-primary text-white font-black text-xs rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined text-lg">print</span>
-                  <span className="hidden sm:inline">IMPRIMIR</span>
+                  <span className="material-symbols-outlined text-lg">visibility</span>
+                  <span className="hidden sm:inline">VISTA PREVIA</span>
                 </button>
               </>}
             </div>
@@ -771,16 +773,25 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                   >
                     {activeDiscountRequest?.status === 'pending' ? 'Esperando Aprobación...' : 'Solicitar Descuento'}
                   </button>
-                  <button
-                    disabled={items.length === 0}
-                    onClick={() => setIsPreviewOpen(true)}
-                    className="lg:hidden flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase hover:text-primary transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">visibility</span>
-                    Vista Previa
-                  </button>
                 </div>
               </div>
+              <button
+                disabled={items.length === 0 || saving}
+                onClick={handleSave}
+                className="w-full mt-4 h-14 bg-primary text-white font-black text-sm rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-xl">description</span>
+                    Generar Cotización
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -789,7 +800,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
         {isPreviewOpen && (
           <div className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 p-4 md:p-10 overflow-y-auto flex flex-col items-center animate-in fade-in duration-300">
             <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center shrink-0">
-              <button onClick={() => setIsPreviewOpen(false)} className="flex items-center gap-2 text-slate-500 font-black hover:text-slate-900 dark:hover:text-white transition-all uppercase tracking-widest text-xs">
+              <button onClick={closePreview} className="flex items-center gap-2 text-slate-500 font-black hover:text-slate-900 dark:hover:text-white transition-all uppercase tracking-widest text-xs">
                 <span className="material-symbols-outlined">arrow_back</span> Regresar
               </button>
               <button onClick={handlePrint} className="flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-primary/30 hover:scale-105 transition-all uppercase tracking-widest text-xs">

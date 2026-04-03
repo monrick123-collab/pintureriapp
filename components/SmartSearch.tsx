@@ -150,11 +150,11 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ products, onSelectProduct, cu
       </div>
 
       {/* Resultados con preview */}
-      {query && filteredProducts.length > 0 && (
+      {filteredProducts.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border dark:border-slate-700 max-h-80 overflow-y-auto animate-in fade-in duration-200">
           <div className="p-2 border-b dark:border-slate-700">
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-              {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+              {query ? `${filteredProducts.length} producto${filteredProducts.length !== 1 ? 's' : ''} encontrado${filteredProducts.length !== 1 ? 's' : ''}` : 'Productos con más stock'}
             </p>
           </div>
           

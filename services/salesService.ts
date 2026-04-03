@@ -549,12 +549,12 @@ export const SalesService = {
         // RPC atómico: inserta venta + items + descuenta inventario en una transacción
         const { data: saleId, error } = await supabase.rpc('process_municipal_sale', {
             p_branch_id: branchId,
-            p_items: JSON.stringify(items.map(i => ({
+            p_items: items.map(i => ({
                 product_id: i.productId,
                 product_name: i.productName,
                 quantity: i.quantity,
                 price: i.price
-            }))),
+            })),
             p_municipality: saleData.municipality,
             p_total: saleData.total,
             p_subtotal: saleData.subtotal,

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { User, Product, CartItem, UserRole, Client } from '../types';
 import { InventoryService } from '../services/inventoryService';
@@ -12,6 +13,7 @@ interface MunicipalPOSProps {
 }
 
 const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
+    const navigate = useNavigate();
     const isAdmin = user.role === UserRole.ADMIN;
     const isWarehouse = user.role === UserRole.WAREHOUSE || user.role === UserRole.WAREHOUSE_SUB;
     const [adminPosBranchId, setAdminPosBranchId] = useState<string>('');
@@ -26,6 +28,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     const [clientSearch, setClientSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [lastSaleId, setLastSaleId] = useState<string | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     
     // Client filters
@@ -319,22 +322,13 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
         }
         try {
             setLoading(true);
-            await SalesService.createMunicipalSale(
+            const saleId = await SalesService.createMunicipalSale(
                 branchId,
                 cart.map(i => ({ productId: i.id, productName: i.name, quantity: i.quantity, price: i.price })),
                 { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference, clientId: selectedClient?.id || null, appliedExtraPct: selectedClient?.extraPercentage || 0 }
             );
+            setLastSaleId(saleId);
             setShowSuccess(true);
-            setTimeout(() => {
-                setShowSuccess(false); setIsPaymentModalOpen(false); setCart([]);
-                setMunicipality(''); setDepartment(''); setContactName('');
-                setSocialReason(''); setRfc(''); setInvoiceNumber('');
-                setDeliveryReceiver(''); setAuthorizedExitBy(''); setNotes('');
-                setTransferReference(''); setSelectedClient(null);
-                setPaymentType('contado'); setPaymentMethod('cash');
-                setCreditDays(30); setBlockedWarning(null);
-                loadData();
-            }, 2000);
         } catch (e: any) {
             console.error(e);
             alert('Error al procesar la venta: ' + (e.message || e.toString()));
@@ -818,6 +812,9 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                                     <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
                                                                         <span className="material-symbols-outlined text-lg">visibility</span>
                                                                     </button>
+                                                                    <button onClick={() => navigate(`/municipal-note/${s.id}`)} className="p-1 text-slate-400 hover:text-green-500 transition-colors" title="Imprimir Nota">
+                                                                        <span className="material-symbols-outlined text-lg">print</span>
+                                                                    </button>
                                                                     <button onClick={() => openEditMunicipalModal(s)} className="p-1 text-slate-400 hover:text-blue-500 transition-colors" title="Editar">
                                                                         <span className="material-symbols-outlined text-lg">edit</span>
                                                                     </button>
@@ -1067,6 +1064,30 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                 </div>
                                 <h3 className="text-2xl font-black text-green-600">¡Venta Registrada!</h3>
                                 <p className="text-slate-400 font-bold text-sm">Municipio: {municipality}</p>
+                                <div className="flex gap-3 mt-2">
+                                    <button
+                                        onClick={() => navigate(`/municipal-note/${lastSaleId}`)}
+                                        className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-primary/20"
+                                    >
+                                        <span className="material-symbols-outlined">print</span>
+                                        Imprimir Nota
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowSuccess(false); setIsPaymentModalOpen(false); setCart([]);
+                                            setMunicipality(''); setDepartment(''); setContactName('');
+                                            setSocialReason(''); setRfc(''); setInvoiceNumber('');
+                                            setDeliveryReceiver(''); setAuthorizedExitBy(''); setNotes('');
+                                            setTransferReference(''); setSelectedClient(null);
+                                            setPaymentType('contado'); setPaymentMethod('cash');
+                                            setCreditDays(30); setBlockedWarning(null);
+                                            loadData();
+                                        }}
+                                        className="px-6 py-3 font-black text-slate-500 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                    >
+                                        Nueva Venta
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[40px] shadow-2xl p-8">

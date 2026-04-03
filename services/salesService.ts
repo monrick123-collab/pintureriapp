@@ -1032,6 +1032,19 @@ export const SalesService = {
     },
 
     /**
+     * Obtiene una venta municipal por ID (para impresión de nota)
+     */
+    async getMunicipalSaleById(id: string): Promise<any> {
+        const { data, error } = await supabase
+            .from('municipal_sales')
+            .select('*, branch:branches(name), municipal_sale_items(*)')
+            .eq('id', id)
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    /**
      * Edita una venta municipal (recalcula inventario atómicamente)
      */
     async editMunicipalSale(saleId: string, payload: {

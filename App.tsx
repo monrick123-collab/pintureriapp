@@ -28,6 +28,7 @@ const ShippingNote = lazy(() => import('./views/ShippingNote'));
 const WholesalePOS = lazy(() => import('./views/WholesalePOS'));
 const WholesaleNote = lazy(() => import('./views/WholesaleNote'));
 const MunicipalPOS = lazy(() => import('./views/MunicipalPOS'));
+const MunicipalNote = lazy(() => import('./views/MunicipalNote'));
 const FinanceDashboard = lazy(() => import('./views/FinanceDashboard'));
 const SupplierManagement = lazy(() => import('./views/SupplierManagement'));
 const AccountsPayable = lazy(() => import('./views/AccountsPayable'));
@@ -140,6 +141,7 @@ const App: React.FC = () => {
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
+          <Route path="/municipal-note/:id" element={user ? <MunicipalNote /> : <Navigate to="/login" replace />} />
           <Route path="/municipal-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalPOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/history" element={user?.role === UserRole.ADMIN ? <AdminHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/pending-payments" element={user?.role === UserRole.ADMIN ? <AdminPendingPayments user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

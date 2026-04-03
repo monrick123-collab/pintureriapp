@@ -887,12 +887,14 @@ export const InventoryService = {
     },
 
     async getReturnRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
+        console.log('getReturnRequests params:', { branchId, startDate, endDate });
+
         let query = supabase
             .from('returns')
             .select(`
                 *,
                 products (name, sku),
-                branches (name)
+                branches!returns_branch_id_fkey(name)
             `)
             .order('created_at', { ascending: false });
 
@@ -901,6 +903,9 @@ export const InventoryService = {
         if (endDate) query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
 
         const { data, error } = await query;
+        console.log('getReturnRequests result:', data);
+        console.log('getReturnRequests error:', error);
+
         if (error) throw error;
         return data || [];
     },
@@ -911,7 +916,7 @@ export const InventoryService = {
             .select(`
                 *,
                 products (name, sku),
-                branches (name)
+                branches!returns_branch_id_fkey(name)
             `)
             .eq('id', returnId)
             .single();

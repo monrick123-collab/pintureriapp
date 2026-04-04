@@ -765,20 +765,13 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 {isAdmin && <th className="px-6 py-4 text-center">Admin</th>}
                                                 <th className="px-6 py-4">Fecha</th>
                                                 <th className="px-6 py-4 text-center">Factura</th>
+                                                <th className="px-6 py-4 text-center">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {history.map(s => (
                                                 <tr key={s.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${s.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                                                    <td className="px-6 py-4">
-                                                        <button
-                                                            onClick={() => setSelectedHistorySale(s)}
-                                                            className="font-black text-primary hover:underline hover:text-primary/80 transition-colors"
-                                                            title="Ver detalle"
-                                                        >
-                                                            #M-{String(s.folio).padStart(4, '0')}
-                                                        </button>
-                                                    </td>
+                                                    <td className="px-6 py-4 font-black text-primary">#M-{String(s.folio).padStart(4, '0')}</td>
                                                     <td className="px-6 py-4 font-bold">{s.municipality}</td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{s.department || '—'}</td>
                                                     <td className="px-6 py-4">
@@ -815,11 +808,8 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                     </td>
                                                     {isAdmin && (
                                                         <td className="px-6 py-4 text-center">
-                                                            {s.status !== 'cancelled' ? (
+                                                            {s.status !== 'cancelled' && (
                                                                 <div className="flex items-center justify-center gap-1">
-                                                                    <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
-                                                                        <span className="material-symbols-outlined text-lg">visibility</span>
-                                                                    </button>
                                                                     <button onClick={() => navigate(`/municipal-note/${s.id}`)} className="p-1 text-slate-400 hover:text-green-500 transition-colors" title="Imprimir Nota">
                                                                         <span className="material-symbols-outlined text-lg">print</span>
                                                                     </button>
@@ -830,16 +820,17 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                                         <span className="material-symbols-outlined text-lg">cancel</span>
                                                                     </button>
                                                                 </div>
-                                                            ) : (
-                                                                <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
-                                                                    <span className="material-symbols-outlined text-lg">visibility</span>
-                                                                </button>
                                                             )}
                                                         </td>
                                                     )}
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
+                                                            <span className="material-symbols-outlined text-lg">visibility</span>
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
-                                            {history.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
+                                            {history.length === 0 && <tr><td colSpan={isAdmin ? 10 : 9} className="px-8 py-12 text-center text-slate-400 italic">Sin ventas en este período.</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>

@@ -893,7 +893,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 {selectedHistorySale.authorized_exit_by && (
                                                     <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10">
                                                         <p className="text-[9px] uppercase font-bold text-primary/60 mb-1">Autorizado por</p>
-                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.authorized_exit_by}</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.authorized_admin?.full_name || selectedHistorySale.authorized_exit_by}</p>
                                                     </div>
                                                 )}
                                                 {selectedHistorySale.delivery_receiver && (

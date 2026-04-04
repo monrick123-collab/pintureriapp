@@ -155,7 +155,8 @@ export const SalesService = {
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name)
+                clients (name),
+                admin:profiles!departure_admin_id(full_name)
             `)
             .eq('id', id)
             .single();
@@ -493,7 +494,8 @@ export const SalesService = {
             .select(`
                 *,
                 branch:branches(name),
-                municipal_sale_items (*)
+                municipal_sale_items (*),
+                authorized_admin:profiles!authorized_exit_by(full_name)
             `)
             .order('created_at', { ascending: false });
 
@@ -1037,7 +1039,7 @@ export const SalesService = {
     async getMunicipalSaleById(id: string): Promise<any> {
         const { data, error } = await supabase
             .from('municipal_sales')
-            .select('*, branch:branches(name), municipal_sale_items(*)')
+            .select('*, branch:branches(name), municipal_sale_items(*), authorized_admin:profiles!authorized_exit_by(full_name)')
             .eq('id', id)
             .single();
         if (error) throw error;

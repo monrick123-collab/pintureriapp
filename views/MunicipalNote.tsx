@@ -132,7 +132,7 @@ const MunicipalNote: React.FC = () => {
                             {sale.authorized_exit_by && (
                                 <div>
                                     <p className="text-[8px] text-slate-400 uppercase font-bold">Autorizado por</p>
-                                    <p className="text-xs font-bold text-slate-700">{sale.authorized_exit_by}</p>
+                                    <p className="text-xs font-bold text-slate-700">{sale.authorized_admin?.full_name || sale.authorized_exit_by}</p>
                                 </div>
                             )}
                             {sale.delivery_receiver && (
@@ -221,7 +221,7 @@ const MunicipalNote: React.FC = () => {
                                 )}
                             </div>
                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Autorizado por (Admin)</p>
-                            <p className="text-xs font-black text-slate-900 uppercase">{sale.authorized_exit_by || 'Firma Requerida'}</p>
+                            <p className="text-xs font-black text-slate-900 uppercase">{sale.authorized_admin?.full_name || sale.authorized_exit_by || 'Firma Requerida'}</p>
                         </div>
                         <div className="text-center">
                             <div className="h-20 border-b border-slate-300 mb-2"></div>

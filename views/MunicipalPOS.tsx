@@ -770,7 +770,15 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {history.map(s => (
                                                 <tr key={s.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${s.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                                                    <td className="px-6 py-4 font-black text-primary">#M-{String(s.folio).padStart(4, '0')}</td>
+                                                    <td className="px-6 py-4">
+                                                        <button
+                                                            onClick={() => setSelectedHistorySale(s)}
+                                                            className="font-black text-primary hover:underline hover:text-primary/80 transition-colors"
+                                                            title="Ver detalle"
+                                                        >
+                                                            #M-{String(s.folio).padStart(4, '0')}
+                                                        </button>
+                                                    </td>
                                                     <td className="px-6 py-4 font-bold">{s.municipality}</td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{s.department || '—'}</td>
                                                     <td className="px-6 py-4">
@@ -851,7 +859,8 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                             <span className="material-symbols-outlined">close</span>
                                         </button>
                                     </div>
-                                    <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                        {/* Municipio + Dependencia */}
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
                                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Municipio</p>
@@ -862,6 +871,60 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.department || '—'}</p>
                                             </div>
                                         </div>
+
+                                        {/* Campos opcionales del cliente */}
+                                        {(selectedHistorySale.contact_name || selectedHistorySale.social_reason || selectedHistorySale.rfc) && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {selectedHistorySale.contact_name && (
+                                                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                                        <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Contacto</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.contact_name}</p>
+                                                    </div>
+                                                )}
+                                                {selectedHistorySale.social_reason && (
+                                                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                                        <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Razón Social</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.social_reason}</p>
+                                                    </div>
+                                                )}
+                                                {selectedHistorySale.rfc && (
+                                                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800 col-span-2">
+                                                        <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">RFC</p>
+                                                        <p className="text-sm font-mono font-bold text-slate-900 dark:text-white uppercase">{selectedHistorySale.rfc}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Datos de entrega */}
+                                        {(selectedHistorySale.authorized_exit_by || selectedHistorySale.delivery_receiver || selectedHistorySale.invoice_number || selectedHistorySale.transfer_reference) && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {selectedHistorySale.authorized_exit_by && (
+                                                    <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10">
+                                                        <p className="text-[9px] uppercase font-bold text-primary/60 mb-1">Autorizado por</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.authorized_exit_by}</p>
+                                                    </div>
+                                                )}
+                                                {selectedHistorySale.delivery_receiver && (
+                                                    <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10">
+                                                        <p className="text-[9px] uppercase font-bold text-primary/60 mb-1">Receptor</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedHistorySale.delivery_receiver}</p>
+                                                    </div>
+                                                )}
+                                                {selectedHistorySale.invoice_number && (
+                                                    <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10">
+                                                        <p className="text-[9px] uppercase font-bold text-primary/60 mb-1">N° Factura</p>
+                                                        <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{selectedHistorySale.invoice_number}</p>
+                                                    </div>
+                                                )}
+                                                {selectedHistorySale.transfer_reference && (
+                                                    <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10">
+                                                        <p className="text-[9px] uppercase font-bold text-primary/60 mb-1">Ref. Transferencia</p>
+                                                        <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{selectedHistorySale.transfer_reference}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Items */}
                                         {selectedHistorySale.municipal_sale_items?.length > 0 && (
@@ -885,17 +948,33 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                         )}
 
                                         {/* Totales */}
-                                        <div className="border-t dark:border-slate-800 pt-4 space-y-2">
-                                            <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                                        <div className="border-t dark:border-slate-800 pt-4 space-y-1.5">
+                                            <div className="flex justify-between text-sm font-bold text-slate-600 dark:text-slate-400">
+                                                <span>Subtotal</span>
+                                                <span>{fmtMoney(selectedHistorySale.subtotal)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm font-bold text-slate-600 dark:text-slate-400">
+                                                <span>IVA (16%)</span>
+                                                <span>{fmtMoney(selectedHistorySale.iva)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white border-t dark:border-slate-700 pt-2 mt-2">
                                                 <span>Total</span>
                                                 <span>{fmtMoney(selectedHistorySale.total)}</span>
                                             </div>
-                                            <div className="flex justify-end gap-2">
+                                            <div className="flex justify-end gap-2 pt-1">
                                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${selectedHistorySale.payment_type === 'credito' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {selectedHistorySale.payment_type === 'credito' ? 'Crédito' : 'Contado'}
+                                                    {selectedHistorySale.payment_type === 'credito' ? `Crédito${selectedHistorySale.credit_days ? ` ${selectedHistorySale.credit_days} días` : ''}` : 'Contado'}
                                                 </span>
                                             </div>
                                         </div>
+
+                                        {/* Notas */}
+                                        {selectedHistorySale.notes && (
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Notas</p>
+                                                <p className="text-xs text-slate-600 dark:text-slate-300">{selectedHistorySale.notes}</p>
+                                            </div>
+                                        )}
 
                                         {/* Cancelación info */}
                                         {selectedHistorySale.status === 'cancelled' && selectedHistorySale.cancellation_reason && (
@@ -904,6 +983,23 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                 <p className="text-xs font-bold text-red-900 dark:text-red-100">{selectedHistorySale.cancellation_reason}</p>
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* Footer con acciones */}
+                                    <div className="p-4 border-t dark:border-slate-800 flex justify-between items-center">
+                                        <button
+                                            onClick={() => setSelectedHistorySale(null)}
+                                            className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                                        >
+                                            Cerrar
+                                        </button>
+                                        <button
+                                            onClick={() => navigate(`/municipal-note/${selectedHistorySale.id}`)}
+                                            className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">print</span>
+                                            Imprimir Nota
+                                        </button>
                                     </div>
                                 </div>
                             </div>

@@ -1,9 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { InventoryService } from '../services/inventoryService';
 import { DiscountService } from '../services/discountService';
-import { RestockRequest, DiscountRequest, User, SupplyOrder } from '../types';
+import { TransferService } from '../services/transfer/transferService';
+import { quotationService } from '../services/quotationService';
+import { RestockRequest, DiscountRequest, User, SupplyOrder, StockTransfer, Quotation } from '../types';
 import Badge from '../components/ui/Badge';
 import { translateStatus, getStatusColor } from '../utils/formatters';
 // import { AiInsightsWidget } from '../components/AiInsightsWidget';
@@ -14,9 +17,12 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<RestockRequest[]>([]);
   const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([]);
   const [supplyOrders, setSupplyOrders] = useState<SupplyOrder[]>([]);
+  const [pendingTransfers, setPendingTransfers] = useState<StockTransfer[]>([]);
+  const [pendingQuotations, setPendingQuotations] = useState<Quotation[]>([]);
   const [sessionSalesTotal, setSessionSalesTotal] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<SupplyOrder | null>(null);
   const [reviewingOrder, setReviewingOrder] = useState(false);
@@ -27,10 +33,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadDashboardData = async () => {
     try {
-      const [pendingRestock, pendingDiscounts, pendingSupply] = await Promise.all([
+      const [pendingRestock, pendingDiscounts, pendingSupply, allTransfers, allQuotations] = await Promise.all([
         InventoryService.getRestockRequests(undefined, 'pending_admin'),
         DiscountService.getPendingRequests(),
-        InventoryService.getSupplyOrders()
+        InventoryService.getSupplyOrders(),
+        TransferService.getStockTransfers(),
+        quotationService.getQuotations()
       ]);
       setRequests(pendingRestock);
       setDiscountRequests(pendingDiscounts);
@@ -40,6 +48,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         s.status !== 'received_with_incidents' &&
         s.status !== 'incident_reviewed'
       ));
+      setPendingTransfers(allTransfers.filter(t => t.status === 'pending'));
+      setPendingQuotations(allQuotations.filter((q: Quotation) => q.status === 'pending'));
 
       const history = JSON.parse(localStorage.getItem('pintamax_sales_history') || '[]');
       setSessionSalesTotal(history.reduce((acc: number, s: any) => acc + s.total, 0));
@@ -95,6 +105,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     } catch (e) {
       console.error(e);
       alert("Error al actualizar estado del pedido.");
+    }
+  };
+
+  const handleApproveTransfer = async (transferId: string) => {
+    try {
+      await TransferService.updateTransferStatus(transferId, 'in_transit');
+      await loadDashboardData();
+    } catch (e) {
+      console.error(e);
+      alert('Error al aprobar el traspaso.');
+    }
+  };
+
+  const handleRejectTransfer = async (transferId: string) => {
+    try {
+      await TransferService.updateTransferStatus(transferId, 'cancelled');
+      await loadDashboardData();
+    } catch (e) {
+      console.error(e);
+      alert('Error al rechazar el traspaso.');
     }
   };
 
@@ -166,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
             {/* Solicitudes Pendientes */}
             {(() => {
-              const hasPending = requests.length + discountRequests.length > 0;
+              const hasPending = requests.length + discountRequests.length + pendingTransfers.length + pendingQuotations.length > 0;
               return hasPending ? (
                 <div className="bg-slate-900 dark:bg-primary p-8 rounded-2xl md:rounded-[32px] text-white shadow-2xl shadow-primary/20 space-y-4 transition-all hover:scale-[1.02] group relative overflow-hidden">
                   <div className="absolute top-4 right-4 opacity-10">
@@ -178,11 +208,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                       <span className="material-symbols-outlined text-xl">notification_important</span>
                     </div>
                   </div>
-                  <h3 className="text-4xl font-black leading-none tracking-tighter relative">{requests.length + discountRequests.length}</h3>
-                  <p className="text-xs font-bold opacity-80 uppercase tracking-widest flex items-center gap-2 relative">
-                    <span className="material-symbols-outlined text-sm">percent</span>{discountRequests.length} descuento
+                  <h3 className="text-4xl font-black leading-none tracking-tighter relative">{requests.length + discountRequests.length + pendingTransfers.length + pendingQuotations.length}</h3>
+                  <p className="text-xs font-bold opacity-80 uppercase tracking-widest flex items-center gap-2 flex-wrap relative">
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">percent</span>{discountRequests.length} descuento</span>
                     <span className="opacity-40">·</span>
-                    <span className="material-symbols-outlined text-sm">inventory</span>{requests.length} stock
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">inventory</span>{requests.length} stock</span>
+                    <span className="opacity-40">·</span>
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">swap_horiz</span>{pendingTransfers.length} traspasos</span>
+                    <span className="opacity-40">·</span>
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">request_quote</span>{pendingQuotations.length} cotizaciones</span>
                   </p>
                 </div>
               ) : (
@@ -347,6 +381,104 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         </div>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Traspasos Pendientes */}
+          {pendingTransfers.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-2xl md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-cyan-500">
+              <div className="flex items-center gap-4 mb-8 md:mb-10">
+                <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl text-cyan-600">
+                  <span className="material-symbols-outlined text-2xl md:text-3xl">swap_horiz</span>
+                </div>
+                <div>
+                  <h3 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 dark:text-white">Traspasos Pendientes</h3>
+                  <p className="text-xs md:text-sm text-slate-500 font-medium">{pendingTransfers.length} traspaso{pendingTransfers.length !== 1 ? 's' : ''} esperando autorización</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {pendingTransfers.map(t => (
+                  <div key={t.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-2xl md:rounded-[32px] border-2 border-transparent hover:border-cyan-500 transition-all flex flex-col group">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-cyan-600 uppercase tracking-widest">Traspaso #{String(t.folio).padStart(4, '0')}</span>
+                      </div>
+                      <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 text-[9px] font-black rounded uppercase">Pendiente</span>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        De: <span className="text-slate-900 dark:text-white font-black">{t.fromBranchName || t.fromBranchId}</span>
+                      </p>
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        Para: <span className="text-slate-900 dark:text-white font-black">{t.toBranchName || t.toBranchId}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-bold mt-1">
+                        {new Date(t.createdAt).toLocaleDateString('es-MX')}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-auto">
+                      <button
+                        onClick={() => handleRejectTransfer(t.id)}
+                        className="py-3 bg-white dark:bg-slate-800 border-2 border-red-500/20 text-red-500 text-[10px] font-black rounded-xl hover:bg-red-500 hover:text-white transition-all uppercase tracking-widest"
+                      >
+                        Rechazar
+                      </button>
+                      <button
+                        onClick={() => handleApproveTransfer(t.id)}
+                        className="py-3 bg-cyan-500 text-white text-[10px] font-black rounded-xl hover:bg-cyan-600 shadow-lg shadow-cyan-500/20 transition-all uppercase tracking-widest"
+                      >
+                        Aprobar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cotizaciones Pendientes */}
+          {pendingQuotations.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-2xl md:rounded-[40px] border dark:border-slate-800 shadow-sm border-l-4 border-l-purple-500">
+              <div className="flex items-center justify-between mb-8 md:mb-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl text-purple-600">
+                    <span className="material-symbols-outlined text-2xl md:text-3xl">request_quote</span>
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 dark:text-white">Cotizaciones Pendientes</h3>
+                    <p className="text-xs md:text-sm text-slate-500 font-medium">{pendingQuotations.length} cotización{pendingQuotations.length !== 1 ? 'es' : ''} sin convertir a venta</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/quotations')}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-black text-purple-600 bg-purple-50 dark:bg-purple-900/20 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
+                >
+                  Ver todas
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {pendingQuotations.map(q => (
+                  <div key={q.id} className="bg-slate-50 dark:bg-slate-950 p-8 rounded-2xl md:rounded-[32px] border-2 border-transparent hover:border-purple-500 transition-all flex flex-col group">
+                    <div className="flex justify-between items-start mb-6">
+                      <span className="text-[11px] font-black text-purple-600 uppercase tracking-widest">#{String(q.folio).padStart(4, '0')}</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">${q.total.toLocaleString()}</span>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{q.clientName || 'Sin cliente'}</p>
+                      <p className="text-[10px] text-slate-400 font-bold">
+                        {new Date(q.createdAt).toLocaleDateString('es-MX')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate('/quotations')}
+                      className="mt-auto w-full py-3 bg-purple-500 text-white text-[10px] font-black rounded-xl hover:bg-purple-600 shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest"
+                    >
+                      Ir a Cotizaciones
+                    </button>
                   </div>
                 ))}
               </div>

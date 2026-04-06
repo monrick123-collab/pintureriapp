@@ -46,6 +46,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
   const [stockCheckLoading, setStockCheckLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
 
   // Use branch-specific prefix
   const branchPrefix = user.branchId === WAREHOUSE_BRANCH_ID ? 'MAT' : (user.branchId || 'SC').substring(0, 3);
@@ -580,7 +581,7 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                       <th className="px-6 py-4">Total</th>
                       <th className="px-6 py-4">Fecha</th>
                       <th className="px-6 py-4">Estado</th>
-                      <th className="px-6 py-4 text-right">Acción</th>
+                      <th className="px-6 py-4 text-center">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-slate-700">
@@ -595,13 +596,17 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                             {q.status === 'completed' ? 'Venta Cerrada' : q.status === 'cancelled' ? 'Cancelada' : 'Pendiente'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          {q.status === 'pending' && (
-                            <button
-                              onClick={() => openConvertModal(q)}
-                              className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-[10px] font-black uppercase"
-                            >Convertir a Venta</button>
-                          )}
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => setSelectedQuotation(q)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
+                              <span className="material-symbols-outlined text-lg">visibility</span>
+                            </button>
+                            {q.status === 'pending' && (
+                              <button onClick={() => openConvertModal(q)} className="p-1 text-slate-400 hover:text-green-500 transition-colors" title="Convertir a Venta">
+                                <span className="material-symbols-outlined text-lg">shopping_cart_checkout</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -972,6 +977,97 @@ const Quotations: React.FC<QuotationsProps> = ({ user, onLogout }) => {
                   }`}
                 >
                   {converting ? 'Procesando...' : stockCheck.some(s => s.available < s.requested) ? 'Confirmar de todas formas' : 'Confirmar Venta'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quotation Detail Modal */}
+        {selectedQuotation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedQuotation(null)}>
+            <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex justify-between items-center">
+                <div>
+                  <h3 className="font-black text-slate-900 dark:text-white text-lg">Detalle Cotización</h3>
+                  <p className="text-xs text-slate-500 font-mono">#{String(selectedQuotation.folio).padStart(4, '0')}</p>
+                </div>
+                <button onClick={() => setSelectedQuotation(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {/* Info grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                    <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Cliente</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedQuotation.clientName || 'Consumidor Final'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                    <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Estado</p>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${selectedQuotation.status === 'completed' ? 'bg-green-100 text-green-600' : selectedQuotation.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {selectedQuotation.status === 'completed' ? 'Venta Cerrada' : selectedQuotation.status === 'cancelled' ? 'Cancelada' : 'Pendiente'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                    <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Fecha</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{new Date(selectedQuotation.createdAt).toLocaleDateString('es-MX')}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                    <p className="text-[9px] uppercase font-bold text-slate-400 mb-1">Sucursal</p>
+                    <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{selectedQuotation.branchId}</p>
+                  </div>
+                </div>
+
+                {/* Items */}
+                {selectedQuotation.items?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Productos</p>
+                    <div className="space-y-2">
+                      {selectedQuotation.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border dark:border-slate-800">
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">{item.productName}</p>
+                            <p className="text-[10px] text-slate-500">Cantidad: {item.quantity}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-black text-slate-900 dark:text-white">${(item.total || item.price * item.quantity).toLocaleString()}</p>
+                            <p className="text-[10px] text-slate-400">${item.price.toLocaleString()} c/u</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Totales */}
+                <div className="border-t dark:border-slate-800 pt-4 space-y-1.5">
+                  <div className="flex justify-between text-sm font-bold text-slate-600 dark:text-slate-400">
+                    <span>Subtotal</span>
+                    <span>${(selectedQuotation.subtotal || 0).toLocaleString()}</span>
+                  </div>
+                  {selectedQuotation.discountAmount > 0 && (
+                    <div className="flex justify-between text-sm font-bold text-red-500">
+                      <span>Descuento</span>
+                      <span>-${selectedQuotation.discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-bold text-slate-600 dark:text-slate-400">
+                    <span>IVA (16%)</span>
+                    <span>${(selectedQuotation.iva || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white border-t dark:border-slate-700 pt-2 mt-2">
+                    <span>Total</span>
+                    <span>${(selectedQuotation.total || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 border-t dark:border-slate-800 flex justify-end">
+                <button
+                  onClick={() => setSelectedQuotation(null)}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>

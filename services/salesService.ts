@@ -504,15 +504,11 @@ export const SalesService = {
         }
 
         if (startDate) {
-            query = query.gte('created_at', startDate);
+            query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
         }
 
         if (endDate) {
-            // Para incluir todo el día de endDate, buscamos menores que el día siguiente
-            const date = new Date(endDate);
-            date.setDate(date.getDate() + 1);
-            const nextDay = date.toISOString().split('T')[0];
-            query = query.lt('created_at', nextDay);
+            query = query.lte('created_at', `${endDate}T23:59:59.999-06:00`);
         }
 
         const { data, error } = await query;

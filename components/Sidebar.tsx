@@ -60,8 +60,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
       title: '🛒 Ventas',
       items: [
         ...(isAdmin || isStoreManager ? [{ label: 'Cotizador', path: '/quotations', icon: 'request_quote' }] : []),
-        ...(isAdmin || isWarehouse || isStoreManager ? [{ label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' }] : []),
-        ...(isAdmin || isStoreManager ? [{ label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' }] : []),
+        ...(isAdmin ? [{ label: 'Ventas Mayoreo', path: '/wholesale-pos', icon: 'groups' }] : []),
+        ...(isAdmin ? [{ label: 'Venta Municipio', path: '/municipal-pos', icon: 'account_balance' }] : []),
 
         { label: 'Clientes', path: '/clients', icon: 'group' },
       ].filter(Boolean) as NavItem[],

@@ -27,6 +27,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
     const [requests, setRequests] = useState<CoinChangeRequest[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [selectedRequest, setSelectedRequest] = useState<any>(null);
     const navigate = useNavigate();
 
     // Form State
@@ -142,6 +143,7 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                         setActiveTab(tab.key as 'new' | 'history');
                                         setBreakdown({});
                                         setCollectedBy('');
+                                        setSelectedRequest(null);
                                     }}
                                     className={`px-3 md:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>
@@ -177,24 +179,24 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                <th className="px-8 py-5">Folio</th>
-                                                <th className="px-8 py-5">Sucursal</th>
-                                                <th className="px-8 py-5">Monto Total</th>
-                                                <th className="px-8 py-5">Mensajero</th>
-                                                <th className="px-8 py-5">Desglose</th>
-                                                <th className="px-8 py-5">Fecha</th>
-                                                <th className="px-8 py-5 text-center">Estado</th>
-                                                <th className="px-8 py-5 text-right">Acciones</th>
+                                                <th className="px-4 md:px-6 py-5">Folio</th>
+                                                <th className="px-4 md:px-6 py-5">Sucursal</th>
+                                                <th className="px-4 md:px-6 py-5">Monto</th>
+                                                <th className="px-4 md:px-6 py-5 hidden lg:table-cell">Mensajero</th>
+                                                <th className="px-4 md:px-6 py-5 hidden xl:table-cell">Desglose</th>
+                                                <th className="px-4 md:px-6 py-5">Fecha</th>
+                                                <th className="px-4 md:px-6 py-5 text-center">Estado</th>
+                                                <th className="px-4 md:px-6 py-5 text-right">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {requests.map(r => (
                                                 <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                                                    <td className="px-8 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
-                                                    <td className="px-8 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
-                                                    <td className="px-8 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
-                                                    <td className="px-8 py-5 text-sm text-slate-500">{(r as any).collectedBy || <span className="text-slate-300">—</span>}</td>
-                                                    <td className="px-8 py-5">
+                                                    <td className="px-4 md:px-6 py-5 font-black text-amber-600">#C-{r.folio.toString().padStart(4, '0')}</td>
+                                                    <td className="px-4 md:px-6 py-5 font-bold text-slate-700 dark:text-slate-300">{r.branchName || r.branchId || 'N/A'}</td>
+                                                    <td className="px-4 md:px-6 py-5 font-black text-lg text-slate-900 dark:text-white">${r.amount.toLocaleString()}</td>
+                                                    <td className="px-4 md:px-6 py-5 text-sm text-slate-500 hidden lg:table-cell">{(r as any).collectedBy || <span className="text-slate-300">—</span>}</td>
+                                                    <td className="px-4 md:px-6 py-5 hidden xl:table-cell">
                                                         {r.breakdown ? (
                                                             <div className="flex flex-wrap gap-1 max-w-xs">
                                                                 {Object.entries(r.breakdown).map(([val, qty]) => (
@@ -207,8 +209,8 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                                             </div>
                                                         ) : <span className="text-slate-400 text-xs">-</span>}
                                                     </td>
-                                                    <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(r.createdAt).toLocaleDateString()}</td>
-                                                    <td className="px-8 py-5 text-center">
+                                                    <td className="px-4 md:px-6 py-5 text-sm text-slate-500 font-medium">{new Date(r.createdAt).toLocaleDateString()}</td>
+                                                    <td className="px-4 md:px-6 py-5 text-center">
                                                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.status === 'completed' ? 'bg-green-500/10 text-green-500' :
                                                             r.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
                                                             r.status === 'coins_sent' ? 'bg-blue-500/10 text-blue-500' :
@@ -217,8 +219,15 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                                             {r.status === 'pending' ? 'Pendiente' : r.status === 'completed' ? 'Completado' : r.status === 'coins_sent' ? 'Monedas Enviadas' : 'Cancelado'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-8 py-5 text-right">
-                                                        <div className="flex justify-end gap-2">
+                                                    <td className="px-4 md:px-6 py-5 text-right">
+                                                        <div className="flex justify-end gap-1.5">
+                                                            <button
+                                                                onClick={() => setSelectedRequest(r)}
+                                                                className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                                title="Ver detalle"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">visibility</span>
+                                                            </button>
                                                             {!isAdmin && r.status === 'pending' && (
                                                                 <button
                                                                     onClick={() => handleConfirmCoinsSent(r.id)}
@@ -246,11 +255,11 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                             ))}
                                             {requests.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="py-20 text-center">
+                                                    <td colSpan={8} className="py-20 text-center">
                                                         <div className="flex flex-col items-center gap-3">
                                                             <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">currency_exchange</span>
                                                             <p className="font-black text-base text-slate-400">Sin solicitudes de cambio</p>
-                                                            <p className="text-xs text-slate-400">Solicita feria o cambio de moneda desde la pesta&ntilde;a &quot;Nuevo Cambio&quot;.</p>
+                                                            <p className="text-xs text-slate-400">Solicita feria o cambio de moneda desde la pestaña "Nuevo Cambio".</p>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -349,6 +358,101 @@ const CoinChange: React.FC<CoinChangeProps> = ({ user, onLogout }) => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+                {/* Modal de Detalle */}
+                {selectedRequest && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedRequest(null)}>
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-6 border-b dark:border-slate-800">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-amber-500 text-2xl">currency_exchange</span>
+                                    <div>
+                                        <h3 className="font-black text-lg">Detalle de Solicitud</h3>
+                                        <p className="text-xs text-slate-400 font-bold">#C-{selectedRequest.folio.toString().padStart(4, '0')}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedRequest(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-5">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Sucursal</p>
+                                        <p className="font-bold text-sm">{selectedRequest.branchName || selectedRequest.branchId || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Monto Total</p>
+                                        <p className="font-black text-xl text-amber-500">${selectedRequest.amount.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Mensajero</p>
+                                        <p className="font-bold text-sm">{selectedRequest.collectedBy || <span className="text-slate-400">No asignado</span>}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Estado</p>
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${selectedRequest.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                                            selectedRequest.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                            selectedRequest.status === 'coins_sent' ? 'bg-blue-500/10 text-blue-500' :
+                                                'bg-amber-500/10 text-amber-500'
+                                            }`}>
+                                            {selectedRequest.status === 'pending' ? 'Pendiente' : selectedRequest.status === 'completed' ? 'Completado' : selectedRequest.status === 'coins_sent' ? 'Monedas Enviadas' : 'Cancelado'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {selectedRequest.breakdown && Object.values(selectedRequest.breakdown).some((v: any) => v > 0) && (
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Desglose de Denominaciones</p>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                            {Object.entries(selectedRequest.breakdown).map(([val, qty]: [string, any]) => (
+                                                qty > 0 && (
+                                                    <div key={val} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-center border dark:border-slate-700">
+                                                        <p className="text-lg font-black text-slate-800 dark:text-white">{qty}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400">${val}</p>
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="border-t dark:border-slate-800 pt-4 space-y-3">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Historial de Fechas</p>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500 font-bold">Creada</span>
+                                            <span className="font-bold">{new Date(selectedRequest.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        {selectedRequest.coins_sent_at && (
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-500 font-bold">Monedas enviadas</span>
+                                                <span className="font-bold">{new Date(selectedRequest.coins_sent_at).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        {selectedRequest.completed_at && (
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-500 font-bold">Completada</span>
+                                                <span className="font-bold">{new Date(selectedRequest.completed_at).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-6 border-t dark:border-slate-800 flex justify-end gap-2">
+                                <button
+                                    onClick={() => { navigate(`/coin-change/${selectedRequest.id}/print`); setSelectedRequest(null); }}
+                                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+                                >
+                                    <span className="material-symbols-outlined text-sm">print</span>
+                                    Imprimir
+                                </button>
+                                <button onClick={() => setSelectedRequest(null)} className="px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

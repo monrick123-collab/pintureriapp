@@ -1136,7 +1136,8 @@ export const InventoryService = {
             ...r,
             branchName: r.branches?.name,
             breakdown: r.breakdown_details,
-            createdAt: r.created_at
+            createdAt: r.created_at,
+            collectedBy: r.collected_by
         }));
     },
 

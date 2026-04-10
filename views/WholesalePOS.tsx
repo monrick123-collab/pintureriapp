@@ -977,10 +977,10 @@ const addToCart = (product: Product) => {
                                                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plazo de Crédito (Días)</label>
                                                                 <input
                                                                     type="number"
-                                                                    className="w-full p-3 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl text-xs font-black"
+                                                                    className="w-full p-3 bg-slate-100 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-xs font-black cursor-not-allowed"
                                                                     value={creditDays}
-                                                                    onChange={e => setCreditDays(parseInt(e.target.value) || 0)}
-                                                                    placeholder="Días"
+                                                                    readOnly
+                                                                    title="Los días de crédito se configuran en el perfil del cliente"
                                                                 />
                                                             </div>
                                                         )}

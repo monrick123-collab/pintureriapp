@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { NotificationService } from '../notificationService';
 
 export const CoinService = {
     async getCoinChangeRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
@@ -20,7 +21,8 @@ export const CoinService = {
             ...r,
             branchName: r.branches?.name,
             breakdown: r.breakdown_details,
-            createdAt: r.created_at
+            createdAt: r.created_at,
+            collectedBy: r.collected_by
         }));
     },
 
@@ -46,6 +48,18 @@ export const CoinService = {
                 breakdown_details: breakdown
             });
         if (error) throw error;
+
+        try {
+            const { data: bData } = await supabase.from('branches').select('name').eq('id', branchId).single();
+            await NotificationService.createNotification({
+                targetRole: 'ADMIN',
+                title: 'Nueva Solicitud de Cambio de Moneda',
+                message: `La sucursal ${bData?.name || branchId} solicita cambio por $${amount.toLocaleString()}.`,
+                actionUrl: '/coin-change'
+            });
+        } catch (e) {
+            console.error('Error enviando notificación de cambio de moneda:', e);
+        }
     },
 
     async updateCoinChangeStatus(requestId: string, status: 'pending' | 'coins_sent' | 'completed' | 'cancelled', receiverId?: string): Promise<void> {

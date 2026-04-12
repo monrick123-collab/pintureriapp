@@ -749,12 +749,8 @@ export const SalesService = {
                 sale_items (*),
                 clients (name)
             `)
-            .gte('created_at', startDate)
-            .lt('created_at', (() => {
-                const d = new Date(endDate);
-                d.setDate(d.getDate() + 1);
-                return d.toISOString().split('T')[0];
-            })())
+            .gte('created_at', startDate.length === 10 ? `${startDate}T00:00:00-06:00` : startDate)
+            .lte('created_at', endDate.length === 10 ? `${endDate}T23:59:59.999-06:00` : endDate)
             .order('created_at', { ascending: false });
 
         if (branchId && branchId !== 'ALL') {

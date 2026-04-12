@@ -289,8 +289,8 @@ useEffect(() => {
     const calculateDateRange = () => {
         const end = new Date();
         let start = new Date();
-        end.setHours(23, 59, 59, 999);
-        start.setHours(0, 0, 0, 0);
+
+        const fmt = (d: Date) => d.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
         switch (historyPeriod) {
             case 'today': break;
@@ -306,12 +306,9 @@ useEffect(() => {
                 break;
             case 'custom':
                 if (!customStart || !customEnd) return null;
-                start = new Date(customStart);
-                const endCustom = new Date(customEnd);
-                endCustom.setHours(23, 59, 59, 999);
-                return { start: start.toISOString(), end: endCustom.toISOString() };
+                return { start: customStart, end: customEnd };
         }
-        return { start: start.toISOString(), end: end.toISOString() };
+        return { start: fmt(start), end: fmt(end) };
     };
 
     const fetchHistorySales = async () => {

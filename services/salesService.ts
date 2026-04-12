@@ -494,8 +494,7 @@ export const SalesService = {
             .select(`
                 *,
                 branch:branches(name),
-                municipal_sale_items (*),
-                authorized_admin:profiles!authorized_exit_by(full_name)
+                municipal_sale_items (*)
             `)
             .order('created_at', { ascending: false });
 
@@ -514,7 +513,23 @@ export const SalesService = {
         const { data, error } = await query;
         if (error) throw error;
 
-        return data || [];
+        // authorized_exit_by es TEXT sin FK formal — se resuelve con query separada
+        const rows = data || [];
+        const ids = Array.from(new Set(rows.map((s: any) => s.authorized_exit_by).filter(Boolean)));
+        const adminsMap = new Map<string, string>();
+        if (ids.length > 0) {
+            const { data: admins } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', ids);
+            (admins || []).forEach((a: any) => adminsMap.set(a.id, a.full_name));
+        }
+        return rows.map((s: any) => ({
+            ...s,
+            authorized_admin: s.authorized_exit_by && adminsMap.has(s.authorized_exit_by)
+                ? { full_name: adminsMap.get(s.authorized_exit_by)! }
+                : null
+        }));
     },
 
     /**
@@ -1031,10 +1046,22 @@ export const SalesService = {
     async getMunicipalSaleById(id: string): Promise<any> {
         const { data, error } = await supabase
             .from('municipal_sales')
-            .select('*, branch:branches(name), municipal_sale_items(*), authorized_admin:profiles!authorized_exit_by(full_name)')
+            .select('*, branch:branches(name), municipal_sale_items(*)')
             .eq('id', id)
             .single();
         if (error) throw error;
+
+        // authorized_exit_by es TEXT sin FK formal — se resuelve con query separada
+        if (data.authorized_exit_by) {
+            const { data: admin } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', data.authorized_exit_by)
+                .maybeSingle();
+            data.authorized_admin = admin ? { full_name: admin.full_name } : null;
+        } else {
+            data.authorized_admin = null;
+        }
         return data;
     },
 

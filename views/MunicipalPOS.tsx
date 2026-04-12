@@ -756,31 +756,31 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">
                                             <tr>
-                                                <th className="px-6 py-4">Folio</th>
-                                                <th className="px-6 py-4">Municipio</th>
-                                                <th className="px-6 py-4">Dependencia</th>
-                                                <th className="px-6 py-4">Pago</th>
-                                                <th className="px-6 py-4">Total</th>
-                                                <th className="px-6 py-4">Estado</th>
-                                                {isAdmin && <th className="px-6 py-4 text-center">Admin</th>}
-                                                <th className="px-6 py-4">Fecha</th>
-                                                <th className="px-6 py-4 text-center">Factura</th>
-                                                <th className="px-6 py-4 text-center">Acciones</th>
+                                                <th className="px-3 md:px-4 py-4">Folio</th>
+                                                <th className="px-3 md:px-4 py-4">Municipio</th>
+                                                <th className="px-3 md:px-4 py-4 hidden md:table-cell">Dependencia</th>
+                                                <th className="px-3 md:px-4 py-4">Pago</th>
+                                                <th className="px-3 md:px-4 py-4">Total</th>
+                                                <th className="px-3 md:px-4 py-4">Estado</th>
+                                                {isAdmin && <th className="px-3 md:px-4 py-4 text-center">Admin</th>}
+                                                <th className="px-3 md:px-4 py-4">Fecha</th>
+                                                <th className="px-3 md:px-4 py-4 text-center hidden md:table-cell">Factura</th>
+                                                <th className="px-3 md:px-4 py-4 text-center">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
                                             {history.map(s => (
                                                 <tr key={s.id} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${s.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                                                    <td className="px-6 py-4 font-black text-primary">#M-{String(s.folio).padStart(4, '0')}</td>
-                                                    <td className="px-6 py-4 font-bold">{s.municipality}</td>
-                                                    <td className="px-6 py-4 text-sm text-slate-500">{s.department || '—'}</td>
-                                                    <td className="px-6 py-4">
+                                                    <td className="px-3 md:px-4 py-4 font-black text-primary">#M-{String(s.folio).padStart(4, '0')}</td>
+                                                    <td className="px-3 md:px-4 py-4 font-bold">{s.municipality}</td>
+                                                    <td className="px-3 md:px-4 py-4 text-sm text-slate-500 hidden md:table-cell">{s.department || '—'}</td>
+                                                    <td className="px-3 md:px-4 py-4">
                                                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${s.payment_type === 'credito' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{s.payment_type}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 font-black">
+                                                    <td className="px-3 md:px-4 py-4 font-black">
                                                         <span className={s.status === 'cancelled' ? 'line-through text-red-400' : ''}>{fmtMoney(s.total)}</span>
                                                     </td>
-                                                     <td className="px-6 py-4">
+                                                     <td className="px-3 md:px-4 py-4">
                                                          {s.status === 'cancelled' ? (
                                                              <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-red-100 text-red-600">Cancelada</span>
                                                          ) : (
@@ -797,19 +797,24 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                          </span>
                                                          )}
                                                      </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-500">{fmtDate(s.created_at)}</td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <button 
+                                                    {isAdmin && (
+                                                        <td className="px-3 md:px-4 py-4 text-center text-sm font-bold text-slate-600 dark:text-slate-300">
+                                                            {s.authorized_admin?.full_name || '—'}
+                                                        </td>
+                                                    )}
+                                                    <td className="px-3 md:px-4 py-4 text-sm text-slate-500">{fmtDate(s.created_at)}</td>
+                                                    <td className="px-3 md:px-4 py-4 text-center hidden md:table-cell">
+                                                        <button
                                                             onClick={() => handleEditInvoice(s)}
                                                             className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 mx-auto transition-colors focus:ring-2 focus:ring-primary/20"
                                                         >
                                                             {s.invoice_number ? s.invoice_number : 'Agregar'}
                                                         </button>
                                                     </td>
-                                                    {isAdmin && (
-                                                        <td className="px-6 py-4 text-center">
-                                                            {s.status !== 'cancelled' && (
-                                                                <div className="flex items-center justify-center gap-1">
+                                                    <td className="px-3 md:px-4 py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {isAdmin && s.status !== 'cancelled' && (
+                                                                <>
                                                                     <button onClick={() => navigate(`/municipal-note/${s.id}`)} className="p-1 text-slate-400 hover:text-green-500 transition-colors" title="Imprimir Nota">
                                                                         <span className="material-symbols-outlined text-lg">print</span>
                                                                     </button>
@@ -819,14 +824,12 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                                                     <button onClick={() => handleCancelMunicipalSale(s)} disabled={cancelLoading} className="p-1 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50" title="Cancelar">
                                                                         <span className="material-symbols-outlined text-lg">cancel</span>
                                                                     </button>
-                                                                </div>
+                                                                </>
                                                             )}
-                                                        </td>
-                                                    )}
-                                                    <td className="px-6 py-4 text-center">
-                                                        <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
-                                                            <span className="material-symbols-outlined text-lg">visibility</span>
-                                                        </button>
+                                                            <button onClick={() => setSelectedHistorySale(s)} className="p-1 text-slate-400 hover:text-primary transition-colors" title="Ver Detalles">
+                                                                <span className="material-symbols-outlined text-lg">visibility</span>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}

@@ -126,22 +126,22 @@ const App: React.FC = () => {
           <Route path="/finance" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.FINANCE) ? <Finance user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/inventory" element={user ? <Inventory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
 
-          <Route path="/shipping-note/:id" element={user ? <ShippingNote /> : <Navigate to="/login" replace />} />
+          <Route path="/shipping-note/:id" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <ShippingNote /> : <Navigate to="/" replace />} />
           <Route path="/users" element={user?.role === UserRole.ADMIN ? <UserManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/quotations" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER) ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/returns" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <Returns user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
-          <Route path="/returns/:id/print" element={user ? <ReturnNote /> : <Navigate to="/login" replace />} />
-          <Route path="/coin-change/:id/print" element={user ? <CoinChangeNote /> : <Navigate to="/login" replace />} />
-          <Route path="/restocks/:id/print" element={user ? <RestockNote user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+          <Route path="/returns/:id/print" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <ReturnNote /> : <Navigate to="/" replace />} />
+          <Route path="/coin-change/:id/print" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <CoinChangeNote /> : <Navigate to="/" replace />} />
+          <Route path="/restocks/:id/print" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <RestockNote user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/supplies" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <Supplies user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/packaging" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <Packaging user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
           <Route path="/wholesale-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <WholesalePOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
-          <Route path="/wholesale-note/:id" element={user ? <WholesaleNote /> : <Navigate to="/login" replace />} />
-          <Route path="/municipal-note/:id" element={user ? <MunicipalNote /> : <Navigate to="/login" replace />} />
+          <Route path="/wholesale-note/:id" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <WholesaleNote /> : <Navigate to="/" replace />} />
+          <Route path="/municipal-note/:id" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalNote /> : <Navigate to="/" replace />} />
           <Route path="/municipal-pos" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB) ? <MunicipalPOS user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/history" element={user?.role === UserRole.ADMIN ? <AdminHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/admin/pending-payments" element={user?.role === UserRole.ADMIN ? <AdminPendingPayments user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

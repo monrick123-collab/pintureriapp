@@ -126,8 +126,15 @@ export const FinanceService = {
     // --- DASHBOARD METRICS ---
     async getFinanceMetrics() {
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const monthStartDate = `${y}-${pad(m + 1)}-01`;
+        const nextY = m === 11 ? y + 1 : y;
+        const nextM = m === 11 ? 0 : m + 1;
+        const monthEndDate = `${nextY}-${pad(nextM + 1)}-01`;
+        const monthStartTz = `${monthStartDate}T00:00:00-06:00`;
+        const monthEndTz = `${monthEndDate}T00:00:00-06:00`;
 
         // 1. Cuentas por Pagar (Pendientes + Autorizadas)
         const { data: invoices } = await supabase
@@ -142,8 +149,8 @@ export const FinanceService = {
             .from('supplier_invoices')
             .select('amount')
             .eq('status', 'paid')
-            .gte('due_date', monthStart.split('T')[0])
-            .lt('due_date', monthEnd.split('T')[0]);
+            .gte('due_date', monthStartDate)
+            .lt('due_date', monthEndDate);
 
         const monthlyExpenses = paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
 
@@ -151,8 +158,8 @@ export const FinanceService = {
         const { data: salesData } = await supabase
             .from('sales')
             .select('total')
-            .gte('created_at', monthStart)
-            .lt('created_at', monthEnd);
+            .gte('created_at', monthStartTz)
+            .lt('created_at', monthEndTz);
 
         const monthlySales = salesData?.reduce((sum, s) => sum + s.total, 0) || 0;
 
@@ -167,18 +174,19 @@ export const FinanceService = {
     async getMonthlyFinancials(months = 6): Promise<{ month: string; ingresos: number; gastos: number }[]> {
         const results: { month: string; ingresos: number; gastos: number }[] = [];
         const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const pad = (n: number) => String(n).padStart(2, '0');
 
         for (let i = months - 1; i >= 0; i--) {
             const now = new Date();
             const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-            const startStr = start.toISOString();
-            const endStr = end.toISOString();
-            const startDate = startStr.split('T')[0];
-            const endDate = endStr.split('T')[0];
+            const startDate = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`;
+            const endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-01`;
+            const startTz = `${startDate}T00:00:00-06:00`;
+            const endTz = `${endDate}T00:00:00-06:00`;
 
             const [{ data: sales }, { data: expenses }] = await Promise.all([
-                supabase.from('sales').select('total').gte('created_at', startStr).lt('created_at', endStr),
+                supabase.from('sales').select('total').gte('created_at', startTz).lt('created_at', endTz),
                 supabase.from('supplier_invoices').select('amount').eq('status', 'paid').gte('due_date', startDate).lt('due_date', endDate)
             ]);
 

@@ -2,30 +2,6 @@ import { supabase } from '../supabase';
 import { NotificationService } from '../notificationService';
 
 export const CoinService = {
-    async getCoinChangeRequests(branchId?: string, startDate?: string, endDate?: string): Promise<any[]> {
-        let query = supabase
-            .from('coin_change_requests')
-            .select(`
-                *,
-                branches (name)
-            `)
-            .order('created_at', { ascending: false });
-
-        if (branchId) query = query.eq('branch_id', branchId);
-        if (startDate) query = query.gte('created_at', `${startDate}T00:00:00-06:00`);
-        if (endDate) query = query.lte('created_at', `${endDate}T23:59:59-06:00`);
-
-        const { data, error } = await query;
-        if (error) throw error;
-        return (data || []).map((r: any) => ({
-            ...r,
-            branchName: r.branches?.name,
-            breakdown: r.breakdown_details,
-            createdAt: r.created_at,
-            collectedBy: r.collected_by
-        }));
-    },
-
     async createCoinChangeRequest(branchId: string, userId: string, amount: number, breakdown?: Record<string, number>, collectedBy?: string): Promise<void> {
         const { data: folio, error: folioError } = await supabase.rpc('get_next_folio', {
             p_branch_id: branchId,

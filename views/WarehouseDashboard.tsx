@@ -191,7 +191,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                     </div>
                 </header>
 
-                <div className="px-6 md:px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 flex gap-8">
+                <div className="px-3 md:px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 flex gap-4 md:gap-8 overflow-x-auto custom-scrollbar whitespace-nowrap">
                     <button
                         onClick={() => setCurrentTab('branches')}
                         className={`py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${currentTab === 'branches' ? 'border-primary text-primary' : 'border-transparent text-slate-400'}`}
@@ -257,28 +257,28 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                 <table className="w-full text-left">
                                     <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                                         <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <th className="px-8 py-5">Folio</th>
-                                            <th className="px-6 py-5">Sucursal</th>
-                                            <th className="px-6 py-5">Fecha</th>
-                                            <th className="px-6 py-5 text-right">Total</th>
-                                            <th className="px-8 py-5 text-right">Acciones</th>
+                                            <th className="px-4 md:px-8 py-4 md:py-5">Folio</th>
+                                            <th className="px-3 md:px-6 py-4 md:py-5">Sucursal</th>
+                                            <th className="px-3 md:px-6 py-4 md:py-5 hidden md:table-cell">Fecha</th>
+                                            <th className="px-3 md:px-6 py-4 md:py-5 text-right">Total</th>
+                                            <th className="px-4 md:px-8 py-4 md:py-5 text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {sheets.filter(s => filterBranch === 'ALL' || s.branchId === filterBranch).map(sheet => (
                                             <tr key={sheet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                                <td className="px-8 py-5 font-black text-primary">#{sheet.folio}</td>
-                                                <td className="px-6 py-5">
+                                                <td className="px-4 md:px-8 py-4 md:py-5 font-black text-primary">#{sheet.folio}</td>
+                                                <td className="px-3 md:px-6 py-4 md:py-5">
                                                     <p className="font-bold text-slate-900 dark:text-white">{sheet.branchName}</p>
                                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{sheet.branchId}</p>
                                                 </td>
-                                                <td className="px-6 py-5 text-xs font-bold text-slate-500">
+                                                <td className="px-3 md:px-6 py-4 md:py-5 text-xs font-bold text-slate-500 hidden md:table-cell">
                                                     {new Date(sheet.createdAt).toLocaleDateString()}
                                                 </td>
-                                                <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
+                                                <td className="px-3 md:px-6 py-4 md:py-5 text-right font-black text-slate-900 dark:text-white">
                                                     ${sheet.totalAmount.toLocaleString()}
                                                 </td>
-                                                <td className="px-8 py-5 text-right">
+                                                <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                                                     <Link
                                                         to={`/shipping-note/${sheet.id}`}
                                                         className="p-2 text-slate-400 hover:text-primary transition-colors inline-block"
@@ -312,24 +312,24 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                                             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                <th className="px-8 py-5">Folio</th>
-                                                <th className="px-6 py-5">Estado</th>
-                                                <th className="px-6 py-5">Atiende</th>
-                                                <th className="px-6 py-5">Arribo Est.</th>
-                                                <th className="px-6 py-5 text-right">Total</th>
-                                                <th className="px-8 py-5 text-right">Fecha</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-5">Folio</th>
+                                                <th className="px-3 md:px-6 py-4 md:py-5">Estado</th>
+                                                <th className="px-3 md:px-6 py-4 md:py-5 hidden md:table-cell">Atiende</th>
+                                                <th className="px-3 md:px-6 py-4 md:py-5 hidden md:table-cell">Arribo Est.</th>
+                                                <th className="px-3 md:px-6 py-4 md:py-5 text-right">Total</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-5 text-right">Fecha</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                             {supplyOrders.map(order => (
                                                 <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                                    <td className="px-8 py-5 font-black text-blue-600">S-{order.folio}</td>
-                                                    <td className="px-6 py-5">
+                                                    <td className="px-4 md:px-8 py-4 md:py-5 font-black text-blue-600">S-{order.folio}</td>
+                                                    <td className="px-3 md:px-6 py-4 md:py-5">
                                                         <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                                                             {translateStatus(order.status)}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-5">
+                                                    <td className="px-3 md:px-6 py-4 md:py-5 hidden md:table-cell">
                                                         {order.assignedAdminName ? (
                                                             <div className="flex items-center gap-2">
                                                                 <div className="size-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-black">{order.assignedAdminName[0]}</div>
@@ -339,15 +339,15 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                                                             <span className="text-xs text-slate-400 italic">No asignado</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">
+                                                    <td className="px-3 md:px-6 py-4 md:py-5 text-xs font-bold text-slate-500 hidden md:table-cell">
                                                         {order.estimatedArrival && !isNaN(new Date(order.estimatedArrival).getTime())
                                                             ? new Date(order.estimatedArrival).toLocaleDateString()
                                                             : 'Pendiente'}
                                                     </td>
-                                                    <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
+                                                    <td className="px-3 md:px-6 py-4 md:py-5 text-right font-black text-slate-900 dark:text-white">
                                                         ${order.totalAmount.toLocaleString()}
                                                     </td>
-                                                    <td className="px-8 py-5 text-right">
+                                                    <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                                                         {order.status === 'shipped' ? (
                                                             <button
                                                                 onClick={() => handleOpenReceiveModal(order)}
@@ -389,7 +389,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
                         {/* Left Side: Product Selection */}
-                        <div className="flex-1 p-8 border-r border-slate-100 dark:border-slate-800 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 p-4 md:p-8 border-r border-slate-100 dark:border-slate-800 overflow-y-auto custom-scrollbar">
                             <h3 className="text-2xl font-black mb-1">Resurtir Tienda</h3>
                             <p className="text-primary font-black uppercase text-[10px] tracking-widest mb-8">{selectedBranch.name}</p>
 
@@ -431,7 +431,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                         </div>
 
                         {/* Right Side: Cart Summary */}
-                        <div className="w-full md:w-[350px] bg-slate-50 dark:bg-[#0f172a] p-8 flex flex-col shrink-0">
+                        <div className="w-full md:w-[350px] bg-slate-50 dark:bg-[#0f172a] p-4 md:p-8 flex flex-col shrink-0">
                             <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6">Lista de Material</h4>
 
                             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
@@ -500,7 +500,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
                         {/* Left Side: Product Selection */}
-                        <div className="flex-1 p-8 border-r border-slate-100 dark:border-slate-800 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 p-4 md:p-8 border-r border-slate-100 dark:border-slate-800 overflow-y-auto custom-scrollbar">
                             <h3 className="text-2xl font-black mb-1">Nuevo Pedido a Admin</h3>
                             <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-8">Solicitud de Suministros para Bodega</p>
 
@@ -542,7 +542,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                         </div>
 
                         {/* Right Side: Cart Summary */}
-                        <div className="w-full md:w-[350px] bg-slate-50 dark:bg-[#0f172a] p-8 flex flex-col shrink-0">
+                        <div className="w-full md:w-[350px] bg-slate-50 dark:bg-[#0f172a] p-4 md:p-8 flex flex-col shrink-0">
                             <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6">Resumen del Pedido</h4>
 
                             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
@@ -605,7 +605,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
             {isReceiveModalOpen && selectedSupplyOrder && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
                             <h3 className="text-2xl font-black mb-1">Recepción de Pedido</h3>
                             <p className="text-primary font-black uppercase text-[10px] tracking-widest">Folio S-{selectedSupplyOrder.folio}</p>
                             <p className="text-sm text-slate-500 mt-2">Verifica la cantidad recibida y el estado de cada producto.</p>
@@ -692,7 +692,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                             ))}
                         </div>
 
-                        <div className="p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
+                        <div className="p-4 md:p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
                             <button
                                 onClick={() => setIsReceiveModalOpen(false)}
                                 className="flex-1 py-4 font-black text-slate-400 uppercase text-xs"
@@ -714,7 +714,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
             {isDetailModalOpen && detailOrder && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
                             <div className="flex items-start justify-between">
                                 <div>
                                     <h3 className="text-2xl font-black mb-1">Detalle de Recepción</h3>
@@ -764,7 +764,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ user, onLogout 
                             })}
                         </div>
 
-                        <div className="p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50">
+                        <div className="p-4 md:p-8 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50">
                             <button
                                 onClick={() => setIsDetailModalOpen(false)}
                                 className="w-full py-4 font-black text-slate-400 uppercase text-xs hover:text-slate-600 transition-colors"

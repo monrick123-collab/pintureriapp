@@ -37,7 +37,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // Also sign out from Supabase Auth
     try {
       await supabase.auth.signOut();
-    } catch (_) {}
+    } catch (e) {
+      console.error('[authStore] Supabase signOut falló; sesión remota puede seguir activa:', e);
+    }
     set({ user: null });
   },
 

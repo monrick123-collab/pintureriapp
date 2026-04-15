@@ -4,6 +4,7 @@ import { User, UserRole } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { PromotionService } from '../services/promotionService';
+import { supabase } from '../services/supabase';
 import { exportToCSV } from '../utils/csvExport';
 
 interface AdminHistoryProps {
@@ -47,6 +48,28 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
         PromotionService.getAllRequests().catch(() => [])
       ]);
 
+      // Resolver UUIDs de sucursales y usuarios a nombres (lookup batch)
+      const allBranches = await InventoryService.getBranches();
+      const branchNameById = new Map(allBranches.map((b: any) => [b.id, b.name]));
+
+      const userIds = [...new Set([
+        ...restocks.map((r: any) => r.requestedBy),
+        ...transfers.map((t: any) => t.requested_by),
+        ...promotions.map((p: any) => p.requestedBy),
+      ].filter(Boolean))];
+
+      let userNameById = new Map<string, string>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', userIds);
+        userNameById = new Map((profiles || []).map((p: any) => [p.id, p.name]));
+      }
+
+      const resolveUser = (id?: string) => id ? (userNameById.get(id) || id) : 'Sistema';
+      const resolveBranch = (id?: string) => id ? (branchNameById.get(id) || id) : '—';
+
       // Transformar datos a formato común
       const historyEntries: HistoryEntry[] = [];
 
@@ -56,8 +79,8 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
           id: sale.id,
           type: 'sale',
           description: `Venta ${sale.isWholesale ? 'MAYORISTA' : 'MENUDEO'} - $${sale.total.toFixed(2)}`,
-          user: sale.createdBy || 'Sistema',
-          branch: sale.branchId,
+          user: resolveUser(sale.createdBy),
+          branch: sale.branchName || resolveBranch(sale.branchId),
           timestamp: sale.createdAt,
           details: sale
         });
@@ -69,8 +92,8 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
           id: restock.id,
           type: 'restock',
           description: `Reabastecimiento - ${restock.status}`,
-          user: restock.requestedBy || 'Sistema',
-          branch: restock.branchId,
+          user: resolveUser(restock.requestedBy),
+          branch: restock.branchName || resolveBranch(restock.branchId),
           timestamp: restock.createdAt,
           details: restock
         });
@@ -78,12 +101,14 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
 
       // Transferencias
       transfers.forEach((transfer: any) => {
+        const fromName = transfer.fromBranchName || resolveBranch(transfer.from_branch_id);
+        const toName = transfer.toBranchName || resolveBranch(transfer.to_branch_id);
         historyEntries.push({
           id: transfer.id,
           type: 'transfer',
-          description: `Transferencia ${transfer.fromBranch} → ${transfer.toBranch}`,
-          user: transfer.createdBy || 'Sistema',
-          branch: transfer.fromBranch,
+          description: `Transferencia ${fromName} → ${toName}`,
+          user: resolveUser(transfer.requested_by),
+          branch: fromName,
           timestamp: transfer.createdAt,
           details: transfer
         });
@@ -96,7 +121,7 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
           type: 'envasado',
           description: `Envasado a ${pack.target_package_type} - ${pack.quantity_drum} tambo(s)`,
           user: 'Sistema',
-          branch: pack.branch_id,
+          branch: pack.branches?.name || resolveBranch(pack.branch_id),
           timestamp: pack.created_at,
           details: pack
         });
@@ -110,8 +135,8 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ user, onLogout }) => {
           id: promo.id,
           type: 'promocion',
           description: `Solicitud promoción ${promo.requestedDiscountPercent}% para ${promo.clientName || 'cliente'} — ${statusLabel}${discountAmt}`,
-          user: promo.requestedBy || 'Sistema',
-          branch: promo.branchId,
+          user: resolveUser(promo.requestedBy),
+          branch: resolveBranch(promo.branchId),
           timestamp: promo.createdAt,
           details: promo
         });

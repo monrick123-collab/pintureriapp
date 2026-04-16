@@ -85,32 +85,47 @@ export const PackagingService = {
     },
 
     async updatePackagingStatus(requestId: string, status: string, userId?: string): Promise<void> {
+        const expectedPrevious: Record<string, string> = {
+            processing: 'received_at_branch',
+            completed: 'processing',
+        };
         const now  = new Date().toISOString();
         const update: Record<string, any> = { status, updated_at: now };
         if (status === 'processing') update.started_at  = now;
         if (status === 'completed')  update.completed_at = now;
 
-        const { error } = await supabase
+        let query = supabase
             .from('packaging_requests')
             .update(update)
             .eq('id', requestId);
+        if (expectedPrevious[status]) query = query.eq('status', expectedPrevious[status]);
+
+        const { error, count } = await query.select('id', { count: 'exact', head: true });
         if (error) throw error;
+        if (count === 0) throw new Error(`No se pudo actualizar: la orden ya no está en estado "${expectedPrevious[status] || 'esperado'}".`);
     },
 
     async authorizePackaging(requestId: string): Promise<void> {
-        const { error } = await supabase
+        const { error, count } = await supabase
             .from('packaging_requests')
             .update({ stock_released: true })
-            .eq('id', requestId);
+            .eq('id', requestId)
+            .eq('status', 'completed')
+            .eq('stock_released', false)
+            .select('id', { count: 'exact', head: true });
         if (error) throw error;
+        if (count === 0) throw new Error('No se pudo autorizar: la orden ya fue autorizada o no está completada.');
     },
 
     async confirmPackagingReceipt(requestId: string): Promise<void> {
-        const { error } = await supabase
+        const { error, count } = await supabase
             .from('packaging_requests')
             .update({ status: 'received_at_branch', updated_at: new Date().toISOString() })
-            .eq('id', requestId);
+            .eq('id', requestId)
+            .eq('status', 'sent_to_branch')
+            .select('id', { count: 'exact', head: true });
         if (error) throw error;
+        if (count === 0) throw new Error('No se pudo confirmar recepción: la orden ya no está en estado "enviada a sucursal".');
     },
 
     // -------------------------------------------------------------------------

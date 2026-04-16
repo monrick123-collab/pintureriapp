@@ -38,7 +38,9 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            if (!formData.name) return;
+            if (!formData.name.trim()) { alert('Ingresa la razón social del proveedor.'); return; }
+            if (formData.paymentTermsDays < 0) { alert('Los días de crédito no pueden ser negativos.'); return; }
+            if (formData.taxId && !/^[A-ZÑ&a-zñ&]{3,4}\d{6}[A-Za-z0-9]{3}$/.test(formData.taxId.trim())) { alert('El RFC no tiene un formato válido (12-13 caracteres).'); return; }
             await FinanceService.createSupplier(formData as any);
             setIsModalOpen(false);
             setFormData({ name: '', taxId: '', contactInfo: '', paymentTermsDays: 0 });
@@ -50,14 +52,14 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
     };
 
     const handleDelete = async (id: string, name: string) => {
-        if (window.confirm(`¿Estás seguro de eliminar al proveedor "${name}"?`)) {
-            try {
-                await FinanceService.deleteSupplier(id);
-                loadSuppliers();
-            } catch (e) {
-                console.error(e);
-                alert("Error al eliminar proveedor");
-            }
+        if (!window.confirm(`¿Estás seguro de eliminar al proveedor "${name}"?`)) return;
+        if (!window.confirm('Esta acción NO se puede deshacer. ¿Confirmar eliminación?')) return;
+        try {
+            await FinanceService.deleteSupplier(id);
+            loadSuppliers();
+        } catch (e) {
+            console.error(e);
+            alert("Error al eliminar proveedor");
         }
     };
 
@@ -169,9 +171,10 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ user, onLogout 
                                         <label className="text-xs font-black uppercase text-slate-400">Días Crédito</label>
                                         <input
                                             type="number"
+                                            min="0"
                                             className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-none focus:ring-2 focus:ring-primary font-bold"
                                             value={formData.paymentTermsDays}
-                                            onChange={e => setFormData({ ...formData, paymentTermsDays: parseInt(e.target.value) || 0 })}
+                                            onChange={e => setFormData({ ...formData, paymentTermsDays: Math.max(0, parseInt(e.target.value) || 0) })}
                                         />
                                     </div>
                                 </div>

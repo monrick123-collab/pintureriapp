@@ -707,11 +707,12 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                                     <div className="flex justify-between text-slate-500 font-bold"><span>IVA 16%</span><span>{fmtMoney(iva)}</span></div>
                                     <div className="flex justify-between font-black text-lg pt-1 border-t dark:border-slate-700"><span>Total</span><span className="text-primary">{fmtMoney(total)}</span></div>
                                 </div>
-                                <button onClick={() => setIsPaymentModalOpen(true)} disabled={cart.length === 0 || loading || !!blockedWarning}
+                                <button onClick={() => setIsPaymentModalOpen(true)} disabled={cart.length === 0 || loading || !!blockedWarning || !authorizedExitBy || !deliveryReceiver.trim()}
                                     className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-2xl shadow-primary/20 uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
                                     Confirmar Venta
                                 </button>
                                 {blockedWarning && <p className="text-xs text-red-500 font-bold text-center">Cuenta bloqueada — venta deshabilitada</p>}
+                                {!blockedWarning && cart.length > 0 && (!authorizedExitBy || !deliveryReceiver.trim()) && <p className="text-xs text-amber-500 font-bold text-center">Completa Autorizado por y Receptor para continuar</p>}
                             </div>
                         </div>
                     </div>

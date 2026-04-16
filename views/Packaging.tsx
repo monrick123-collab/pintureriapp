@@ -324,6 +324,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 setActiveTab(tab.key);
                                                 setDetailOrder(null);
                                                 setShowSettings(false);
+                                                setShowAuth(false);
                                             }
                                         }}
                                         className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all ${

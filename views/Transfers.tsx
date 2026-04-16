@@ -694,7 +694,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                 { key: 'history', label: 'Historial', icon: 'list' },
                                 { key: 'barter_pending', label: 'Ofertas Pendientes', icon: 'inbox', badge: pendingBarters.length },
                             ] as const).map(tab => (
-                                <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setIsDetailModalOpen(false); setIsBarterDetailOpen(false); setIsSelectionModalOpen(false); setSelectedBarter(null); setBarterWithInventory(null); setCart([]); setReceivedCart([]); setSelectionCart([]); setNotes(''); setSuggestions([]); }}
+                                <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setIsDetailModalOpen(false); setIsBarterDetailOpen(false); setIsSelectionModalOpen(false); setIsShippingModalOpen(false); setIsModalOpen(false); setSelectedTransfer(null); setSelectedBarter(null); setBarterWithInventory(null); setShippingOrder(null); setShippingCarrier(''); setShippingTrackingNumber(''); setShippingNotes(''); setCart([]); setReceivedCart([]); setSelectionCart([]); setNotes(''); setSuggestions([]); }}
                                     className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-1.5 transition-all relative ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                     <span className="material-symbols-outlined text-sm">{tab.icon}</span>{tab.label}
                                     {'badge' in tab && tab.badge > 0 && (

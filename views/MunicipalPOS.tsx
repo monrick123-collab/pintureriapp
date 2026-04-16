@@ -436,7 +436,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                             { key: 'history', label: 'Historial' },
                             { key: 'accounts', label: 'Cuentas de Crédito' },
                         ] as const).map(tab => (
-                            <button key={tab.key} onClick={() => { setActiveTab(tab.key); setIsPaymentModalOpen(false); setSelectedHistorySale(null); setIsEditModalOpen(false); setIsAccountModalOpen(false); setSelectedAccount(null); }}
+                            <button key={tab.key} onClick={() => { setActiveTab(tab.key); setIsPaymentModalOpen(false); setSelectedHistorySale(null); setIsEditModalOpen(false); setEditSaleData(null); setEditItems([]); setIsAccountModalOpen(false); setSelectedAccount(null); }}
                                 className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                                 {tab.label}
                             </button>

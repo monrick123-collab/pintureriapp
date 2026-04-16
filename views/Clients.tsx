@@ -210,7 +210,7 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">{c.name}</span>
-                              <span className="text-[10px] text-slate-500 font-mono tracking-tighter">{c.id}</span>
+                              <span className="text-[10px] text-slate-500">{c.phone || c.email || ''}</span>
                             </div>
                           </div>
                         </td>

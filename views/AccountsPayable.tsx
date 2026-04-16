@@ -13,6 +13,7 @@ const AccountsPayable: React.FC<AccountsPayableProps> = ({ user, onLogout }) => 
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
 
     // Form state
     const [selectedSupplierId, setSelectedSupplierId] = useState('');
@@ -153,6 +154,9 @@ const AccountsPayable: React.FC<AccountsPayableProps> = ({ user, onLogout }) => 
                                             </td>
                                             <td className="p-4 text-right pr-6">
                                                 <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setSelectedInvoice(inv)} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Ver detalle">
+                                                        <span className="material-symbols-outlined text-lg">visibility</span>
+                                                    </button>
                                                     {inv.status === 'received' && (
                                                         <button onClick={() => updateStatus(inv.id, 'verified')} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-xs font-bold" title="Verificar">Verificar</button>
                                                     )}
@@ -174,6 +178,77 @@ const AccountsPayable: React.FC<AccountsPayableProps> = ({ user, onLogout }) => 
                         </div>
                     )}
                 </div>
+
+                {selectedInvoice && (() => {
+                    const today = new Date();
+                    const due = new Date(selectedInvoice.dueDate);
+                    const daysOverdue = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+                    const isOverdue = daysOverdue > 0 && selectedInvoice.status !== 'paid' && selectedInvoice.status !== 'rejected';
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)}>
+                            <div className="bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl shadow-2xl border dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                                <div className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800 p-4 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-900 dark:text-white">{selectedInvoice.supplierName}</h3>
+                                        <p className="text-xs text-slate-500 font-mono">{selectedInvoice.invoiceFolio}</p>
+                                    </div>
+                                    <button onClick={() => setSelectedInvoice(null)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                                    <div className="text-center py-2">
+                                        <p className="text-3xl font-black text-primary">${selectedInvoice.amount.toLocaleString()}</p>
+                                        <div className="flex items-center justify-center gap-2 mt-2">
+                                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getStatusColor(selectedInvoice.status)}`}>
+                                                {getStatusLabel(selectedInvoice.status)}
+                                            </span>
+                                            {isOverdue && (
+                                                <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-600">
+                                                    {daysOverdue} {daysOverdue === 1 ? 'día' : 'días'} vencida
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Fecha Emisión</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedInvoice.issueDate}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Fecha Vencimiento</p>
+                                            <p className={`text-sm font-bold ${isOverdue ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{selectedInvoice.dueDate}</p>
+                                        </div>
+                                    </div>
+                                    {selectedInvoice.notes && (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Notas</p>
+                                            <p className="text-sm text-slate-700 dark:text-slate-300">{selectedInvoice.notes}</p>
+                                        </div>
+                                    )}
+                                    {(selectedInvoice.pdfUrl || selectedInvoice.xmlUrl) && (
+                                        <div className="flex gap-2">
+                                            {selectedInvoice.pdfUrl && (
+                                                <a href={selectedInvoice.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-lg">picture_as_pdf</span>PDF
+                                                </a>
+                                            )}
+                                            {selectedInvoice.xmlUrl && (
+                                                <a href={selectedInvoice.xmlUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-lg">code</span>XML
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-slate-400 text-center">Registrada: {new Date(selectedInvoice.createdAt).toLocaleString('es-MX')}</p>
+                                </div>
+                                <div className="p-4 border-t dark:border-slate-800">
+                                    <button onClick={() => setSelectedInvoice(null)} className="w-full py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cerrar</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {isUploadModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

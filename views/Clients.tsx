@@ -91,14 +91,14 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
   );
 
   const handleDeleteClient = async (id: string) => {
-    if (confirm("¿Eliminar este cliente permanentemente?")) {
-      try {
-        await ClientService.deleteClient(id);
-        loadClients();
-      } catch (e) {
-        console.error(e);
-        alert("Error al eliminar cliente");
-      }
+    if (!confirm("¿Eliminar este cliente permanentemente?")) return;
+    if (!confirm("Esta acción NO se puede deshacer. ¿Confirmar eliminación?")) return;
+    try {
+      await ClientService.deleteClient(id);
+      loadClients();
+    } catch (e) {
+      console.error(e);
+      alert("Error al eliminar cliente");
     }
   };
 

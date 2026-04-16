@@ -143,7 +143,9 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     };
 
     const handleSubmit = async () => {
-        if (cart.length === 0 || !transportedBy || !receivedBy) return;
+        if (cart.length === 0) { alert('Agrega al menos un producto al carrito.'); return; }
+        if (!transportedBy) { alert('Ingresa quién transporta la devolución.'); return; }
+        if (!receivedBy) { alert('Ingresa quién recibe la devolución.'); return; }
         try {
             const items = cart.map(item => ({
                 productId: item.productId,

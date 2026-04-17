@@ -124,7 +124,8 @@ const AccountsPayable: React.FC<AccountsPayableProps> = ({ user, onLogout }) => 
                         <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
                     ) : (
                         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                            <table className="w-full text-left">
+                            <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left min-w-[700px]">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-black uppercase text-slate-400 tracking-wider">
                                     <tr>
                                         <th className="p-4 pl-6">Proveedor</th>
@@ -175,6 +176,7 @@ const AccountsPayable: React.FC<AccountsPayableProps> = ({ user, onLogout }) => 
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     )}
                 </div>

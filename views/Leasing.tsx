@@ -28,20 +28,33 @@ const Leasing: React.FC<LeasingProps> = ({ user, onLogout }) => {
         }
     };
 
-    const handlePayDraft = (lease: Lease) => {
-        const confirm = window.confirm(`¿Registrar pago de renta para ${lease.propertyName} por $${lease.monthlyAmount}?`)
-        if (confirm) {
-            FinanceService.registerLeasePayment({
+    const [paying, setPaying] = useState(false);
+
+    const handlePayDraft = async (lease: Lease) => {
+        const amountStr = prompt(`Monto a pagar para "${lease.propertyName}":`, String(lease.monthlyAmount));
+        if (!amountStr) return;
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) { alert('Monto inválido.'); return; }
+
+        const notes = prompt('Notas (opcional, ej: "Pago Abril 2026"):', '') ?? '';
+
+        if (!window.confirm(`¿Confirmar pago de $${amount.toLocaleString()} para ${lease.propertyName}?`)) return;
+
+        try {
+            setPaying(true);
+            await FinanceService.registerLeasePayment({
                 leaseId: lease.id,
-                amount: lease.monthlyAmount,
+                amount,
                 paymentDate: new Date().toISOString().split('T')[0],
-                notes: 'Pago mensual registrado desde panel'
-            }).then(() => {
-                alert("Pago registrado correctamente");
-            }).catch(e => {
-                console.error(e);
-                alert("Error al registrar pago");
+                notes: notes || `Pago registrado desde panel`
             });
+            alert('Pago registrado correctamente.');
+            loadLeases();
+        } catch (e: any) {
+            console.error(e);
+            alert('Error al registrar pago: ' + e.message);
+        } finally {
+            setPaying(false);
         }
     };
 
@@ -88,10 +101,11 @@ const Leasing: React.FC<LeasingProps> = ({ user, onLogout }) => {
 
                                         <button
                                             onClick={() => handlePayDraft(lease)}
-                                            className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                            disabled={paying}
+                                            className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
                                             <span className="material-symbols-outlined">payments</span>
-                                            Registrar Pago Mes Actual
+                                            {paying ? 'Registrando...' : 'Registrar Pago'}
                                         </button>
                                     </div>
                                 </div>

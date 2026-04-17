@@ -1726,16 +1726,10 @@ export const InventoryService = {
         if (error) throw new Error(error.message);
     },
 
-    async cancelBarterTransfer(barterId: string): Promise<void> {
-        // Release any stock holds before cancelling
-        try {
-            await supabase.rpc('release_barter_holds', { p_barter_id: barterId });
-        } catch (_e) {
-            // Holds may not exist yet; continue with cancellation
-        }
-
-        const { error } = await supabase.rpc('cancel_barter_transfer', {
-            p_barter_id: barterId
+    async cancelBarterTransfer(barterId: string, cancelledBy?: string): Promise<void> {
+        const { error } = await supabase.rpc('cancel_barter_transfer_full', {
+            p_barter_id: barterId,
+            p_cancelled_by: cancelledBy ?? null,
         });
 
         if (error) throw error;
@@ -1770,17 +1764,9 @@ export const InventoryService = {
     },
 
     async confirmBarterReception(barterId: string, receivedBy: string): Promise<void> {
-        // Register who receives before the atomic RPC
-        const { error: updateError } = await supabase
-            .from('barter_transfers')
-            .update({ received_by: receivedBy, updated_at: new Date().toISOString() })
-            .eq('id', barterId);
-
-        if (updateError) throw updateError;
-
-        // Atomic: moves stock, releases holds, marks completed
         const { error } = await supabase.rpc('process_barter_transfer_bidirectional', {
-            p_barter_id: barterId
+            p_barter_id: barterId,
+            p_received_by: receivedBy,
         });
 
         if (error) throw error;

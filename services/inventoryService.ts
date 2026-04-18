@@ -95,6 +95,24 @@ export const InventoryService = {
             }));
     },
 
+    // Obtiene stock actual de N productos en una sucursal. Usado para validación
+    // de stock pre-transacción (p. ej. antes de crear/aprobar un trueque).
+    // Devuelve Map<productId, stock>. Productos sin fila en inventory → no aparecen
+    // en el Map (el caller debe interpretar ausencia como stock = 0).
+    async getStockForProducts(branchId: string, productIds: string[]): Promise<Map<string, number>> {
+        if (productIds.length === 0) return new Map();
+
+        const { data, error } = await supabase
+            .from('inventory')
+            .select('product_id, stock')
+            .eq('branch_id', branchId)
+            .in('product_id', productIds);
+
+        if (error) throw error;
+
+        return new Map((data || []).map((r: any) => [r.product_id as string, r.stock as number]));
+    },
+
     async createProduct(product: Omit<Product, 'id' | 'inventory'>, initialStock = 0, initialBranchId?: string): Promise<any> {
         const { data, error } = await supabase
             .from('products')

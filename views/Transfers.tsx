@@ -42,6 +42,15 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
     const [search, setSearch] = useState('');
     const [toBranchId, setToBranchId] = useState('');
     const [notes, setNotes] = useState('');
+    const [isApprovalReviewOpen, setIsApprovalReviewOpen] = useState(false);
+    const [approvalReview, setApprovalReview] = useState<{
+        barterId: string;
+        fromBranchName: string;
+        toBranchName: string;
+        fromRows: Array<{ productName: string; offered: number; available: number; ok: boolean }>;
+        toRows:   Array<{ productName: string; offered: number; available: number; ok: boolean }>;
+        hasInsufficient: boolean;
+    } | null>(null);
 
     // Shipping States
     const [shippingOrder, setShippingOrder] = useState<ShippingOrder | null>(null);
@@ -254,6 +263,27 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
             toast.warning('Selecciona sucursal origen', 'Elige la sucursal desde la que se realizará el trueque.');
             return;
         }
+
+        // Val 1: stock pre-envío en sucursal origen
+        try {
+            const stockMap = await InventoryService.getStockForProducts(
+                fromBranchId,
+                cart.map(c => c.id)
+            );
+            const insufficient = cart.filter(c => (stockMap.get(c.id) ?? 0) < c.quantity);
+            if (insufficient.length > 0) {
+                const msg = insufficient
+                    .map(c => `• ${c.name}: disponible ${stockMap.get(c.id) ?? 0}, ofrecido ${c.quantity}`)
+                    .join('\n');
+                toast.error('Stock insuficiente', msg);
+                return;
+            }
+        } catch (e: any) {
+            console.error('Error validando stock para trueque:', e);
+            toast.error('Error validando stock', e.message || 'Inténtalo de nuevo.');
+            return;
+        }
+
         try {
             setLoading(true);
             await InventoryService.createBarterOffer({
@@ -452,12 +482,55 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
         }
     };
 
+    const handleOpenApprovalReview = async (barterId: string) => {
+        if (!isAdmin) return;
+        const b = selectedBarter;
+        if (!b) return;
+
+        try {
+            setLoading(true);
+
+            const givenItems    = b.givenItems    ?? [];
+            const receivedItems = b.receivedItems ?? [];
+
+            const [fromStock, toStock] = await Promise.all([
+                InventoryService.getStockForProducts(b.fromBranchId, givenItems.map((i: any) => i.productId)),
+                InventoryService.getStockForProducts(b.toBranchId,   receivedItems.map((i: any) => i.productId)),
+            ]);
+
+            const fromRows = givenItems.map((i: any) => {
+                const available = fromStock.get(i.productId) ?? 0;
+                return { productName: i.productName ?? i.product?.name ?? i.productId, offered: i.quantity, available, ok: available >= i.quantity };
+            });
+            const toRows = receivedItems.map((i: any) => {
+                const available = toStock.get(i.productId) ?? 0;
+                return { productName: i.productName ?? i.product?.name ?? i.productId, offered: i.quantity, available, ok: available >= i.quantity };
+            });
+
+            setApprovalReview({
+                barterId,
+                fromBranchName: b.fromBranchName ?? b.fromBranchId,
+                toBranchName:   b.toBranchName   ?? b.toBranchId,
+                fromRows,
+                toRows,
+                hasInsufficient: fromRows.some(r => !r.ok) || toRows.some(r => !r.ok),
+            });
+            setIsApprovalReviewOpen(true);
+        } catch (e: any) {
+            console.error('Error preparando revisión de aprobación:', e);
+            toast.error('Error cargando stock', e.message || 'Inténtalo de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleApproveBarter = async (id: string) => {
         if (!isAdmin) return;
-        if (!confirm("¿Aprobar este trueque? El stock quedará reservado hasta que ambas sucursales confirmen el intercambio.")) return;
         try {
             setLoading(true);
             await InventoryService.approveBarterTransfer(id, user.id);
+            setIsApprovalReviewOpen(false);
+            setApprovalReview(null);
             setIsBarterDetailOpen(false);
             loadData();
             toast.success('Trueque aprobado', 'El stock está reservado. La sucursal origen debe confirmar el envío.');
@@ -1394,7 +1467,7 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     <button onClick={() => handleRejectBarter(selectedBarter.id)} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/30 text-red-500 font-black rounded-2xl text-[10px] uppercase hover:bg-red-50 transition-colors">
                                         Rechazar
                                     </button>
-                                    <button onClick={() => handleApproveBarter(selectedBarter.id)} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl text-[10px] uppercase shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                                    <button onClick={() => handleOpenApprovalReview(selectedBarter.id)} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl text-[10px] uppercase shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
                                         Aprobar y Reservar Stock
                                     </button>
                                 </div>
@@ -1616,6 +1689,99 @@ const Transfers: React.FC<TransfersProps> = ({ user, onLogout }) => {
                                     className="flex-1 py-3 bg-primary text-white font-black rounded-2xl uppercase text-xs shadow-lg disabled:opacity-50"
                                 >
                                     {loading ? 'Guardando...' : 'Registrar Envío'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Revisión de Aprobación de Trueque (Val 2) */}
+                {isApprovalReviewOpen && approvalReview && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col scale-in-95 animate-in">
+                            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">fact_check</span>
+                                        Revisión de Aprobación
+                                    </h3>
+                                    <p className="text-slate-500 text-sm font-medium mt-1">
+                                        Verifica el stock de ambas sucursales antes de reservar.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => { setIsApprovalReviewOpen(false); setApprovalReview(null); }}
+                                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-slate-400">close</span>
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6 overflow-y-auto max-h-[60vh]">
+                                {[
+                                    { title: `${approvalReview.fromBranchName} da`, rows: approvalReview.fromRows },
+                                    { title: `${approvalReview.toBranchName} da`,   rows: approvalReview.toRows },
+                                ].map((section, idx) => (
+                                    <div key={idx}>
+                                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                            {section.title}
+                                        </h4>
+                                        {section.rows.length === 0 ? (
+                                            <p className="text-sm text-slate-400 italic">Sin productos.</p>
+                                        ) : (
+                                            <ul className="divide-y dark:divide-slate-700 border rounded-xl dark:border-slate-700 overflow-hidden">
+                                                {section.rows.map((r, i) => (
+                                                    <li key={i} className="flex items-center justify-between px-4 py-3 text-sm">
+                                                        <span className="flex items-center gap-2">
+                                                            {r.ok
+                                                                ? <span className="material-symbols-outlined text-green-500 text-base">check_circle</span>
+                                                                : <span className="material-symbols-outlined text-red-500 text-base">cancel</span>}
+                                                            <span className={r.ok ? 'text-slate-700 dark:text-slate-200' : 'text-red-600 dark:text-red-400 font-semibold'}>
+                                                                {r.productName}
+                                                            </span>
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                            stock <span className="font-bold text-slate-700 dark:text-slate-200">{r.available}</span>
+                                                            {' / '}
+                                                            ofrece <span className="font-bold text-slate-700 dark:text-slate-200">{r.offered}</span>
+                                                            {!r.ok && <span className="ml-2 text-red-500 font-black">FALTA</span>}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {approvalReview.hasInsufficient && (
+                                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm">
+                                        <span className="material-symbols-outlined text-base mt-0.5">warning</span>
+                                        <div>
+                                            <p className="font-bold">Al menos un producto no tiene stock suficiente.</p>
+                                            <p className="text-xs mt-0.5">Si apruebas, el RPC fallará al reservar el stock faltante. Revisa el inventario antes de continuar.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
+                                <button
+                                    onClick={() => { setIsApprovalReviewOpen(false); setApprovalReview(null); }}
+                                    disabled={loading}
+                                    className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl text-[10px] uppercase hover:bg-slate-50 transition-colors disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => handleApproveBarter(approvalReview.barterId)}
+                                    disabled={loading}
+                                    className={`flex-1 py-4 text-white font-black rounded-2xl text-[10px] uppercase shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 ${
+                                        approvalReview.hasInsufficient
+                                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                            : 'bg-primary shadow-primary/20'
+                                    }`}
+                                >
+                                    {approvalReview.hasInsufficient ? 'Aprobar de Todas Formas' : 'Aprobar y Reservar Stock'}
                                 </button>
                             </div>
                         </div>

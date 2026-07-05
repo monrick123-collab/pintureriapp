@@ -1,3 +1,4 @@
+import { safeIncludes } from '../utils/stringUtils';
 import { create } from 'zustand';
 import { Product } from '../types';
 import { ProductService } from '../services/productService';
@@ -142,9 +143,9 @@ export const useProductStore = create<ProductStore>((set, get) => ({
   searchProducts: (query: string) => {
     const lowerQuery = query.toLowerCase();
     return get().products.filter(p =>
-      p.name.toLowerCase().includes(lowerQuery) ||
-      p.sku.toLowerCase().includes(lowerQuery) ||
-      p.description?.toLowerCase().includes(lowerQuery)
+      safeIncludes(p.name, lowerQuery) ||
+      safeIncludes(p.sku, lowerQuery) ||
+      safeIncludes(p.description, lowerQuery)
     );
   },
 

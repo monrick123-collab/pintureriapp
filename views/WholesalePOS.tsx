@@ -7,6 +7,7 @@ import { ClientService } from '../services/clientService';
 import { AiService } from '../services/aiService';
 import { PromotionService } from '../services/promotionService';
 import { translateStatus } from '../utils/formatters';
+import { safeIncludes } from '../utils/stringUtils';
 import { Link } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import { WAREHOUSE_BRANCH_ID } from '../constants';
@@ -387,7 +388,7 @@ const addToCart = (product: Product) => {
     };
 
     const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = safeIncludes(p.name, search) || safeIncludes(p.sku, search);
         const matchesCategory = category === 'Todos' || p.category === category;
         return matchesSearch && matchesCategory;
     });
@@ -557,6 +558,10 @@ const addToCart = (product: Product) => {
             toast.warning("Sucursal requerida", "Seleccione una sucursal antes de finalizar la venta");
             return;
         }
+        if (!selectedClient) {
+            toast.error("Cliente requerido", "Selecciona un cliente para procesar la venta de mayoreo.");
+            return;
+        }
 
         if (!selectedClient || !selectedAdminId) {
             toast.warning("Datos incompletos", "Seleccione cliente y administrador de salida");
@@ -703,9 +708,9 @@ const addToCart = (product: Product) => {
     const filteredClients = clients.filter(client => {
         // Filtro de búsqueda
         if (clientFilter.search && 
-            !client.name.toLowerCase().includes(clientFilter.search.toLowerCase()) &&
-            !client.taxId.toLowerCase().includes(clientFilter.search.toLowerCase()) &&
-            !client.email.toLowerCase().includes(clientFilter.search.toLowerCase())) {
+            !safeIncludes(client.name, clientFilter.search) &&
+            !safeIncludes(client.taxId, clientFilter.search) &&
+            !safeIncludes(client.email, clientFilter.search)) {
             return false;
         }
         

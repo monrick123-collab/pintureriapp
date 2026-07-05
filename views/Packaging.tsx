@@ -4,19 +4,19 @@ import { User, Product, PackagingRequest, PackagingSettings, PackagingOrderLine,
 import { InventoryService } from '../services/inventoryService';
 import { PackagingService } from '../services/packaging/packagingService';
 import AuthorizationModal from '../components/AuthorizationModal';
+import {
+    PackageType, CalcLine, CalcLines,
+    INITIAL_CALC_LINES,
+    getLineByType, getLitersPerUnit as getLitersPerUnitPure,
+    calcTotalUsed as calcTotalUsedPure, getActiveLines as getActiveLinesPure
+} from './packaging/packagingCalc';
 
 interface PackagingProps {
     user: User;
     onLogout: () => void;
 }
 
-type PackageType = 'galon' | 'litro' | 'medio_litro' | 'cuarto_litro';
-
-interface CalcLine {
-    packageType: PackageType;
-    qty: number;
-    targetProductId: string;
-}
+// PackageType, CalcLine, CalcLines: importados de packagingCalc.ts
 
 const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: string; colorText: string }[] = [
     { type: 'galon',        label: 'Galón',    icon: 'water_drop',   colorBg: 'bg-blue-50 dark:bg-blue-900/30',    colorText: 'text-blue-600 dark:text-blue-400' },
@@ -25,12 +25,7 @@ const PACKAGE_DEFS: { type: PackageType; label: string; icon: string; colorBg: s
     { type: 'cuarto_litro', label: '¼ Litro',  icon: 'opacity',      colorBg: 'bg-emerald-50 dark:bg-emerald-900/30', colorText: 'text-emerald-600 dark:text-emerald-400' },
 ];
 
-const INITIAL_CALC_LINES: CalcLine[] = [
-    { packageType: 'galon',        qty: 0, targetProductId: '' },
-    { packageType: 'litro',        qty: 0, targetProductId: '' },
-    { packageType: 'medio_litro',  qty: 0, targetProductId: '' },
-    { packageType: 'cuarto_litro', qty: 0, targetProductId: '' },
-];
+// INITIAL_CALC_LINES importado de packagingCalc.ts (Record form)
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     sent_to_branch:     { label: 'Enviado a Sucursal',    color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
@@ -59,7 +54,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [bulkId, setBulkId] = useState('');
     const [branchId, setBranchId] = useState('');
     const [drumQty, setDrumQty] = useState(1);
-    const [calcLines, setCalcLines] = useState<CalcLine[]>(INITIAL_CALC_LINES);
+    const [calcLines, setCalcLines] = useState<CalcLines>(INITIAL_CALC_LINES);
     const [submitting, setSubmitting] = useState(false);
     const [availableBulkLiters, setAvailableBulkLiters] = useState(0);
 
@@ -84,18 +79,13 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
     const [showAuth, setShowAuth] = useState(false);
 
     // ─── Derived calculations ───
-    const getLitersPerUnit = (type: PackageType): number => {
-        if (type === 'galon') return settings.galon_liters;
-        if (type === 'litro') return 1;
-        if (type === 'medio_litro') return 0.5;
-        return 0.25;
-    };
+    const getLitersPerUnit = (type: PackageType): number => getLitersPerUnitPure(type, settings.galon_liters);
 
     const totalCapacity = (drumQty * settings.drum_liters) + availableBulkLiters;
-    const totalUsed = calcLines.reduce((sum, l) => sum + l.qty * getLitersPerUnit(l.packageType), 0);
+    const totalUsed = calcTotalUsedPure(calcLines, settings.galon_liters);
     const merma = totalUsed > 0 ? Math.max(0, totalCapacity - totalUsed) : 0;
     const isOverCapacity = totalUsed > totalCapacity;
-    const activeLines = calcLines.filter(l => l.qty > 0);
+    const activeLines = getActiveLinesPure(calcLines);
     const canSubmit = !isOverCapacity && activeLines.length > 0 && !!bulkId && !!branchId && activeLines.every(l => !!l.targetProductId);
 
     // Reset lines when tambo changes
@@ -517,7 +507,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 value={branchId}
                                                 onChange={e => {
                                                     setBranchId(e.target.value);
-                                                    setCalcLines([]);
+                                                    setCalcLines(INITIAL_CALC_LINES);
                                                     setDrumQty(1);
                                                     setBulkId('');
                                                     setDetailOrder(null);
@@ -588,7 +578,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                 {/* Cards Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {PACKAGE_DEFS.map((def, idx) => {
-                                        const line = calcLines.find(l => l.packageType === def.type)!;
+                                        const line = getLineByType(calcLines, def.type);
                                         const litersPerUnit = getLitersPerUnit(def.type);
                                         const subtotal = line.qty * litersPerUnit;
 
@@ -603,11 +593,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                     <select
                                                         value={line.targetProductId}
                                                         onChange={e =>
-                                                            setCalcLines(
-                                                                calcLines.map((l, i) =>
-                                                                    i === idx ? { ...l, targetProductId: e.target.value } : l
-                                                                )
-                                                            )
+                                                            setCalcLines(prev => ({ ...prev, [def.type]: { ...prev[def.type], targetProductId: e.target.value } }))
                                                         }
                                                         className={`w-full p-2 text-xs font-bold rounded-lg outline-none border dark:border-slate-700 bg-white dark:bg-slate-800 ${line.qty > 0 && !line.targetProductId ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                                                     >
@@ -623,11 +609,7 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <button
                                                         onClick={() =>
-                                                            setCalcLines(
-                                                                calcLines.map((l, i) =>
-                                                                    i === idx ? { ...l, qty: Math.max(0, l.qty - 1) } : l
-                                                                )
-                                                            )
+                                                            setCalcLines(prev => ({ ...prev, [def.type]: { ...prev[def.type], qty: Math.max(0, prev[def.type].qty - 1) } }))
                                                         }
                                                         className="px-3 py-2 bg-slate-300 dark:bg-slate-600 rounded-lg font-black hover:bg-slate-400 dark:hover:bg-slate-500 text-lg"
                                                     >
@@ -638,21 +620,13 @@ const Packaging: React.FC<PackagingProps> = ({ user, onLogout }) => {
                                                         min="0"
                                                         value={line.qty}
                                                         onChange={e =>
-                                                            setCalcLines(
-                                                                calcLines.map((l, i) =>
-                                                                    i === idx ? { ...l, qty: Math.max(0, parseInt(e.target.value) || 0) } : l
-                                                                )
-                                                            )
+                                                            setCalcLines(prev => ({ ...prev, [def.type]: { ...prev[def.type], qty: Math.max(0, parseInt(e.target.value) || 0) } }))
                                                         }
                                                         className="flex-1 text-center p-2 bg-white dark:bg-slate-800 rounded-lg text-lg font-black outline-none border dark:border-slate-700"
                                                     />
                                                     <button
                                                         onClick={() =>
-                                                            setCalcLines(
-                                                                calcLines.map((l, i) =>
-                                                                    i === idx ? { ...l, qty: l.qty + 1 } : l
-                                                                )
-                                                            )
+                                                            setCalcLines(prev => ({ ...prev, [def.type]: { ...prev[def.type], qty: prev[def.type].qty + 1 } }))
                                                         }
                                                         className="px-3 py-2 bg-slate-300 dark:bg-slate-600 rounded-lg font-black hover:bg-slate-400 dark:hover:bg-slate-500 text-lg"
                                                     >

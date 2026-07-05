@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { safeIncludes } from '../utils/stringUtils';
 import Sidebar from '../components/Sidebar';
 import { User, Product, CartItem, UserRole, Client } from '../types';
 import { InventoryService } from '../services/inventoryService';
@@ -278,9 +279,9 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
     // Filter clients based on filters
     const filteredClients = clients.filter(client => {
         // Search filter
-        if (clientFilter.search && !client.name.toLowerCase().includes(clientFilter.search.toLowerCase()) && 
-            !(client.taxId || '').toLowerCase().includes(clientFilter.search.toLowerCase()) &&
-            !client.email.toLowerCase().includes(clientFilter.search.toLowerCase())) {
+        if (clientFilter.search && !safeIncludes(client.name, clientFilter.search) && 
+            !safeIncludes(client.taxId, clientFilter.search) &&
+            !safeIncludes(client.email, clientFilter.search)) {
             return false;
         }
         

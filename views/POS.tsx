@@ -7,6 +7,7 @@ import { DiscountService } from '../services/discountService';
 import { DiscountRequest } from '../types';
 import { exportToCSV } from '../utils/csvExport';
 import { useToast } from '../hooks/useToast';
+import { safeIncludes } from '../utils/stringUtils';
 
 interface POSProps {
   user: User;
@@ -321,7 +322,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = safeIncludes(p.name, search) || safeIncludes(p.sku, search);
     const matchesCategory = category === 'Todos' || p.category === category;
     return matchesSearch && matchesCategory;
   });

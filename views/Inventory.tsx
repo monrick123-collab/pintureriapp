@@ -6,6 +6,7 @@ import { User, Product, Branch, RestockRequest, UserRole, InternalConsumption } 
 import { MOCK_BRANCHES, WAREHOUSE_BRANCH_ID } from '../constants';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
+import { safeIncludes } from '../utils/stringUtils';
 import AuthorizationModal from '../components/AuthorizationModal';
 
 interface InventoryProps {
@@ -83,8 +84,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   };
 
   const lookupFiltered = lookupProducts.filter(p =>
-    p.name.toLowerCase().includes(lookupSearch.toLowerCase()) ||
-    p.sku.toLowerCase().includes(lookupSearch.toLowerCase())
+    safeIncludes(p.name, lookupSearch) || safeIncludes(p.sku, lookupSearch)
   );
 
   useEffect(() => {
@@ -140,7 +140,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   };
 
   const filtered = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = safeIncludes(p.name, search) || safeIncludes(p.sku, search);
     const matchesBrand = brandFilter === 'all' || p.brand === brandFilter;
     return matchesSearch && matchesBrand;
   });

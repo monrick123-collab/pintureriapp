@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User, Client, UserRole } from '../types';
 import { ClientService } from '../services/clientService';
+import { safeIncludes } from '../utils/stringUtils';
 import AuthorizationModal from '../components/AuthorizationModal';
 
 interface ClientsProps {
@@ -85,9 +86,7 @@ const Clients: React.FC<ClientsProps> = ({ user, onLogout }) => {
   };
 
   const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    // Handle potential null/undefined for new clients before full save, or data issues
-    (c.taxId || '').toLowerCase().includes(search.toLowerCase())
+    safeIncludes(c.name, search) || safeIncludes(c.taxId, search)
   );
 
   const handleDeleteClient = async (id: string) => {

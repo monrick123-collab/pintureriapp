@@ -27,6 +27,8 @@ export const SalesService = {
             transferReference?: string,
             paymentStatus?: 'pending' | 'approved' | 'rejected',
             promotionRequestId?: string,
+            registerCredit?: boolean,
+            creditClientName?: string,
         }
     ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
@@ -58,7 +60,10 @@ export const SalesService = {
             p_delivery_receiver_name: extra?.deliveryReceiverName || null,
             p_transfer_reference: extra?.transferReference || null,
             p_payment_status: extra?.paymentStatus || 'approved',
-            p_promotion_request_id: extra?.promotionRequestId || null
+            p_promotion_request_id: extra?.promotionRequestId || null,
+            p_register_credit: extra?.registerCredit || false,
+            p_credit_client_id: extra?.registerCredit ? (clientId || null) : null,
+            p_credit_client_name: extra?.creditClientName || null
         });
 
         if (error) {

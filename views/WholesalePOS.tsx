@@ -648,26 +648,11 @@ const addToCart = (product: Product) => {
                     deliveryReceiverName: deliveryReceiver,
                     transferReference: paymentMethod === 'transfer' ? transferReference : undefined,
                     paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved',
-                    promotionRequestId: pendingPromotionRequestId || undefined
+                    promotionRequestId: pendingPromotionRequestId || undefined,
+                    registerCredit: paymentType === 'credito',
+                    creditClientName: selectedClient.name
                 }
             );
-
-            // Si es venta a crédito, registrar cargo en la cuenta de mayoreo
-            if (paymentType === 'credito') {
-                try {
-                    const accountId = await SalesService.createWholesaleAccount(
-                        currentBranchId,
-                        selectedClient.id,
-                        selectedClient.name,
-                        selectedClient.creditLimit || 10000
-                    );
-                    await SalesService.addWholesaleCharge(accountId, total, saleId, undefined, user.id);
-                } catch (creditError) {
-                    console.error('Error registrando cargo en cuenta de crédito:', creditError);
-                    // No bloquear la venta, pero avisar
-                    toast.warning('Venta registrada', 'No se pudo actualizar la cuenta de crédito. Verifique manualmente.');
-                }
-            }
 
             await loadInitialData(); // Reload inventory
 

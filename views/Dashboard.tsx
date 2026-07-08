@@ -6,9 +6,11 @@ import { InventoryService } from '../services/inventoryService';
 import { DiscountService } from '../services/discountService';
 import { TransferService } from '../services/transfer/transferService';
 import { quotationService } from '../services/quotationService';
+import { DashboardService, DashboardMetrics } from '../services/dashboardService';
 import { RestockRequest, DiscountRequest, User, SupplyOrder, StockTransfer, Quotation } from '../types';
 import Badge from '../components/ui/Badge';
 import { translateStatus, getStatusColor } from '../utils/formatters';
+import { useToast } from '../hooks/useToast';
 // import { AiInsightsWidget } from '../components/AiInsightsWidget';
 
 interface DashboardProps {
@@ -26,6 +28,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [sessionSalesTotal, setSessionSalesTotal] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<SupplyOrder | null>(null);
   const [reviewingOrder, setReviewingOrder] = useState(false);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     loadDashboardData();
@@ -33,12 +37,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadDashboardData = async () => {
     try {
-      const [pendingRestock, pendingDiscounts, pendingSupply, allTransfers, allQuotations] = await Promise.all([
+      const [pendingRestock, pendingDiscounts, pendingSupply, allTransfers, allQuotations, dashMetrics] = await Promise.all([
         InventoryService.getRestockRequests(undefined, 'pending_admin'),
         DiscountService.getPendingRequests(),
         InventoryService.getSupplyOrders(),
         TransferService.getStockTransfers(),
-        quotationService.getQuotations()
+        quotationService.getQuotations(),
+        DashboardService.getMetrics()
       ]);
       setRequests(pendingRestock);
       setDiscountRequests(pendingDiscounts);
@@ -53,6 +58,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
       const history = JSON.parse(localStorage.getItem('pintamax_sales_history') || '[]');
       setSessionSalesTotal(history.reduce((acc: number, s: any) => acc + s.total, 0));
+      if (dashMetrics) setMetrics(dashMetrics);
     } catch (e) {
       console.error("Error loading dashboard:", e);
     }
@@ -70,11 +76,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const handleApproveRequest = async (req: RestockRequest) => {
     try {
       await InventoryService.updateRestockStatus(req.id, 'approved_warehouse');
-      alert(`Solicitud aprobada correctamente. Ahora aparece en el Panel de Bodega.`);
+      toast.success("Solicitud aprobada", "Ahora aparece en el Panel de Bodega.");
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert("Error al aprobar la solicitud.");
+      toast.error("Error", "No se pudo aprobar la solicitud.");
     }
   };
 
@@ -84,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert("Error al aprobar descuento.");
+      toast.error("Error", "No se pudo aprobar el descuento.");
     }
   };
 
@@ -94,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert("Error al rechazar descuento.");
+      toast.error("Error", "No se pudo rechazar el descuento.");
     }
   };
 
@@ -104,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert("Error al actualizar estado del pedido.");
+      toast.error("Error", "No se pudo actualizar el estado del pedido.");
     }
   };
 
@@ -114,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert('Error al aprobar el traspaso.');
+      toast.error("Error", "No se pudo aprobar el traspaso.");
     }
   };
 
@@ -124,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       await loadDashboardData();
     } catch (e) {
       console.error(e);
-      alert('Error al rechazar el traspaso.');
+      toast.error("Error", "No se pudo rechazar el traspaso.");
     }
   };
 
@@ -160,9 +166,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   <span className="material-symbols-outlined text-xl">payments</span>
                 </div>
               </div>
-              <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">${(410500 + sessionSalesTotal).toLocaleString()}</h3>
-              <p className="text-xs font-bold text-green-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">trending_up</span> +12.4% vs mes anterior
+              <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">${(metrics?.salesToday ?? 0).toLocaleString()}</h3>
+              <p className={`text-xs font-bold flex items-center gap-1 ${(metrics?.salesPercentageChange ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <span className="material-symbols-outlined text-sm">{(metrics?.salesPercentageChange ?? 0) >= 0 ? 'trending_up' : 'trending_down'}</span> {(metrics?.salesPercentageChange ?? 0).toFixed(1)}% vs mes anterior
               </p>
             </div>
 
@@ -174,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   <span className="material-symbols-outlined text-xl">local_shipping</span>
                 </div>
               </div>
-              <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">14</h3>
+              <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{metrics?.shipmentsToday ?? '—'}</h3>
               <p className="text-xs font-bold text-slate-500 flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">route</span> 4 pedidos en ruta
               </p>
@@ -183,14 +189,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             {/* Uso de Almacén */}
             <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl md:rounded-[32px] border dark:border-slate-800 shadow-sm space-y-4 transition-all hover:shadow-xl hover:-translate-y-1 group">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Uso de Almacén</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Stock Crítico</p>
                 <div className="p-2.5 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-xl">warehouse</span>
                 </div>
               </div>
-              <h3 className="text-4xl font-black text-primary leading-none tracking-tighter">62%</h3>
+              <h3 className="text-4xl font-black text-primary leading-none tracking-tighter">{metrics?.lowStockPct ?? '—'}%</h3>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[62%] transition-all duration-700"></div>
+                <div className="bg-primary h-full transition-all duration-700" style={{ width: `${metrics?.lowStockPct ?? 0}%` }}></div>
               </div>
             </div>
 

@@ -10,7 +10,10 @@ import { translateStatus } from '../utils/formatters';
 import { safeIncludes } from '../utils/stringUtils';
 import { Link } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { WAREHOUSE_BRANCH_ID } from '../constants';
+import { ProductService } from '../services/productService';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 
 interface WholesalePOSProps {
     user: User;
@@ -792,6 +795,7 @@ const addToCart = (product: Product) => {
                                                 <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-14 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary">
                                                     <div className="flex items-center justify-center px-4 text-slate-400"><span className="material-symbols-outlined">search</span></div>
                                                     <input className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold" placeholder="Buscar producto por SKU o nombre..." value={search} onChange={e => setSearch(e.target.value)} />
+                                                    <button onClick={() => setIsScannerOpen(true)} className="flex items-center justify-center px-3 text-slate-400 hover:text-primary transition-colors" title="Escanear codigo de barras"><span className="material-symbols-outlined">barcode_scanner</span></button>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -1835,6 +1839,11 @@ const addToCart = (product: Product) => {
               </div>
             )}
             </main>
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={(code) => { setIsScannerOpen(false); handleScan(code); }}
+            />
         </div>
     );
 };

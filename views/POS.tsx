@@ -7,7 +7,10 @@ import { DiscountService } from '../services/discountService';
 import { DiscountRequest } from '../types';
 import { exportToCSV } from '../utils/csvExport';
 import { useToast } from '../hooks/useToast';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { safeIncludes } from '../utils/stringUtils';
+import { ProductService } from '../services/productService';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 
 interface POSProps {
   user: User;
@@ -51,6 +54,23 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [billingError, setBillingError] = useState('');
 
   const toast = useToast();
+
+  // --- SCANNER STATES ---
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Busca un producto por sku O barcode y lo agrega al carrito (auto-add)
+  const handleScan = async (code: string) => {
+    const product = await ProductService.findProductByCode(code);
+    if (!product) {
+      toast.error("No encontrado", `Ningún producto con código: ${code}`);
+      return;
+    }
+    addToCart(product);
+    toast.success("Producto agregado", `${product.name} (escaneado)`);
+  };
+
+  // Hook de escáner hardware (pistola USB/Bluetooth)
+  useBarcodeScanner(handleScan, !isScannerOpen && !isPaymentModalOpen);
 
   // --- HISTORY STATES ---
   const PAGE_SIZE = 25;
@@ -549,6 +569,13 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
+                    <button
+                      onClick={() => setIsScannerOpen(true)}
+                      className="flex items-center justify-center px-3 text-slate-400 hover:text-primary transition-colors"
+                      title="Escanear código de barras"
+                    >
+                      <span className="material-symbols-outlined">barcode_scanner</span>
+                    </button>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {['Todos', 'Interiores', 'Exteriores', 'Esmaltes', 'Accesorios'].map(cat => (
@@ -1267,6 +1294,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         )
         }
       </main >
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => { setIsScannerOpen(false); handleScan(code); }}
+      />
     </div >
   );
 };

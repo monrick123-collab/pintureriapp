@@ -51,6 +51,35 @@ export const ProductService = {
         });
     },
 
+    /**
+     * Busca un producto por codigo escaneado: matchea contra sku O barcode.
+     * Usado por el escaner de codigo de barras (hardware y camara).
+     */
+    async findProductByCode(code: string): Promise<Product | null> {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .or(`sku.eq.${code},barcode.eq.${code}`)
+            .limit(1)
+            .maybeSingle();
+
+        if (error || !data) return null;
+
+        const { data: inventoryData } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('product_id', data.id);
+
+        const inventoryMap: Record<string, number> = {};
+        (inventoryData || []).forEach((i: any) => inventoryMap[i.branch_id] = i.stock);
+
+        return {
+            ...mapDbProduct(data),
+            stock: (inventoryData || []).reduce((acc: number, curr: any) => acc + curr.stock, 0),
+            inventory: inventoryMap
+        };
+    },
+
     async getProductById(id: string): Promise<Product | null> {
         const { data, error } = await supabase
             .from('products')

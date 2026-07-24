@@ -25,6 +25,7 @@ const mapDbProduct = (item: Record<string, any>): Product => ({
     location: item.location || item.products?.location || '',
     unit_measure: item.unit_measure || item.products?.unit_measure || 'pza',
     supplier_id: item.supplier_id || item.products?.supplier_id,
+    barcode: item.barcode || item.products?.barcode,
     inventory: {}
 });
 
@@ -134,7 +135,8 @@ export const InventoryService = {
                 location: product.location,
                 cost_price: product.costPrice,
                 unit_measure: product.unit_measure,
-                supplier_id: product.supplier_id
+                supplier_id: product.supplier_id,
+                barcode: product.barcode
             }])
             .select()
             .single();
@@ -176,7 +178,8 @@ export const InventoryService = {
                 location: updates.location,
                 cost_price: updates.costPrice,
                 unit_measure: updates.unit_measure,
-                supplier_id: updates.supplier_id
+                supplier_id: updates.supplier_id,
+                barcode: updates.barcode
             })
             .eq('id', id);
 

@@ -56,6 +56,7 @@ export interface Product {
   location?: string;
   supplier_id?: string;
   unit_measure?: string;
+  barcode?: string;
 }
 
 export interface BulkInventoryItem {

@@ -23,6 +23,7 @@ const mapDbProduct = (item: Record<string, any>): Product => ({
     location: item.location || item.products?.location || '',
     unit_measure: item.unit_measure || item.products?.unit_measure || 'pza',
     supplier_id: item.supplier_id || item.products?.supplier_id,
+    barcode: item.barcode || item.products?.barcode,
     inventory: {}
 });
 

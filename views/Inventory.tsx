@@ -55,7 +55,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
-    name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '',
+    name: '', sku: '', barcode: '', category: 'Interiores', brand: '', price: 0, image: '', description: '',
     wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro'
   });
 
@@ -160,7 +160,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', sku: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro', min_stock: 10, max_stock: 100, costPrice: 0, location: '', unit_measure: 'pza' });
+    setFormData({ name: '', sku: '', barcode: '', category: 'Interiores', brand: '', price: 0, image: '', description: '', wholesalePrice: 0, wholesaleMinQty: 12, packageType: 'litro', min_stock: 10, max_stock: 100, costPrice: 0, location: '', unit_measure: 'pza' });
     setInitialStock(0);
     setSelectedProduct(null);
   };
@@ -202,7 +202,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const openEdit = (p: Product) => {
     setSelectedProduct(p);
     setFormData({
-      name: p.name, sku: p.sku, category: p.category, price: p.price,
+      name: p.name, sku: p.sku, barcode: p.barcode || '', category: p.category, price: p.price,
       image: p.image, description: p.description,
       brand: p.brand || '',
       wholesalePrice: p.wholesalePrice || 0,

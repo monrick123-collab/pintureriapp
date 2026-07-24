@@ -12,8 +12,9 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-"@supabase/supabase-js": "^2.89.0",
+    "@supabase/supabase-js": "^2.89.0",
     "groq-sdk": "^0.37.0",
+    "html5-qrcode": "^2.3.8",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router-dom": "7.1.1",

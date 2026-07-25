@@ -7,6 +7,10 @@ import { User, Product, CartItem, UserRole, Client } from '../types';
 import { InventoryService } from '../services/inventoryService';
 import { SalesService } from '../services/salesService';
 import { ClientService } from '../services/clientService';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { useToast } from '../hooks/useToast';
+import { ProductService } from '../services/productService';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 
 interface MunicipalPOSProps {
     user: User;
@@ -268,6 +272,23 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
             return [...prev, { ...p, price: adjustedPrice, quantity: 1 }];
         });
     };
+
+    // --- SCANNER ---
+    const toast = useToast();
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+    const handleScan = async (code: string) => {
+        const product = await ProductService.findProductByCode(code);
+        if (!product) {
+            toast.error("No encontrado", `Ningun producto con codigo: ${code}`);
+            return;
+        }
+        addToCart(product);
+        toast.success("Producto agregado", `${product.name} (escaneado)`);
+    };
+
+    useBarcodeScanner(handleScan, !isScannerOpen && !isPaymentModalOpen);
+
     const updateQty = (id: string, delta: number) => {
         setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i).filter(i => i.quantity > 0));
     };
@@ -635,9 +656,12 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                         {/* CENTER — Products */}
                         <div className="flex-1 flex flex-col overflow-hidden">
                             <div className="p-6 border-b dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-                                <div className="relative max-w-lg">
-                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                                <div className="relative max-w-lg flex items-center gap-2">
+                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10">search</span>
                                     <input className="w-full pl-12 pr-6 py-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none font-medium text-sm focus:ring-2 focus:ring-primary/10 outline-none" placeholder="Buscar producto..." value={search} onChange={e => setSearch(e.target.value)} />
+                                    <button onClick={() => setIsScannerOpen(true)} className="flex items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary rounded-2xl transition-colors shrink-0" title="Escanear codigo de barras">
+                                        <span className="material-symbols-outlined">barcode_scanner</span>
+                                    </button>
                                 </div>
                             </div>
                             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 xl:grid-cols-3 gap-4 custom-scrollbar">
@@ -1319,6 +1343,11 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
                     </div>
                 )}
             </main>
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={(code) => { setIsScannerOpen(false); handleScan(code); }}
+            />
         </div>
     );
 };

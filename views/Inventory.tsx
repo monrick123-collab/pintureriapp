@@ -7,6 +7,8 @@ import { MOCK_BRANCHES, WAREHOUSE_BRANCH_ID } from '../constants';
 import { InventoryService } from '../services/inventoryService';
 import { translateStatus } from '../utils/formatters';
 import { safeIncludes } from '../utils/stringUtils';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 import AuthorizationModal from '../components/AuthorizationModal';
 
 interface InventoryProps {
@@ -46,6 +48,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
+
+  // --- SCANNER (solo busqueda, sin auto-add) ---
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const anyModalOpen = isRequestModalOpen || isEditModalOpen || isAddModalOpen || isConsumptionModalOpen;
+  useBarcodeScanner((code) => setSearch(code), !isScannerOpen && !anyModalOpen);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [transferQty, setTransferQty] = useState(0);
@@ -416,9 +423,14 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
             {viewMode === 'products' ? (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative max-w-md flex-1">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                    <input className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar por nombre o SKU..." value={search} onChange={e => setSearch(e.target.value)} />
+                  <div className="relative max-w-md flex-1 flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                      <input className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar por nombre o SKU..." value={search} onChange={e => setSearch(e.target.value)} />
+                    </div>
+                    <button onClick={() => setIsScannerOpen(true)} className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-primary rounded-2xl border-none shadow-sm transition-colors shrink-0" title="Escanear codigo de barras">
+                      <span className="material-symbols-outlined">barcode_scanner</span>
+                    </button>
                   </div>
                   <select
                     className="bg-white dark:bg-slate-800 px-4 py-3 pr-10 rounded-2xl border-none shadow-sm text-sm font-bold text-slate-600"
@@ -874,6 +886,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
           </div>
         </div>
       )}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => { setIsScannerOpen(false); setSearch(code); }}
+        title="Buscar producto por codigo"
+      />
     </div>
   );
 };

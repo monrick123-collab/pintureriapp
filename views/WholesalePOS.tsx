@@ -114,6 +114,21 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({ user, onLogout }) => {
         isMunicipality: 'all' as 'all' | 'yes' | 'no'
     });
 
+    // --- SCANNER ---
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+    const handleScan = async (code: string) => {
+        const product = await ProductService.findProductByCode(code);
+        if (!product) {
+            toast.error("No encontrado", `Ningun producto con codigo: ${code}`);
+            return;
+        }
+        addToCart(product);
+        toast.success("Producto agregado", `${product.name} (escaneado)`);
+    };
+
+    useBarcodeScanner(handleScan, !isScannerOpen && !isPaymentModalOpen);
+
 useEffect(() => {
         if (selectedClient) {
             ClientService.getClientFinancials(selectedClient.id).then(setClientFinancials);

@@ -961,7 +961,12 @@ export const InventoryService = {
     },
 
     async authorizeReturn(returnId: string, adminId: string, approved: boolean, destinationBranchId?: string): Promise<void> {
-        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(adminId);
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[9ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(adminId);
+
+        // Validar que destinationBranchId sea obligatorio al aprobar
+        if (approved && !destinationBranchId) {
+            throw new Error('Debes seleccionar una bodega destino antes de aprobar la devolución.');
+        }
 
         if (approved && destinationBranchId) {
             // Primero marcar como aprobado

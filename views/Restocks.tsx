@@ -197,15 +197,22 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
             alert("Complete los datos de envío");
             return;
         }
-        
+
+        // Fallback defensivo: branchId puede venir como branch_id (snake_case) si el mapeo no lo convirtió
+        const destBranchId = selectedSheet.branchId || (selectedSheet as any).branch_id || '';
+        if (!destBranchId) {
+            alert("Error: la solicitud no tiene sucursal destino. Contacta al administrador.");
+            return;
+        }
+
         try {
             setLoading(true);
-            
+
             const shippingId = await ShippingService.createShippingOrder({
                 entityType: 'restock_sheet',
                 entityId: selectedSheet.id,
                 originBranchId: user.branchId || (branches.find(b => b.type === 'warehouse')?.id ?? ''),
-                destinationBranchId: selectedSheet.branchId,
+                destinationBranchId: destBranchId,
                 createdBy: user.id,
                 carrier: shippingCarrier,
                 trackingNumber: shippingTrackingNumber
@@ -653,15 +660,21 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                 <span className="text-2xl font-black text-primary">${selectedSheet.totalAmount.toLocaleString()}</span>
                             </div>
 
-                            {/* Admin/StoreManager Actions - Confirm Reception */}
+                            {/* Admin/StoreManager Actions - Confirm Reception (solo si hay envío registrado) */}
                             {(isAdmin || user.role === UserRole.STORE_MANAGER) && selectedSheet.status === 'shipped' && (
                                 <div className="p-6 border-t dark:border-slate-700 bg-amber-50 dark:bg-amber-900/10 flex gap-3">
-                                    <button
-                                        onClick={handleOpenDifferencesModal}
-                                        className="flex-1 py-3 bg-primary text-white font-black rounded-2xl text-[10px] uppercase"
-                                    >
-                                        Confirmar Recepción
-                                    </button>
+                                    {(selectedSheet as any).shipping_id ? (
+                                        <button
+                                            onClick={handleOpenDifferencesModal}
+                                            className="flex-1 py-3 bg-primary text-white font-black rounded-2xl text-[10px] uppercase"
+                                        >
+                                            Confirmar Recepción
+                                        </button>
+                                    ) : (
+                                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400 text-center w-full py-3">
+                                            ⚠️ Registra el envío desde el panel de Bodega antes de confirmar la recepción.
+                                        </p>
+                                    )}
                                 </div>
                             )}
 

@@ -79,8 +79,8 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
     if (lookupProducts.length === 0) {
       try {
         setLookupLoading(true);
-        // Traemos todos los productos de todas las sucursales (usando 'BR-MAIN' que tiene el catálogo global)
-        const all = await InventoryService.getProductsByBranch(WAREHOUSE_BRANCH_ID);
+        // Cargar TODOS los productos con inventario de TODAS las sucursales
+        const all = await InventoryService.getProducts();
         setLookupProducts(all);
       } catch (e) {
         console.error(e);

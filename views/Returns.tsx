@@ -177,6 +177,11 @@ const Returns: React.FC<ReturnsProps> = ({ user, onLogout }) => {
     };
 
     const handleAuthorize = async (id: string, approved: boolean, destinationBranchId?: string) => {
+        // Validación temprana en la UI: destino obligatorio al aprobar
+        if (approved && !destinationBranchId) {
+            alert('Debes seleccionar una bodega destino antes de aprobar la devolución.');
+            return;
+        }
         try {
             await InventoryService.authorizeReturn(id, user.id, approved, destinationBranchId);
             setApprovingReturnId(null);

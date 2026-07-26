@@ -453,7 +453,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         total,
         paymentMethod,
         undefined, // clientId
-        { subtotal, discountAmount, iva }
+        { subtotal, discountAmount, iva, sellerId: user.id }
       );
 
       // Marcar solicitud de descuento como usada (si aplica)

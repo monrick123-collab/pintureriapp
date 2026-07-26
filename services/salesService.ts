@@ -29,6 +29,7 @@ export const SalesService = {
             promotionRequestId?: string,
             registerCredit?: boolean,
             creditClientName?: string,
+            sellerId?: string,
         }
     ): Promise<string> {
         // Preparamos los items para enviarlos al RPC
@@ -63,7 +64,8 @@ export const SalesService = {
             p_promotion_request_id: extra?.promotionRequestId || null,
             p_register_credit: extra?.registerCredit || false,
             p_credit_client_id: extra?.registerCredit ? (clientId || null) : null,
-            p_credit_client_name: extra?.creditClientName || null
+            p_credit_client_name: extra?.creditClientName || null,
+            p_seller_id: extra?.sellerId || null
         });
 
         if (error) {
@@ -563,6 +565,7 @@ export const SalesService = {
             transferReference?: string;
             clientId?: string | null;
             appliedExtraPct?: number;
+            sellerId?: string;
         }
     ): Promise<string> {
         // RPC atómico: inserta venta + items + descuenta inventario en una transacción

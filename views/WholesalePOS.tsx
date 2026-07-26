@@ -668,7 +668,8 @@ const addToCart = (product: Product) => {
                     paymentStatus: (paymentMethod === 'transfer' || paymentMethod === 'cash') ? 'pending' : 'approved',
                     promotionRequestId: pendingPromotionRequestId || undefined,
                     registerCredit: paymentType === 'credito',
-                    creditClientName: selectedClient.name
+                    creditClientName: selectedClient.name,
+                    sellerId: user.id
                 }
             );
 

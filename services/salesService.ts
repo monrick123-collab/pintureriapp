@@ -154,14 +154,15 @@ export const SalesService = {
     },
 
     async getSaleDetail(id: string): Promise<Sale | null> {
+        if (!id || id === 'undefined') return null;
+
         const { data, error } = await supabase
             .from('sales')
             .select(`
                 *,
                 branch:branches(name),
                 sale_items (*),
-                clients (name),
-                admin:profiles!departure_admin_id(full_name)
+                clients (name)
             `)
             .eq('id', id)
             .single();
@@ -194,7 +195,7 @@ export const SalesService = {
             isWholesale: data.is_wholesale,
             paymentType: data.payment_type,
             departureAdminId: data.departure_admin_id,
-            departureAdminName: data.admin?.full_name,
+            departureAdminName: data.departure_admin_name || undefined,
             billingBank: data.billing_bank,
             billingSocialReason: data.billing_social_reason,
             billingInvoiceNumber: data.billing_invoice_number,

@@ -17,16 +17,33 @@ const WholesaleNote: React.FC = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const data = await SalesService.getSaleDetail(id!);
+            if (!id || id === 'undefined') {
+                setError('ID de venta no válido.');
+                setLoading(false);
+                return;
+            }
+            const data = await SalesService.getSaleDetail(id);
+            if (!data) {
+                setError('No se encontró la venta. Es posible que haya sido eliminada o el ID sea incorrecto.');
+            }
             setSale(data);
         } catch (e) {
             console.error("Error loading wholesale note:", e);
+            setError('Error al cargar la nota de venta. Intente de nuevo.');
         } finally {
             setLoading(false);
         }
     };
 
+    const [error, setError] = useState<string | null>(null);
+
     if (loading) return <div className="p-20 text-center font-bold">Cargando nota de venta...</div>;
+    if (error) return (
+        <div className="p-20 text-center">
+            <p className="font-bold text-red-500 mb-4">{error}</p>
+            <button onClick={() => navigate(-1)} className="px-6 py-2 bg-primary text-white rounded-xl font-bold">Volver</button>
+        </div>
+    );
     if (!sale) return <div className="p-20 text-center font-bold text-red-500">Error: No se encontró la venta.</div>;
 
     const date = new Date(sale.createdAt).toLocaleDateString('es-MX', {

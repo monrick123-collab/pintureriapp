@@ -359,7 +359,8 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
 
     const handleAddPayment = async () => {
         if (!selectedAccount) return;
-        const amount = parseFloat(paymentAmount);
+        // Bug A5 fix: si es pago_completo, usar el balance de la cuenta, no el input
+        const amount = paymentFormType === 'pago_completo' ? selectedAccount.balance : parseFloat(paymentAmount);
         if (isNaN(amount) || amount <= 0) { alert('Monto inválido.'); return; }
         try {
             setLoading(true);

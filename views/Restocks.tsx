@@ -409,20 +409,22 @@ const Restocks: React.FC<RestocksProps> = ({ user, onLogout }) => {
                                                         >
                                                             <span className="material-symbols-outlined">print</span>
                                                         </button>
+                                                        {/* Bug A2 fix: los botones rápidos ahora abren el modal de detalle
+                                                            en lugar de solo registrar la hora sin mover inventario */}
                                                         {(isAdmin || isWarehouse) && !s.departureTime && s.status !== 'cancelled' && (
                                                             <button
-                                                                onClick={() => handleUpdateRestockTime(s.id, 'departure')}
+                                                                onClick={() => handleViewDetail(s.id)}
                                                                 className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-                                                                title="Registrar Salida"
+                                                                title="Registrar Envío (abre formulario completo)"
                                                             >
                                                                 <span className="material-symbols-outlined">local_shipping</span>
                                                             </button>
                                                         )}
                                                         {((!isWarehouse && s.status === 'shipped') || (isAdmin && s.status === 'shipped')) && (
                                                             <button
-                                                                onClick={() => handleUpdateRestockTime(s.id, 'arrival')}
+                                                                onClick={() => handleViewDetail(s.id)}
                                                                 className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
-                                                                title="Confirmar Llegada"
+                                                                title="Confirmar Recepción (abre captura de cantidades)"
                                                             >
                                                                 <span className="material-symbols-outlined">check_circle</span>
                                                             </button>

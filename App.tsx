@@ -42,6 +42,7 @@ const AdminPromotionRequests = lazy(() => import('./views/AdminPromotionRequests
 const RestockNote = lazy(() => import('./views/RestockNote'));
 const AdminHistory = lazy(() => import('./views/AdminHistory'));
 const AdminPendingPayments = lazy(() => import('./views/AdminPendingPayments'));
+const SellerSales = lazy(() => import('./views/SellerSales'));
 
 const App: React.FC = () => {
   const { user, setUser, login, logout } = useAuthStore();
@@ -128,6 +129,7 @@ const App: React.FC = () => {
 
           <Route path="/shipping-note/:id" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.WAREHOUSE || user?.role === UserRole.WAREHOUSE_SUB || user?.role === UserRole.STORE_MANAGER) ? <ShippingNote /> : <Navigate to="/" replace />} />
           <Route path="/users" element={user?.role === UserRole.ADMIN ? <UserManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+          <Route path="/seller-sales" element={user?.role === UserRole.STORE_MANAGER ? <SellerSales user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/clients" element={user ? <Clients user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
           <Route path="/branches" element={user?.role === UserRole.ADMIN ? <Branches user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
           <Route path="/quotations" element={(user?.role === UserRole.ADMIN || user?.role === UserRole.STORE_MANAGER) ? <Quotations user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />

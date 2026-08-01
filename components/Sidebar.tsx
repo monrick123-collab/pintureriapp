@@ -94,6 +94,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           { label: 'Cambio Moneda', path: '/coin-change', icon: 'currency_exchange' },
           { label: 'Corte de Caja', path: '/cash-cut', icon: 'point_of_sale' },
         ] : []),
+        ...(isStoreManager ? [
+          { label: 'Ventas Individuales', path: '/seller-sales', icon: 'leaderboard' },
+        ] : []),
         ...(isAdmin ? [
           { label: 'Aprobación Cortes', path: '/admin-cash-cuts', icon: 'price_check' },
           { label: 'Pagos Pendientes', path: '/admin/pending-payments', icon: 'pending_actions' },

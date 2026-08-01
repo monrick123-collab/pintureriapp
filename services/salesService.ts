@@ -595,7 +595,8 @@ export const SalesService = {
             p_notes: saleData.notes || null,
             p_transfer_reference: saleData.transferReference || null,
             p_client_id: saleData.clientId || null,
-            p_applied_extra_pct: saleData.appliedExtraPct || 0
+            p_applied_extra_pct: saleData.appliedExtraPct || 0,
+            p_seller_id: saleData.sellerId || null
         });
 
         if (error) {

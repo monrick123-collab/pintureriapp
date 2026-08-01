@@ -347,7 +347,7 @@ const MunicipalPOS: React.FC<MunicipalPOSProps> = ({ user, onLogout }) => {
             const saleId = await SalesService.createMunicipalSale(
                 branchId,
                 cart.map(i => ({ productId: i.id, productName: i.name, quantity: i.quantity, price: i.price })),
-                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference, clientId: selectedClient?.id || null, appliedExtraPct: selectedClient?.extraPercentage || 0 }
+                { municipality, department, contactName, socialReason, rfc, invoiceNumber, authorizedExitBy, deliveryReceiver, paymentType, paymentMethod, creditDays: paymentType === 'credito' ? creditDays : 0, subtotal, iva, total, notes, transferReference, clientId: selectedClient?.id || null, appliedExtraPct: selectedClient?.extraPercentage || 0, sellerId: user.id }
             );
             setLastSaleId(saleId);
             setShowSuccess(true);

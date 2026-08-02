@@ -59,7 +59,11 @@ export const SalesService = {
             p_billing_social_reason: extra?.billingSocialReason || null,
             p_billing_invoice_number: extra?.billingInvoiceNumber || null,
             p_delivery_receiver_name: extra?.deliveryReceiverName || null,
-            p_promotion_request_id: extra?.promotionRequestId || null
+            p_promotion_request_id: extra?.promotionRequestId || null,
+            p_register_credit: extra?.registerCredit || false,
+            p_credit_client_id: extra?.registerCredit ? (clientId || null) : null,
+            p_credit_client_name: extra?.creditClientName || null,
+            p_seller_id: extra?.sellerId || null
         });
 
         if (error) {

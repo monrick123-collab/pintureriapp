@@ -445,11 +445,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border dark:border-slate-700">
                   <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left min-w-[700px]">
+                    <table className="w-full text-left min-w-[900px]">
                       <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700">
                         <tr className="text-xs font-black text-slate-400 uppercase tracking-widest">
                           <th className="px-8 py-5">Producto</th>
                           <th className="px-6 py-5">Marca/Ubic.</th>
+                          <th className="px-6 py-5">Código de Barras</th>
                           {!isWarehouse && <th className="px-6 py-5">Precio</th>}
                           <th className="px-6 py-5 text-center">Stock (Min/Max)</th>
                           <th className="px-8 py-5 text-right">Acciones</th>
@@ -473,6 +474,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                                   </span>
                                   {p.location && <span className="text-xs font-bold text-slate-500 pl-1">📍 {p.location}</span>}
                                 </div>
+                              </td>
+                              <td className="px-6 py-5">
+                                {p.barcode ? (
+                                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300">{p.barcode}</span>
+                                ) : (
+                                  <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sin código</span>
+                                )}
                               </td>
                               {(!isWarehouse) && (
                                 <td className="px-6 py-5 font-black text-primary">${p.price.toLocaleString()}</td>
@@ -668,21 +676,27 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout }) => {
                     <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Precio</label><input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-black" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} /></div>
                     <div className="space-y-1"><label className="text-xs font-black uppercase text-slate-500">Status</label><select className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}><option value="available">Disponible</option><option value="low">Bajo Stock</option><option value="out">Agotado</option></select></div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-black uppercase text-slate-500">Tipo de Envase (Orden de Resurtido)</label>
-                    <select
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
-                      value={formData.packageType}
-                      onChange={e => setFormData({ ...formData, packageType: e.target.value as any })}
-                    >
-                      <option value="cubeta">Cubeta (19 lts)</option>
-                      <option value="galon">Galón (4 lts)</option>
-                      <option value="litro">Litro (1 lto)</option>
-                      <option value="medio">Medio (1/2 lto)</option>
-                      <option value="cuarto">Cuarto (1/4 lto)</option>
-                      <option value="aerosol">Aerosol</option>
-                      <option value="complemento">Complemento</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-slate-500">Código de Barras</label>
+                      <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 font-mono" placeholder="Ej: 7501234567890" value={formData.barcode || ''} onChange={e => setFormData({ ...formData, barcode: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-slate-500">Tipo de Envase (Resurtido)</label>
+                      <select
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20"
+                        value={formData.packageType}
+                        onChange={e => setFormData({ ...formData, packageType: e.target.value as any })}
+                      >
+                        <option value="cubeta">Cubeta (19 lts)</option>
+                        <option value="galon">Galón (4 lts)</option>
+                        <option value="litro">Litro (1 lto)</option>
+                        <option value="medio">Medio (1/2 lto)</option>
+                        <option value="cuarto">Cuarto (1/4 lto)</option>
+                        <option value="aerosol">Aerosol</option>
+                        <option value="complemento">Complemento</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 md:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">

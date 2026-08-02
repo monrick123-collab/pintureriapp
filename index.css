@@ -75,6 +75,11 @@
     margin: 0;
 }
 
+@page thermal {
+    size: 80mm auto;
+    margin: 0;
+}
+
 @media print {
     .format-letter {
         page: letter;
@@ -82,6 +87,26 @@
 
     .format-half-letter {
         page: halfLetter;
+    }
+
+    .format-thermal {
+        page: thermal;
+        width: 80mm;
+        padding: 4mm;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    .format-thermal, .format-thermal * {
+        visibility: visible;
+    }
+
+    .format-thermal {
+        position: absolute;
+        left: 0;
+        top: 0;
     }
     
     /* Strict override for completely neutralizing dark mode printing issues */

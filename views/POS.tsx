@@ -11,6 +11,7 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { safeIncludes } from '../utils/stringUtils';
 import { ProductService } from '../services/productService';
 import BarcodeScannerModal from '../components/BarcodeScannerModal';
+import Receipt, { ReceiptData } from '../components/Receipt';
 
 interface POSProps {
   user: User;
@@ -46,6 +47,9 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [pendingDiscountSales, setPendingDiscountSales] = useState<DiscountRequest[]>([]);
   const [pendingDiscountRequestId, setPendingDiscountRequestId] = useState<string | null>(null);
+
+  // --- RECEIPT STATE ---
+  const [lastSale, setLastSale] = useState<ReceiptData | null>(null);
 
   // --- BILLING STATES (reemplaza el patrón document.getElementById) ---
   const [billingBank, setBillingBank] = useState('');
@@ -447,7 +451,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         };
       });
 
-      await SalesService.processSale(
+      const saleId = await SalesService.processSale(
         currentBranchId,
         saleItems,
         total,
@@ -463,16 +467,39 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
         loadPendingDiscountSales();
       }
 
+      // Obtener folio real de la venta desde la base de datos
+      let realFolio = saleId.slice(0, 8).toUpperCase();
+      try {
+        const saleDetail = await SalesService.getSaleDetail(saleId);
+        if (saleDetail?.folio) {
+          realFolio = `V-${String(saleDetail.folio).padStart(4, '0')}`;
+        }
+      } catch (e) {
+        console.warn('No se pudo obtener el folio, usando ID corto:', e);
+      }
+
+      // Capturar datos para el ticket térmico
+      setLastSale({
+        folio: realFolio,
+        date: new Date().toLocaleString('es-MX'),
+        cashierName: user.name,
+        branchName: branches.find(b => b.id === currentBranchId)?.name || 'Sucursal',
+        items: saleItems,
+        subtotal,
+        discountAmount,
+        iva,
+        total,
+        paymentMethod,
+        cashReceived: parseFloat(cashReceived) || 0,
+        change
+      });
+
       setShowSuccess(true);
       setAppliedDiscount(null);
       setActiveDiscountRequest(null);
 
       // Refresh inventory from DB
       await loadProducts();
-
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3500);
 
     } catch (e) {
       console.error(e);
@@ -816,7 +843,15 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                       <div className="size-20 rounded-full bg-green-500 text-white flex items-center justify-center mb-4"><span className="material-symbols-outlined text-5xl">check</span></div>
                       <h3 className="text-2xl font-black">¡Venta Exitosa!</h3>
                       <p className="text-slate-500">Inventario actualizado en tiempo real.</p>
-                      <button
+                      <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
+                        <button
+                          onClick={() => window.print()}
+                          className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined">print</span>
+                          Imprimir Ticket
+                        </button>
+                        <button
                         onClick={() => {
                           setShowSuccess(false);
                           setIsPaymentModalOpen(false);
@@ -830,12 +865,14 @@ const POS: React.FC<POSProps> = ({ user, onLogout }) => {
                           setActiveDiscountRequest(null);
                           setPendingDiscountRequestId(null);
                         }}
-                        className="mt-6 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
+                        className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
                       >
                         Nueva Venta
                       </button>
+                      </div>
                     </div>
                   )}
+                  {lastSale && <Receipt sale={lastSale} />}
                 </div>
               </div>
             )}

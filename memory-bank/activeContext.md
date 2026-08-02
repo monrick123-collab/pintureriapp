@@ -8,17 +8,10 @@
 - Backend: proyecto Supabase Pintamax (ref rqrumtpqutzdbwtqjaoh), estado ACTIVE_HEALTHY.
 - Stack: React 19 + Vite 6 + TypeScript + Supabase (PostgreSQL 17) + Zustand 5.
 - Clon local: /Users/ricardojuarez/Desktop/pintureriapp
-- Dependencias NO instaladas aun (falta npm install).
-- Archivo .env NO creado (usar .env.example como plantilla).
-
----
-
-## Tareas pendientes (setup inicial)
-
-- [ ] Crear .env con VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY del proyecto Pintamax.
-- [ ] Ejecutar npm install para instalar dependencias.
-- [ ] Verificar que la app conecte a Supabase Pintamax (npm run dev).
-- [ ] Revisar estado de la base de datos (tablas, RLS, migraciones aplicadas).
+- Archivo .env.local: configurado con credenciales de Supabase Pintamax.
+- Vercel CLI: instalado globalmente (v58.4.4) y autenticado como monrick123-collab (team fergusxds-projects).
+- Proyecto Vercel: pintureriapp linkeado, URL de produccion https://pintureriapp.vercel.app (HTTP 200).
+- Variables de entorno en Vercel: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_GROQ_API_KEY (Production/Preview/Development).
 
 ---
 

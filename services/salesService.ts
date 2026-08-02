@@ -45,27 +45,21 @@ export const SalesService = {
             p_total: total,
             p_payment_method: paymentMethod,
             p_items: rpcItems,
+            p_client_id: clientId || null,
             p_subtotal: extra?.subtotal || total,
             p_discount_amount: extra?.discountAmount || 0,
             p_iva: extra?.iva || 0,
-
-            // New optional fields sent directly to INSERT
-            p_client_id: clientId || null,
-            p_is_wholesale: extra?.isWholesale || false,
             p_payment_type: extra?.paymentType || 'contado',
+            p_is_wholesale: extra?.isWholesale || false,
             p_departure_admin_id: extra?.departureAdminId || null,
             p_credit_days: extra?.creditDays || 0,
+            p_payment_status: extra?.paymentStatus || 'approved',
+            p_transfer_reference: extra?.transferReference || null,
             p_billing_bank: extra?.billingBank || null,
             p_billing_social_reason: extra?.billingSocialReason || null,
             p_billing_invoice_number: extra?.billingInvoiceNumber || null,
             p_delivery_receiver_name: extra?.deliveryReceiverName || null,
-            p_transfer_reference: extra?.transferReference || null,
-            p_payment_status: extra?.paymentStatus || 'approved',
-            p_promotion_request_id: extra?.promotionRequestId || null,
-            p_register_credit: extra?.registerCredit || false,
-            p_credit_client_id: extra?.registerCredit ? (clientId || null) : null,
-            p_credit_client_name: extra?.creditClientName || null,
-            p_seller_id: extra?.sellerId || null
+            p_promotion_request_id: extra?.promotionRequestId || null
         });
 
         if (error) {

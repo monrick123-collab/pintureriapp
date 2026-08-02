@@ -82,10 +82,10 @@ const ShippingNote: React.FC = () => {
                 </button>
             </div>
 
-            {/* A4 Document Wrapper */}
+            {/* Letter Document Wrapper */}
             <div className="w-full overflow-x-auto print:overflow-visible flex justify-center">
-                {/* A4 Document */}
-                <div className="w-[210mm] min-h-[297mm] bg-white shadow-2xl print:shadow-none p-[15mm] md:p-[20mm] font-sans flex flex-col border border-slate-200 print:border-none shrink-0">
+                {/* Letter Document */}
+                <div className="w-[216mm] min-h-[279mm] bg-white shadow-2xl print:shadow-none p-[15mm] md:p-[20mm] font-sans flex flex-col border border-slate-200 print:border-none shrink-0 format-letter">
 
                     {/* Header */}
                     <div className="flex justify-between items-start mb-8 border-b-2 border-slate-900 pb-6">

@@ -65,12 +65,21 @@
     margin: 0;
 }
 
+@page letter {
+    size: letter;       /* 216mm × 279mm — estándar México */
+    margin: 10mm;
+}
+
 @page halfLetter {
     size: 140mm 216mm;
     margin: 0;
 }
 
 @media print {
+    .format-letter {
+        page: letter;
+    }
+
     .format-half-letter {
         page: halfLetter;
     }

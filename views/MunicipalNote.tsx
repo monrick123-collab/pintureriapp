@@ -47,7 +47,7 @@ const MunicipalNote: React.FC = () => {
     const items: any[] = sale.municipal_sale_items || [];
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center">
+        <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:p-0 print:bg-white flex flex-col items-center print-format-container">
             {/* Action Bar */}
             <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center print:hidden">
                 <button
@@ -66,9 +66,9 @@ const MunicipalNote: React.FC = () => {
                 </button>
             </div>
 
-            {/* A4 Document Wrapper */}
+            {/* Letter Document Wrapper */}
             <div className="w-full overflow-x-auto print:overflow-visible flex justify-center">
-                <div className="w-[210mm] min-h-[297mm] bg-white shadow-2xl print:shadow-none p-[15mm] md:p-[20mm] font-sans flex flex-col border border-slate-200 print:border-none shrink-0">
+                <div className="w-[216mm] min-h-[279mm] bg-white shadow-2xl print:shadow-none p-[15mm] md:p-[20mm] font-sans flex flex-col border border-slate-200 print:border-none shrink-0 format-letter">
 
                     {/* Header */}
                     <div className="flex justify-between items-start mb-8 border-b-2 border-slate-900 pb-6">

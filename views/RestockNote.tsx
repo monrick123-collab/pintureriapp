@@ -137,7 +137,9 @@ const RestockNote: React.FC<RestockNoteProps> = ({ user }) => {
                             <thead>
                                 <tr className="border-b-2 border-slate-800">
                                     <th className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 w-12 text-center">Cant.</th>
-                                    <th className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900">SKU / Producto</th>
+                                    <th className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900">Concepto</th>
+                                    <th className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 text-right">Precio Unit.</th>
+                                    <th className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 text-right">Importe</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -148,6 +150,8 @@ const RestockNote: React.FC<RestockNoteProps> = ({ user }) => {
                                             <p className="font-bold text-slate-900">{item.product?.name || 'Varios'}</p>
                                             <p className="text-[9px] font-bold text-slate-500 uppercase">{item.product?.sku || 'N/A'}</p>
                                         </td>
+                                        <td className="py-2 text-right font-medium text-slate-700">${(item.unitPrice || 0).toLocaleString()}</td>
+                                        <td className="py-2 text-right font-black text-slate-900">${(item.totalPrice || 0).toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -155,6 +159,8 @@ const RestockNote: React.FC<RestockNoteProps> = ({ user }) => {
                                 <tr className="border-t-2 border-slate-800">
                                     <td className="py-2 text-center font-black text-slate-900">{qtyTotal}</td>
                                     <td className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 text-right pr-2">Total Artículos</td>
+                                    <td className="py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total:</td>
+                                    <td className="py-2 text-right font-black text-lg text-slate-900">${(sheet.totalAmount || 0).toLocaleString()}</td>
                                 </tr>
                             </tfoot>
                         </table>

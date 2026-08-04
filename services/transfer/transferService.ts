@@ -66,6 +66,30 @@ export const TransferService = {
     },
 
     async createStockTransfer(fromId: string, toId: string, notes: string, items: { productId: string, quantity: number }[]): Promise<void> {
+        // S2: Validar que fromId no sea igual a toId (auto-traspaso imposible)
+        if (fromId === toId) {
+            throw new Error('La sucursal origen y destino no pueden ser la misma.');
+        }
+
+        // S2: Validar stock suficiente en origen ANTES de crear el traspaso
+        const productIds = items.map(i => i.productId);
+        if (productIds.length > 0) {
+            const { data: stockData, error: stockError } = await supabase
+                .from('inventory')
+                .select('product_id, stock')
+                .eq('branch_id', fromId)
+                .in('product_id', productIds);
+
+            if (stockError) throw stockError;
+
+            const stockMap = new Map((stockData || []).map((s: any) => [s.product_id, s.stock]));
+            const insufficient = items.filter(i => (stockMap.get(i.productId) ?? 0) < i.quantity);
+
+            if (insufficient.length > 0) {
+                throw new Error(`Stock insuficiente en origen para ${insufficient.length} producto(s).`);
+            }
+        }
+
         const { data: maxCheck } = await supabase
             .from('stock_transfers')
             .select('folio')

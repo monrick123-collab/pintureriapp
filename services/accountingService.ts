@@ -21,6 +21,9 @@ export const AccountingService = {
     },
 
     async createExpense(expense: Omit<Expense, 'id' | 'createdAt'>): Promise<void> {
+        if (!expense.amount || expense.amount <= 0) {
+            throw new Error('El monto del gasto debe ser mayor a 0.');
+        }
         const { error } = await supabase.from('expenses').insert({
             description: expense.description,
             amount: expense.amount,
@@ -125,6 +128,7 @@ export const AccountingService = {
         totalTransfer: number;
         expensesAmount: number;
         calculatedTotal: number;
+        countedCash?: number;
         notes?: string;
     }) {
         const { error } = await supabase.from('cash_cuts').upsert({
@@ -135,6 +139,7 @@ export const AccountingService = {
             total_transfer: data.totalTransfer,
             expenses_amount: data.expensesAmount,
             calculated_total: data.calculatedTotal,
+            counted_cash: data.countedCash || 0,
             status: 'pending',
             notes: data.notes
         }, { onConflict: 'branch_id, date' });
